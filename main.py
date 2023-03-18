@@ -47,17 +47,120 @@ class PG_Wrapper:
         self.ui_tbox_core: list[PG_Text_Box] = []
         self.ui_tbox_children: list[PG_Text_Box_Child] = []
         
-        pos = self.cf['ui']['default_padding']  # set root element x/y to the default padding
-        UI_TIME = self.create_tbox_core("Time: ", pos, pos, False, self.timer.get_active_segment_time)
+        UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.timer.get_active_segment_time)
+        time_pos = (self.cf['ui']['default_padding'],
+                    self.window.height - self.cf['ui']['default_padding'])
+        UI_TIME.re.bottomleft = time_pos
         self.ui_tbox_core.append(UI_TIME)
-        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'bottom', self.get_fps)
+        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.get_fps)
         self.ui_tbox_children.append(UI_FPS)
+
         self.terrain = pg.sprite.Group()
         self.create_terrain_outline()
         self.create_obstacles()
 
     def create_terrain_outline(self):
-        pass
+        ''' encapsulated the surface bounds with rects '''
+        CF = self.cf['environment']['terrain_block']
+
+        min_x = self.window.bounds['min_x']
+        max_x = self.window.bounds['max_x']
+        min_y = self.window.bounds['min_y']
+        max_y = self.window.bounds['max_y']
+        
+        # topleft --> topright
+        curr_pos_y = 0
+        curr_pos_x = min_x
+        last_block: Static_Interactive
+        while curr_pos_x < max_x:
+            # set random height/width from within the ranges
+            width = randint(CF['min_width'], CF['max_width'])
+            height = randint(CF['min_height'], CF['max_height'])
+            # ensure no overlap: 
+            if (curr_pos_x + width) > max_x:
+                width = max_x - curr_pos_x
+            POS = Vec2(curr_pos_x, curr_pos_y)
+            BLOCK = Static_Interactive(
+                self.window,
+                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
+                POS,
+                (width, height),
+                None, None, None, None, None
+            )
+            last_block = BLOCK
+            self.terrain.add(BLOCK)
+            curr_pos_x = BLOCK.rect.right
+        
+        # topright --> bottomright
+        curr_pos_y = last_block.rect.bottom
+        curr_pos_x = max_x
+        while curr_pos_y < max_y:
+            # set random height/width from within the ranges
+            width = randint(CF['min_width'], CF['max_width'])
+            height = randint(CF['min_height'], CF['max_height'])
+            # ensure no overlap: 
+            if (curr_pos_y + height) > max_y:
+                height = max_y - curr_pos_y 
+            POS = Vec2(curr_pos_x, curr_pos_y)
+            BLOCK = Static_Interactive(
+                self.window,
+                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
+                POS,
+                (width, height),
+                None, None, None, None, None
+            )
+            BLOCK.rect.right = curr_pos_x
+            last_block = BLOCK
+            self.terrain.add(BLOCK)
+            curr_pos_y = BLOCK.rect.bottom
+
+        # bottomright --> bottomleft
+        curr_pos_x = last_block.rect.left
+        curr_pos_y = max_y
+        while curr_pos_x > min_x:
+            # set random height/width from within the ranges
+            width = randint(CF['min_width'], CF['max_width'])
+            height = randint(CF['min_height'], CF['max_height'])
+            # ensure no overlap: 
+            if (curr_pos_x - width) < min_x:
+                width = abs(min_x - curr_pos_x)
+            POS = Vec2()
+            BLOCK = Static_Interactive(
+                self.window,
+                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
+                POS,
+                (width, height),
+                None, None, None, None, None
+            )
+            BLOCK.rect.bottom = curr_pos_y
+            BLOCK.rect.right = curr_pos_x
+            last_block = BLOCK
+            self.terrain.add(BLOCK)
+            curr_pos_x = BLOCK.rect.left
+
+        # bottomleft --> topright
+        curr_pos_x = min_x
+        curr_pos_y = last_block.rect.top
+        while curr_pos_y > min_y:
+            # set random height/width from within the ranges
+            width = randint(CF['min_width'], CF['max_width'])
+            height = randint(CF['min_height'], CF['max_height'])
+            # ensure no overlap: 
+            if (curr_pos_y - width) < min_y:
+                width = abs(min_y - curr_pos_y)
+            POS = Vec2()
+            BLOCK = Static_Interactive(
+                self.window,
+                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
+                POS,
+                (width, height),
+                None, None, None, None, None
+            )
+            BLOCK.rect.left = curr_pos_x
+            BLOCK.rect.bottom = curr_pos_y
+            last_block = BLOCK
+            self.terrain.add(BLOCK)
+            curr_pos_y = BLOCK.rect.top
 
     def create_obstacles(self):
         ''' obstacle spawning algorithm '''
@@ -67,7 +170,7 @@ class PG_Wrapper:
         # how many obstacle placement attempts to allow before deciding a solution can't be found:
         FAIL_LIMIT = self.cf['environment']['obstacle_placement_attempt_limit']
         # relevant dict for readability:
-        CF = self.cf['environment']['terrain_block']
+        CF = self.cf['environment']['obstacle_block']
 
         i = 0
         failed = 0
@@ -111,7 +214,7 @@ class PG_Wrapper:
 
     def get_fps(self):
         return round(self.clock.get_fps())
-    
+
     def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
         ''' create tbox core using default settings '''
         return PG_Text_Box(
@@ -120,7 +223,7 @@ class PG_Wrapper:
             self.cf['fonts']['semibold'],
             self.cf['ui']['default_font_size'],
             self.cf['ui']['apply_aa'],
-            self.cf['ui']['text_color_dim'], 
+            self.cf['ui']['text_color_light'], 
             self.cf['ui']['default_bg_color'],
             self.cf['ui']['default_border_color'],
             self.cf['ui']['default_border_width'],

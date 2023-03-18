@@ -3,8 +3,7 @@ from random import randint
 
 class PG_Window:
     ''' wrapper for the pygame window, containing the surface
-        * offset>0 creates a buffer for detecting if mouse is off the surface
-        ** i.e., offset=1 will create a surface 1 pixel larger than the effective bounds
+        the surface bounds determine the effective game area
     '''
     def __init__(self, caption: str, w: int, h: int, bounds_padding: dict, fill_color):
         self.fill_color = fill_color

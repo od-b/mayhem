@@ -32,6 +32,7 @@ RGB = {
 
 PALLETTES = {
     'PASTEL_LIGHT': [
+        RGB['pastel_orange'],
         RGB['pastel_peach'],
         RGB['pastel_pink'],
         RGB['pastel_yellow'],
@@ -51,9 +52,6 @@ CONFIG = {
         'caption': str('< caption >'),
         'height': int(840),
         'width': int(1400),
-        # see PG_window.py for offset explanation
-        'surface_offset_x': int(1),
-        'surface_offset_y': int(1),
         'fill_color': RGB['offblack'],
         'bounds_padding': {
             'min_x': 1,
@@ -78,10 +76,18 @@ CONFIG = {
     },
     'environment': {
         'n_obstacles': int(60),
-        # how many failed attempts to allow when placing obstacles
-        # avoid looping forever, while checking current progress
         'obstacle_padding': int(50),  # extra padding for the obstacles, on top of spaceship size
+        # how many failed attempts to allow when generating obstacles:
+        # intercepts forever-loops and prints out how close the algorithm was to success
         'obstacle_placement_attempt_limit': int(10000),
+        # customize the obstacle / terrain blocks
+        'obstacle_block': {
+            'color_pool': PALLETTES['PASTEL_LIGHT'],
+            'min_height': int(10),
+            'max_height': int(80),
+            'min_width': int(8),
+            'max_width': int(90),
+        },
         'terrain_block': {
             'color_pool': PALLETTES['PASTEL_LIGHT'],
             'min_height': int(10),
