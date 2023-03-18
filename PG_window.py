@@ -53,8 +53,8 @@ class PG_Window:
         display.update()
 
     def __str__(self):
-        msg = f'[PG_Window]:\nwidth={self.width}, height={self.height}\nbounds = '+'{'
+        msg = f'< PG_Window: width={self.width}, height={self.height},\n  bounds='+'{'
         for key, val in self.bounds.items():
             msg += f'\n\t"{key}": {val}'
-        msg += '\n}\n'
+        msg += '\n  }\n>'
         return msg

@@ -1,9 +1,19 @@
-from typing import Callable     # type hint for function pointers --> https://docs.python.org/3/library/typing.html
+# default python library imports
+from typing import Callable     # type hint for function pointers
+
+# pygame 2.1.2 --> print(pygame.__version__)
 import pygame as pg
+import sys
+# local imports
+## general:
+from exceptions import VersionError
 from config import CONFIG
-from PG_window import PG_Window
-from PG_ui import PG_Text_Box, PG_Text_Box_Child, PG_Rect
 from timing import Timer
+## pygame specific:
+from PG_window import PG_Window
+from PG_shapes import PG_Rect
+from PG_ui import PG_Text_Box, PG_Text_Box_Child
+
 
 class PG_Wrapper:
     ''' singleton wrapper for the app
@@ -13,6 +23,9 @@ class PG_Wrapper:
     '''
     def __init__(self, config: dict[str, any]):
         pg.init()
+        if not (str(pg.__version__) == config['misc']['req_pygame_version']):
+            raise VersionError("Pygame", str(pg.__version__), config['misc']['req_pygame_version'])
+
         self.cf = config
         self.window = PG_Window(
             config['window']['caption'],
@@ -35,12 +48,6 @@ class PG_Wrapper:
         self.ui_tbox_core.append(UI_TIME)
         UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'bottom', self.get_fps)
         self.ui_tbox_children.append(UI_FPS)
-        
-        ## tests
-        # UI_FPS_2 = self.create_tbox_child("FPS_2: ", UI_FPS, 'right', self.get_fps)
-        # self.ui_tbox_children.append(UI_FPS_2)
-        # TEST_3 = self.create_tbox_child("TEST_3", UI_TIME, 'right', None)
-        # self.ui_tbox_core.append(TEST_3)
 
         self.print_setup()
     
@@ -49,9 +56,9 @@ class PG_Wrapper:
 
     def print_setup(self):
         msg = f'{self.window}\n'
-        msg += '[Misc]:\n'
-        msg += f'max_fps="{self.max_fps}"'
-        print(msg)
+        msg += '< Misc:\n'
+        msg += f'  max_fps="{self.max_fps}"'
+        print(msg+'\n>')
     
     def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
         ''' create tbox core using default settings '''
