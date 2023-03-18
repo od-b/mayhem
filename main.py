@@ -3,6 +3,7 @@ from typing import Callable     # type hint for function pointers
 
 # 
 import pygame as pg
+from pygame.math import Vector2 as Vec2
 # local imports
 ## general:
 from config import CONFIG

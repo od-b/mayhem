@@ -1,4 +1,4 @@
-from typing import Callable     # type hint for function pointers --> https://docs.python.org/3/library/typing.html
+from typing import Callable     # type hint for function pointers
 import pygame as pg
 from modules.PG_shapes import PG_Rect
 
