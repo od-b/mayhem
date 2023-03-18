@@ -1,18 +1,22 @@
 # default python library imports
 from typing import Callable     # type hint for function pointers
+from random import randint, uniform
 
-# 
+# library imports
 import pygame as pg
 from pygame.math import Vector2 as Vec2
+
 # local imports
 ## general:
 from config import CONFIG
-from modules.exceptions import VersionError
+from modules.exceptions import VersionError, LogicError
 from modules.timing import Timer
 ## pygame specific:
 from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
 from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
+# sprites:
+from modules.PG_sprites import Static_Interactive
 
 
 class PG_Wrapper:
@@ -31,8 +35,7 @@ class PG_Wrapper:
             config['window']['caption'],
             config['window']['width'],
             config['window']['height'],
-            config['window']['surface_offset_x'],
-            config['window']['surface_offset_y'],
+            config['window']['bounds_padding'],
             config['window']['fill_color']
         )
         # misc
@@ -44,21 +47,70 @@ class PG_Wrapper:
         self.ui_tbox_core: list[PG_Text_Box] = []
         self.ui_tbox_children: list[PG_Text_Box_Child] = []
         
-        UI_TIME = self.create_tbox_core("Time: ", 100, 100, False, self.timer.get_active_segment_time)
+        pos = self.cf['ui']['default_padding']  # set root element x/y to the default padding
+        UI_TIME = self.create_tbox_core("Time: ", pos, pos, False, self.timer.get_active_segment_time)
         self.ui_tbox_core.append(UI_TIME)
         UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'bottom', self.get_fps)
         self.ui_tbox_children.append(UI_FPS)
+        self.terrain = pg.sprite.Group()
+        self.create_terrain_outline()
+        self.create_obstacles()
 
-        self.print_setup()
-    
+    def create_terrain_outline(self):
+        pass
+
+    def create_obstacles(self):
+        ''' obstacle spawning algorithm '''
+        n_obstacles = self.cf['environment']['n_obstacles']
+        adjusted_width = self.cf['spaceship']['width'] + self.cf['environment']['obstacle_padding']
+        adjusted_height = self.cf['spaceship']['height'] + self.cf['environment']['obstacle_padding']
+        # how many obstacle placement attempts to allow before deciding a solution can't be found:
+        FAIL_LIMIT = self.cf['environment']['obstacle_placement_attempt_limit']
+        # relevant dict for readability:
+        CF = self.cf['environment']['terrain_block']
+
+        i = 0
+        failed = 0
+        while i < n_obstacles:
+            # set random height/width from within the ranges
+            width = randint(CF['min_width'], CF['max_width'])
+            height = randint(CF['min_height'], CF['max_height'])
+            POS = Vec2(self.window.get_rand_x_inbound(width),
+                       self.window.get_rand_y_inbound(height))
+            BLOCK = Static_Interactive(
+                self.window,
+                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
+                POS,
+                (width, height),
+                None, None, None, None, None
+            )
+            # the block is now created, but there's 2 potential problems:
+            # 1) the block might overlap other blocks
+            # 2) we don't want to lock the spaceship in by bad rng
+
+            # solution: create a copy of the rect and inflate it using the spaceship size + set padding
+            inflated_rect = BLOCK.rect.copy().inflate(adjusted_width, adjusted_height)
+            # temporarily swap the rect with the one of the block, while saving the original
+            # this is to allow for easy and fast spritecollide checking
+            original_rect = BLOCK.rect.copy()
+            BLOCK.rect = inflated_rect
+
+            # if the block + spaceship rect doesn't collide with any terrain, add it to the group
+            if len(pg.sprite.spritecollide(BLOCK, self.terrain, False)) == 0:
+                # it doesn't collide, swap rect back
+                BLOCK.rect = original_rect
+                self.terrain.add(BLOCK)
+                i += 1
+            else:
+                # otherwise, simply try again with a new block size and position
+                failed += 1
+                if (failed > FAIL_LIMIT):
+                    msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.'
+                    msg += f'current obstacle count: {i} / {n_obstacles}'
+                    raise LogicError(msg)
+
     def get_fps(self):
         return round(self.clock.get_fps())
-
-    def print_setup(self):
-        msg = f'{self.window}\n'
-        msg += '< Misc:\n'
-        msg += f'  max_fps="{self.max_fps}"'
-        print(msg+'\n>')
     
     def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
         ''' create tbox core using default settings '''
@@ -88,7 +140,7 @@ class PG_Wrapper:
             self.cf['ui']['default_border_color'],
             self.cf['ui']['default_border_width'],
             getter_func, parent, alignment,
-            self.cf['ui']['default_child_offset'],
+            self.cf['ui']['default_padding'],
         )
 
     def loop(self):
@@ -108,6 +160,8 @@ class PG_Wrapper:
 
             for elem in self.ui_tbox_children:
                 elem.update()
+            
+            self.terrain.draw(self.window.surface)
 
             # refresh the display, applying drawing etc.
             self.window.update()

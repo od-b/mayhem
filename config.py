@@ -32,8 +32,10 @@ RGB = {
 
 PALLETTES = {
     'PASTEL_LIGHT': [
-        RGB['pastel_red'],
+        RGB['pastel_peach'],
+        RGB['pastel_pink'],
         RGB['pastel_yellow'],
+        RGB['pastel_red'],
         RGB['pastel_teal'],
         RGB['pastel_blue']
     ],
@@ -53,6 +55,12 @@ CONFIG = {
         'surface_offset_x': int(1),
         'surface_offset_y': int(1),
         'fill_color': RGB['offblack'],
+        'bounds_padding': {
+            'min_x': 1,
+            'max_x': 1,
+            'min_y': 1,
+            'max_y': 60,
+        }
     },
     'ui': {
         'apply_aa': True,
@@ -62,25 +70,28 @@ CONFIG = {
         'default_bg_color': RGB['black'],
         'default_border_width': 2,
         'default_font_size': 20,
-        'default_child_offset': 10,
+        'default_padding': 10,  # padding of the ui elements
     },
     'fonts': {
         'semibold': "media/fonts/JetBrainsMono-SemiBold.ttf",
         'bold': "media/fonts/JetBrainsMono-Bold.ttf",
     },
     'environment': {
-        'n_obstacles': int(3),
-        'obstacle': {
-            'color_pool': [
-                RGB['peach'],
-                RGB['orange'],
-                RGB['marygold'],
-                RGB['dutchwhite']
-            ],
+        'n_obstacles': int(60),
+        # how many failed attempts to allow when placing obstacles
+        # avoid looping forever, while checking current progress
+        'obstacle_padding': int(50),  # extra padding for the obstacles, on top of spaceship size
+        'obstacle_placement_attempt_limit': int(10000),
+        'terrain_block': {
+            'color_pool': PALLETTES['PASTEL_LIGHT'],
             'min_height': int(10),
-            'max_height': int(20),
+            'max_height': int(80),
             'min_width': int(8),
-            'max_width': int(),
+            'max_width': int(90),
         },
     },
+    'spaceship': {
+        'width': int(40),
+        'height': int(40),
+    }
 }

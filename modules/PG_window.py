@@ -6,19 +6,18 @@ class PG_Window:
         * offset>0 creates a buffer for detecting if mouse is off the surface
         ** i.e., offset=1 will create a surface 1 pixel larger than the effective bounds
     '''
-    def __init__(self, caption: str, w: int, h: int, offset_x: int, offset_y: int, fill_color):
-        self.offset_x = offset_x
-        self.offset_y = offset_y
+    def __init__(self, caption: str, w: int, h: int, bounds_padding: dict, fill_color):
         self.fill_color = fill_color
+        self.bounds_padding = bounds_padding
         
-        self.width = w + (2 * offset_x)
-        self.height = h + (2 * offset_y)
+        self.width = w
+        self.height = h
         self.surface = display.set_mode((self.width, self.height))
         self.bounds: dict[str, int] = {
-            'min_x': int(self.offset_x),
-            'max_x': int(self.width - self.offset_x),
-            'min_y': int(self.offset_y),
-            'max_y': int(self.height - self.offset_y),
+            'min_x': int(self.bounds_padding['min_x']),
+            'max_x': int(self.width - self.bounds_padding['max_x']),
+            'min_y': int(self.bounds_padding['min_y']),
+            'max_y': int(self.height - self.bounds_padding['max_y']),
         }
         self.set_caption(caption)
 
@@ -38,11 +37,11 @@ class PG_Window:
             return False
         return True
 
-    def get_rand_x(self, adjustment: int):
-        return randint(adjustment, self.width - adjustment)
-        
-    def get_rand_y(self, adjustment: int):
-        return randint(adjustment, self.height - adjustment)
+    def get_rand_x_inbound(self, width_adj: int):
+        return randint(self.bounds['min_x'], self.bounds['max_x'] - width_adj)
+
+    def get_rand_y_inbound(self, height_adj: int):
+        return randint(self.bounds['min_y'], self.bounds['max_y'] - height_adj)
 
     def fill(self):
         ''' fills the surface with a set color '''
