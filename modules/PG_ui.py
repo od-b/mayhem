@@ -1,6 +1,6 @@
 from typing import Callable     # type hint for function pointers --> https://docs.python.org/3/library/typing.html
 import pygame as pg
-from PG_shapes import PG_Rect
+from modules.PG_shapes import PG_Rect
 
 
 class PG_Text_Box(PG_Rect):

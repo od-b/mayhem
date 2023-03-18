@@ -1,18 +1,17 @@
 # default python library imports
 from typing import Callable     # type hint for function pointers
 
-# pygame 2.1.2 --> print(pygame.__version__)
+# 
 import pygame as pg
-import sys
 # local imports
 ## general:
-from exceptions import VersionError
 from config import CONFIG
-from timing import Timer
+from modules.exceptions import VersionError
+from modules.timing import Timer
 ## pygame specific:
-from PG_window import PG_Window
-from PG_shapes import PG_Rect
-from PG_ui import PG_Text_Box, PG_Text_Box_Child
+from modules.PG_window import PG_Window
+from modules.PG_shapes import PG_Rect
+from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
 
 
 class PG_Wrapper:
