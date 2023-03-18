@@ -39,7 +39,7 @@ CONFIG = {
         'default_bg_color': RGB['black'],
         'default_border_width': 2,
         'default_font_size': 20,
-        'default_child_offset': 4,
+        'default_child_offset': 10,
     },
     'fonts': {
         'semibold': "media/fonts/JetBrainsMono-SemiBold.ttf",

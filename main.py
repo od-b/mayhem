@@ -31,13 +31,22 @@ class PG_Wrapper:
         self.ui_tbox_core: list[PG_Text_Box] = []
         self.ui_tbox_children: list[PG_Text_Box_Child] = []
         
-        UI_TIME = self.create_tbox_core("UI_TIME", 10, 10, False, self.timer.get_active_segment_time)
+        UI_TIME = self.create_tbox_core("Time: ", 100, 100, False, self.timer.get_active_segment_time)
         self.ui_tbox_core.append(UI_TIME)
-        # UI_FPS = self.create_tbox_core("_", 5, 5, False)
-        # UI_FPS_TESTCHILD = self.create_tbox_child("_", UI_FPS, 'right')
+        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'bottom', self.get_fps)
+        self.ui_tbox_children.append(UI_FPS)
+        
+        ## tests
+        # UI_FPS_2 = self.create_tbox_child("FPS_2: ", UI_FPS, 'right', self.get_fps)
+        # self.ui_tbox_children.append(UI_FPS_2)
+        # TEST_3 = self.create_tbox_child("TEST_3", UI_TIME, 'right', None)
+        # self.ui_tbox_core.append(TEST_3)
 
         self.print_setup()
     
+    def get_fps(self):
+        return round(self.clock.get_fps())
+
     def print_setup(self):
         msg = f'{self.window}\n'
         msg += '[Misc]:\n'
@@ -85,7 +94,6 @@ class PG_Wrapper:
         while (running):
             # fill the window before drawing/rendering
             self.window.fill()
-
 
             # update objects for the next frame
             for elem in self.ui_tbox_core:

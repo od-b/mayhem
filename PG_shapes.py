@@ -18,14 +18,13 @@ class PG_Rect:
         self.window = window
         self.border_width: int = border_width
         self.border_color: None | tuple = border_color
+        self.bg_color: None | tuple = bg_color
         self.border: pg.Rect | None = None
         self.bounds: dict[str, int] = window.get_bounds()
-
         self.re = pg.Rect(int(x), int(y), int(w), int(h))
-        if self.border_width > 0:
-            self.create_border()
 
-        self.bg_color: None | tuple = bg_color
+        if (border_width > 0):
+            self.create_border()
     
     def set_bounds(self, min_x: int, max_x: int, min_y: int, max_y: int):
         ''' for setting bounds to something other than the window surface '''
@@ -118,18 +117,16 @@ class PG_Rect:
     def create_border(self):
         ''' create a border for the current rect '''
         WIDTH_X_2 = int(2 * self.border_width)
-        
+
         self.border = pg.Rect(
-            self.re.y - self.border_width,
             self.re.x - self.border_width,
+            self.re.y - self.border_width,
             self.re.w + WIDTH_X_2,
             self.re.h + WIDTH_X_2,
-            width=self.border_width
         )
 
     def draw_border(self):
-        # pg.draw.rect(self.window.surface, self.border_color, self.border)
         pg.draw.rect(self.window.surface, self.border_color, self.border)
 
-    def draw_background(self):
+    def draw(self):
         pg.draw.rect(self.window.surface, self.bg_color, self.re)

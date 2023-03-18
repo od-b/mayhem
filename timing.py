@@ -1,7 +1,3 @@
-#
-# nothing is tested here
-#
-
 
 class Segment:
     ''' reference can be for example a given map/challenge '''
@@ -65,19 +61,8 @@ class Timer:
         self.start_time = curr_time
         self.total_time = 0
 
-    # TODO
-    def total_curr_sync_ms(self):
-        # prob looks weird when seconds are flip flopping on different ms timers
-        pass
-
     def update(self, curr_time: int):
         # update total time
         self.total_time = (curr_time - self.start_time)
         # update segment time
         self.active_segment.update_duration(curr_time)
-
-
-# TODO
-class FPS_Based_Timer(Timer):
-    # fps based timer instead of using actual time
-    pass
