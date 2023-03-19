@@ -18,21 +18,19 @@ from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
 from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
 # sprites:
-from modules.PG_sprites import Static_Interactive
+from modules.PG_sprites import Static_Interactive, Controllable
 
 
 class PG_App:
-    ''' app class, may serve multiple app instances
+    ''' singleton app class
         * takes in a config dict specifying various constants and parameters
         * contains most objects relevant to the app
         * initializes and sets up pygame objects from the given config
         * contains game loop, specialized setup-functions
     '''
     def __init__(self, CONFIG: dict[str, any]):
-        self.cf = deepcopy(CONFIG)
-        # load and store a copy of the CONFIG
-        # certain settings in cf may be modified during runtime, however CONFIG
-        # should remain unchanged to avoid change across app instances
+        self.cf = CONFIG
+        # load and store the CONFIG
         self.window = PG_Window(
             self.cf['window']['caption'],
             self.cf['window']['width'],
@@ -70,9 +68,16 @@ class PG_App:
         ''' group of sprites that are to be drawn '''
 
         # outline the game area with blocks
-        self.create_terrain_outline(None, None, self.draw_group, self.window.bounds)
-        # place obstacles within the game area
-        self.create_static_obstacles(None, None, self.draw_group)
+        self.spawn_terrain_outline(None, None, self.draw_group, self.window.bounds)
+        # place obstacles within the game area, adjusted for player size + settings
+        w_padding = int(self.cf['player']['width'] + self.cf['environment']['obstacle_padding'])
+        h_padding = int(self.cf['player']['height'] + self.cf['environment']['obstacle_padding'])
+        self.spawn_static_obstacles(None, None, self.draw_group, w_padding, h_padding)
+        
+        # load the player sprite
+        self.player = self.create_controllable_sprite(self.cf['player'], None, None)
+        self.draw_group.add(self.player)
+        self.update_group.add(self.player)
 
     def get_rand_list_elem(self, list: list):
         ''' get random elem from non-empty list '''
@@ -86,7 +91,41 @@ class PG_App:
         ''' get fps, rounded to the nearest integer '''
         return round(self.clock.get_fps(), None)
 
-    def create_terrain_outline(self, trigger_func: Callable | None, trigger_weight: float | None, group: Group, bounds: dict):
+    def create_controllable_sprite(self, config: dict, trigger_func: Callable | None, trigger_weight: float | None):
+        ''' create and return a controllable type sprite from the given config '''
+        MAX_VELOCITY = Vec2(
+            float(config['max_velocity_x']),
+            float(config['max_velocity_y']))
+        VELOCITY = Vec2(
+            float(config['initial_vectors']['velocity_x']),
+            float(config['initial_vectors']['velocity_y']))
+        POSITION = Vec2(
+            int(config['initial_vectors']['pos_x']),
+            int(config['initial_vectors']['pos_y']))
+        SIZE = (int(config['width']), int(config['height']))
+
+        SPRITE = Controllable(
+            self.window,
+            self.cf['physics'],
+            config['color'],
+            POSITION,
+            SIZE,
+            config['image'],
+            float(config['mass']),
+            VELOCITY,
+            MAX_VELOCITY,
+            trigger_func,
+            trigger_weight,
+            float(config['initial_vectors']['angle']),
+            int(config['max_health']),
+            int(config['max_mana']),
+            int(config['initial_vectors']['health']),
+            int(config['initial_vectors']['mana'])
+        )
+        return SPRITE
+
+    def spawn_terrain_outline(self, trigger_func: Callable | None, trigger_weight: float | None,
+                               group: Group, bounds: dict):
         ''' encapsulate the given bounds with rects '''
         # constant declarations for readability and convenience:
         CF = self.cf['environment']['terrain_block']
@@ -111,7 +150,7 @@ class PG_App:
             position = Vec2(curr_pos_x, curr_pos_y)
             color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window, color, position, (width, height),
+                self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
             last_block = BLOCK
@@ -129,7 +168,7 @@ class PG_App:
             position = Vec2(0.0, curr_pos_y)
             color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window, color, position, (width, height),
+                self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
             BLOCK.rect.right = curr_pos_x
@@ -150,7 +189,7 @@ class PG_App:
             position = Vec2()
             color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window, color, position, (width, height),
+                self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
             BLOCK.rect.bottom = curr_pos_y
@@ -170,7 +209,7 @@ class PG_App:
             position = Vec2()
             color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window, color, position, (width, height),
+                self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
             BLOCK.rect.left = curr_pos_x
@@ -179,11 +218,10 @@ class PG_App:
             group.add(BLOCK)
             curr_pos_y = BLOCK.rect.top
 
-    def create_static_obstacles(self, trigger_func: Callable | None, trigger_weight: float | None, group: Group):
+    def spawn_static_obstacles(self, trigger_func: Callable | None, trigger_weight: float | None,
+                                group: Group, width_padding: int, height_padding: int):
         ''' obstacle spawning algorithm '''
         n_obstacles = self.cf['environment']['n_obstacles']
-        adjusted_width = self.cf['spaceship']['width'] + self.cf['environment']['obstacle_padding']
-        adjusted_height = self.cf['spaceship']['height'] + self.cf['environment']['obstacle_padding']
         # how many obstacle placement attempts to allow before deciding a solution can't be found:
         FAIL_LIMIT = self.cf['environment']['obstacle_placement_attempt_limit']
         # relevant dict for readability:
@@ -201,7 +239,7 @@ class PG_App:
                 self.window.get_rand_y_inbound(height)
             )
             BLOCK = Static_Interactive(
-                self.window, color, position, (width, height),
+                self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
             # the block is now created, but there's 2 potential problems:
@@ -209,7 +247,7 @@ class PG_App:
             # 2) we don't want to lock the spaceship in by bad rng
 
             # solution: create a copy of the rect and inflate it using the spaceship size + set padding
-            inflated_rect = BLOCK.rect.copy().inflate(adjusted_width, adjusted_height)
+            inflated_rect = BLOCK.rect.copy().inflate(width_padding, height_padding)
             # temporarily swap the rect with the one of the block, while saving the original
             # this is to allow for easy and fast spritecollide checking
             original_rect = BLOCK.rect.copy()
@@ -282,6 +320,9 @@ class PG_App:
 
             # refresh the display, applying drawing etc.
             self.window.update()
+            
+            # update sprites before next frame
+            self.update_group.update()
 
             # loop through events
             for event in pg.event.get():

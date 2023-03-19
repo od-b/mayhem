@@ -34,6 +34,9 @@ CONFIG = {
         'semibold': "media/fonts/JetBrainsMono-SemiBold.ttf",
         'bold': "media/fonts/JetBrainsMono-Bold.ttf",
     },
+    'physics': {
+        'gravity': float(0.001),
+    },
     'environment': {
         'n_obstacles': int(10),
         'obstacle_padding': int(50),  # extra padding for the obstacles, on top of spaceship size
@@ -56,8 +59,24 @@ CONFIG = {
             'max_width': int(22),
         },
     },
-    'spaceship': {
+    'player': {
+        'color': RGB['black'],
+        'image': None,
         'width': int(40),
         'height': int(40),
+        'mass': float(0.1),
+        'max_health': int(150),
+        'max_mana': int(150),
+        'max_velocity_x': float(1),
+        'max_velocity_y': float(1),
+        'initial_vectors': {
+            'health': int(100),
+            'mana': int(100),
+            'pos_x': int(400),
+            'pos_y': int(400),
+            'angle': float(0),
+            'velocity_x': float(0),
+            'velocity_y': float(0),
+        },
     }
 }
