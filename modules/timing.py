@@ -1,39 +1,60 @@
 
 class Segment:
-    ''' reference can be for example a given map/challenge '''
-    def __init__(self, start: int, reference: int | None):
-        self.reference: int | None = reference
+    ''' ref is an ID of sort. can be for example a given map/challenge/algorithm '''
+    def __init__(self, start: int, ref: int | None):
+        self.ref: int | None = ref
         self.start: int = start
         self.duration: int = 0
 
+    def get_duration_int(self):
+        ''' returns milliseconds that have passed since segment started '''
+        return self.duration
+    
+    def get_duration_formatted(self):
+        ''' returns <mm:ss>, or <hh:mm:ss> if hh > 0'''
+        secs = int(self.duration/1000) % 60
+        mins = int(self.duration/(1000*60)) % 60
+        hours = int(self.duration/(1000*60*60)) % 24
+        if hours == 0:
+            return f'{mins:02d}:{secs:02d}'
+        return f'{hours:02d}:{mins:02d}:{secs:02d}'
+
     def update_duration(self, curr_time: int):
+        ''' increments duration of segment '''
         self.duration = (curr_time - self.start)
 
 
 class Timer:
     ''' Segment based time tracking.
-        Activates when Timer.start_first_segment() is called, not on Timer.__init__ '''
+        * Tracking activates when .start_first_segment() is called, not on __init__
+        * start_first_segment MUST be called before ANY other methods are called.
+    '''
     def __init__(self):
         self.start_time: int = 0
         self.total_time: int = 0
         self.active_segment: Segment | None = None
         self.segments: list[Segment] = []
-        self.n_segments: int = 0
-    
-    def get_active_segment_time(self):
-        return self.active_segment.duration
 
     def start_first_segment(self, curr_time: int, ref: int | None):
+        ''' initialize the first segment '''
         self.start_time = curr_time
         self.active_segment = Segment(curr_time, ref)
 
-    def new_segment(self, ref: int | None, archive_curr: bool):
-        if (archive_curr):
+    def new_segment(self, ref: int | None, archive_active_segment: bool):
+        ''' start a new segment with the given ref
+            * choose whether to archive or delete current active segment
+        '''
+        if (archive_active_segment):
             self.segments.append(self.active_segment)
-            self.n_segments += 1
+        else:
+            del self.active_segment
         self.active_segment = Segment(self.total_time, ref)
 
-    def get_fastest_segment(self, ref: int | None):
+    def get_fastest_archived_segment(self, ref: int | None):
+        ''' get fastest segment with a specific ref.
+            * if ref is None, returns fastest segment with any ref
+            * returns None if there are no matching segments
+        '''
         fastest_time: int | None = None
         if not ref:
             for seg in self.segments:
@@ -41,28 +62,33 @@ class Timer:
                     fastest_time = seg.duration
         else:
             for seg in self.segments:
-                if (seg.reference == ref):
+                if (seg.ref == ref):
                     if (not fastest_time) or (seg.duration < fastest_time):
                         fastest_time = seg.duration
         
         return fastest_time
 
-    def delete_segments_by_ref(self, ref: int):
+    def delete_archived_segments_by_ref(self, ref: int):
+        ''' delete all segments with a given reference'''
         for seg in self.segments:
-            if (seg.reference == ref):
+            if (seg.ref == ref):
                 self.segments.remove(seg)
+                del seg
 
-    def delete_all_segments(self):
+    def delete_all_archived_segments(self):
+        ''' delete all segments '''
+        for seg in self.segments:
+            del seg
         self.segments = []
-        self.n_segments = 0
 
-    def full_reset(self, curr_time: int):
-        self.delete_all_segments()
-        self.start_time = curr_time
+    def full_reset(self):
+        ''' resets everything, start_first_segment must be recalled when ready '''
+        self.delete_all_archived_segments()
+        self.start_time = 0
         self.total_time = 0
+        self.active_segment = None
 
     def update(self, curr_time: int):
-        # update total time
+        ''' update total time and active segment duration '''
         self.total_time = (curr_time - self.start_time)
-        # update segment time
         self.active_segment.update_duration(curr_time)

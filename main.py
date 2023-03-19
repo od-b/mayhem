@@ -1,14 +1,16 @@
 # default python library imports
 from typing import Callable     # type hint for function pointers
 from random import randint, uniform
+from copy import deepcopy
 
 # library imports
 import pygame as pg
 from pygame.math import Vector2 as Vec2
+from pygame.sprite import Group
 
 # local imports
 ## general:
-from config import CONFIG
+from config import CONFIG as WRAPPER_CONFIG
 from modules.exceptions import VersionError, LogicError
 from modules.timing import Timer
 ## pygame specific:
@@ -19,150 +21,165 @@ from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
 from modules.PG_sprites import Static_Interactive
 
 
-class PG_Wrapper:
-    ''' singleton wrapper for the app
-        * initializes and sets up pygame
-        * reads and distributes settings from the given config
-        * contains all objects relevant to the app
+class PG_App:
+    ''' app class, may serve multiple app instances
+        * takes in a config dict specifying various constants and parameters
+        * contains most objects relevant to the app
+        * initializes and sets up pygame objects from the given config
+        * contains game loop, specialized setup-functions
     '''
-    def __init__(self, config: dict[str, any]):
-        pg.init()
-        if not (str(pg.__version__) == config['misc']['req_pygame_version']):
-            raise VersionError("Pygame", str(pg.__version__), config['misc']['req_pygame_version'])
-
-        self.cf = config
+    def __init__(self, CONFIG: dict[str, any]):
+        self.cf = deepcopy(CONFIG)
+        # load and store a copy of the CONFIG
+        # certain settings in cf may be modified during runtime, however CONFIG
+        # should remain unchanged to avoid change across app instances
         self.window = PG_Window(
-            config['window']['caption'],
-            config['window']['width'],
-            config['window']['height'],
-            config['window']['bounds_padding'],
-            config['window']['fill_color']
+            self.cf['window']['caption'],
+            self.cf['window']['width'],
+            self.cf['window']['height'],
+            self.cf['window']['bounds_padding'],
+            self.cf['window']['fill_color'],
+            self.cf['window']['bounds_fill_color'],
         )
-        # misc
+        # the timer is not pygame specific and depends on a clock for updates
+        # pygame clock
         self.clock = pg.time.Clock()
-        self.max_fps: int = config['misc']['max_fps']
         self.timer = Timer()
+
+        # misc
+        self.max_fps: int = self.cf['misc']['max_fps']
 
         # set up UI
         self.ui_tbox_core: list[PG_Text_Box] = []
         self.ui_tbox_children: list[PG_Text_Box_Child] = []
         
-        UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.timer.get_active_segment_time)
-        time_pos = (self.cf['ui']['default_padding'],
-                    self.window.height - self.cf['ui']['default_padding'])
-        UI_TIME.re.bottomleft = time_pos
+        # create the 'root' element and manually set its position to bottom left (+default padding),
+        UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.get_duration)
+        UI_TIME.re.bottomleft = (
+            self.cf['ui']['default_padding'],
+            self.window.height - self.cf['ui']['default_padding'])
         self.ui_tbox_core.append(UI_TIME)
-        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.get_fps)
+        
+        # create the fps frame as a child of time, located to the right
+        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.get_fps_int)
         self.ui_tbox_children.append(UI_FPS)
 
-        self.terrain = pg.sprite.Group()
-        self.create_terrain_outline()
-        self.create_obstacles()
+        self.update_group = Group()
+        ''' group of sprites that are to be updated '''
+        self.draw_group = Group()
+        ''' group of sprites that are to be drawn '''
 
-    def create_terrain_outline(self):
-        ''' encapsulated the surface bounds with rects '''
+        # outline the game area with blocks
+        self.create_terrain_outline(None, None, self.draw_group, self.window.bounds)
+        # place obstacles within the game area
+        self.create_static_obstacles(None, None, self.draw_group)
+
+    def get_rand_list_elem(self, list: list):
+        ''' get random elem from non-empty list '''
+        return list[randint(1, len(list)-1)]
+
+    def get_duration(self):
+        ''' to allow referencing the function before first segment is initialized '''
+        return self.timer.active_segment.get_duration_formatted()
+
+    def get_fps_int(self):
+        ''' get fps, rounded to the nearest integer '''
+        return round(self.clock.get_fps(), None)
+
+    def create_terrain_outline(self, trigger_func: Callable | None, trigger_weight: float | None, group: Group, bounds: dict):
+        ''' encapsulate the given bounds with rects '''
+        # constant declarations for readability and convenience:
         CF = self.cf['environment']['terrain_block']
-
-        min_x = self.window.bounds['min_x']
-        max_x = self.window.bounds['max_x']
-        min_y = self.window.bounds['min_y']
-        max_y = self.window.bounds['max_y']
+        MIN_X = bounds['min_x']
+        MAX_X = bounds['max_x']
+        MIN_Y = bounds['min_y']
+        MAX_Y = bounds['max_y']
         
-        # topleft --> topright
-        curr_pos_y = 0
-        curr_pos_x = min_x
-        last_block: Static_Interactive
-        while curr_pos_x < max_x:
+        # below are four loops that together will outline the entire bounds
+        last_block: Static_Interactive | None = None  # for remembering the last block placed
+
+        # 1) topleft --> topright
+        curr_pos_y = MIN_Y
+        curr_pos_x = MIN_X
+        while curr_pos_x < MAX_X:
             # set random height/width from within the ranges
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
             # ensure no overlap: 
-            if (curr_pos_x + width) > max_x:
-                width = max_x - curr_pos_x
-            POS = Vec2(curr_pos_x, curr_pos_y)
+            if (curr_pos_x + width) > MAX_X:
+                width = MAX_X - curr_pos_x
+            position = Vec2(curr_pos_x, curr_pos_y)
+            color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window,
-                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
-                POS,
-                (width, height),
-                None, None, None, None, None
+                self.window, color, position, (width, height),
+                None, None, None, trigger_func, trigger_weight
             )
             last_block = BLOCK
-            self.terrain.add(BLOCK)
+            group.add(BLOCK)
             curr_pos_x = BLOCK.rect.right
         
-        # topright --> bottomright
+        # 2) topright --> bottomright
         curr_pos_y = last_block.rect.bottom
-        curr_pos_x = max_x
-        while curr_pos_y < max_y:
-            # set random height/width from within the ranges
+        curr_pos_x = MAX_X
+        while curr_pos_y < MAX_Y:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
-            # ensure no overlap: 
-            if (curr_pos_y + height) > max_y:
-                height = max_y - curr_pos_y 
-            POS = Vec2(curr_pos_x, curr_pos_y)
+            if (curr_pos_y + height) > MAX_Y:
+                height = MAX_Y - curr_pos_y 
+            position = Vec2(0.0, curr_pos_y)
+            color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window,
-                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
-                POS,
-                (width, height),
-                None, None, None, None, None
+                self.window, color, position, (width, height),
+                None, None, None, trigger_func, trigger_weight
             )
             BLOCK.rect.right = curr_pos_x
             last_block = BLOCK
-            self.terrain.add(BLOCK)
+            group.add(BLOCK)
             curr_pos_y = BLOCK.rect.bottom
 
-        # bottomright --> bottomleft
+        # 3) bottomright --> bottomleft
         curr_pos_x = last_block.rect.left
-        curr_pos_y = max_y
-        while curr_pos_x > min_x:
+        curr_pos_y = MAX_Y
+        while curr_pos_x > MIN_X:
             # set random height/width from within the ranges
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
             # ensure no overlap: 
-            if (curr_pos_x - width) < min_x:
-                width = abs(min_x - curr_pos_x)
-            POS = Vec2()
+            if (curr_pos_x - width) < MIN_X:
+                width = abs(MIN_X - curr_pos_x)
+            position = Vec2()
+            color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window,
-                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
-                POS,
-                (width, height),
-                None, None, None, None, None
+                self.window, color, position, (width, height),
+                None, None, None, trigger_func, trigger_weight
             )
             BLOCK.rect.bottom = curr_pos_y
             BLOCK.rect.right = curr_pos_x
             last_block = BLOCK
-            self.terrain.add(BLOCK)
+            group.add(BLOCK)
             curr_pos_x = BLOCK.rect.left
 
-        # bottomleft --> topright
-        curr_pos_x = min_x
+        # 4) bottomleft --> topright
+        curr_pos_x = MIN_X
         curr_pos_y = last_block.rect.top
-        while curr_pos_y > min_y:
-            # set random height/width from within the ranges
+        while curr_pos_y > MIN_Y:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
-            # ensure no overlap: 
-            if (curr_pos_y - width) < min_y:
-                width = abs(min_y - curr_pos_y)
-            POS = Vec2()
+            if (curr_pos_y - height) < MIN_Y:
+                height = abs(MIN_Y - curr_pos_y)
+            position = Vec2()
+            color = self.get_rand_list_elem(CF['color_pool'])
             BLOCK = Static_Interactive(
-                self.window,
-                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
-                POS,
-                (width, height),
-                None, None, None, None, None
+                self.window, color, position, (width, height),
+                None, None, None, trigger_func, trigger_weight
             )
             BLOCK.rect.left = curr_pos_x
             BLOCK.rect.bottom = curr_pos_y
             last_block = BLOCK
-            self.terrain.add(BLOCK)
+            group.add(BLOCK)
             curr_pos_y = BLOCK.rect.top
 
-    def create_obstacles(self):
+    def create_static_obstacles(self, trigger_func: Callable | None, trigger_weight: float | None, group: Group):
         ''' obstacle spawning algorithm '''
         n_obstacles = self.cf['environment']['n_obstacles']
         adjusted_width = self.cf['spaceship']['width'] + self.cf['environment']['obstacle_padding']
@@ -176,16 +193,16 @@ class PG_Wrapper:
         failed = 0
         while i < n_obstacles:
             # set random height/width from within the ranges
+            color = CF['color_pool'][randint(1, len(CF['color_pool'])-1)]
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
-            POS = Vec2(self.window.get_rand_x_inbound(width),
-                       self.window.get_rand_y_inbound(height))
+            position = Vec2(
+                self.window.get_rand_x_inbound(width),
+                self.window.get_rand_y_inbound(height)
+            )
             BLOCK = Static_Interactive(
-                self.window,
-                CF['color_pool'][randint(1, len(CF['color_pool'])-1)],
-                POS,
-                (width, height),
-                None, None, None, None, None
+                self.window, color, position, (width, height),
+                None, None, None, trigger_func, trigger_weight
             )
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
@@ -199,27 +216,24 @@ class PG_Wrapper:
             BLOCK.rect = inflated_rect
 
             # if the block + spaceship rect doesn't collide with any terrain, add it to the group
-            if len(pg.sprite.spritecollide(BLOCK, self.terrain, False)) == 0:
+            if len(pg.sprite.spritecollide(BLOCK, group, False)) == 0:
                 # it doesn't collide, swap rect back
                 BLOCK.rect = original_rect
-                self.terrain.add(BLOCK)
+                group.add(BLOCK)
                 i += 1
             else:
-                # otherwise, simply try again with a new block size and position
+                # otherwise, free (delete) the sprite and try again
+                del BLOCK
                 failed += 1
                 if (failed > FAIL_LIMIT):
                     msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.'
                     msg += f'current obstacle count: {i} / {n_obstacles}'
                     raise LogicError(msg)
 
-    def get_fps(self):
-        return round(self.clock.get_fps())
-
     def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
-        ''' create tbox core using default settings '''
+        ''' create textbox core using default settings '''
         return PG_Text_Box(
-            self.window,
-            content,
+            self.window, content,
             self.cf['fonts']['semibold'],
             self.cf['ui']['default_font_size'],
             self.cf['ui']['apply_aa'],
@@ -231,10 +245,9 @@ class PG_Wrapper:
         )
 
     def create_tbox_child(self, content: str, parent: PG_Text_Box | PG_Rect, alignment: str, getter_func: Callable | None):
-        ''' create tbox core using default settings '''
+        ''' create textbox child using default settings '''
         return PG_Text_Box_Child(
-            self.window,
-            content,
+            self.window, content,
             self.cf['fonts']['semibold'],
             self.cf['ui']['default_font_size'],
             self.cf['ui']['apply_aa'],
@@ -255,7 +268,8 @@ class PG_Wrapper:
 
         while (running):
             # fill the window before drawing/rendering
-            self.window.fill()
+            self.window.fill_surface(None)
+            self.window.bounds_rect.draw()
 
             # update objects for the next frame
             for elem in self.ui_tbox_core:
@@ -264,7 +278,7 @@ class PG_Wrapper:
             for elem in self.ui_tbox_children:
                 elem.update()
             
-            self.terrain.draw(self.window.surface)
+            self.draw_group.draw(self.window.surface)
 
             # refresh the display, applying drawing etc.
             self.window.update()
@@ -293,5 +307,14 @@ class PG_Wrapper:
             self.timer.update(pg.time.get_ticks())
 
 if __name__ == '__main__':
-    GAME = PG_Wrapper(CONFIG)
-    GAME.loop()
+    # initialize pygame
+    pg.init()
+
+    # verify pygame version
+    req_pg_version = str(WRAPPER_CONFIG['misc']['req_pygame_version'])
+    if not (str(pg.__version__) == req_pg_version):
+        raise VersionError("Pygame", str(pg.__version__), req_pg_version)
+
+    # load the game
+    APP = PG_App(WRAPPER_CONFIG)
+    APP.loop()

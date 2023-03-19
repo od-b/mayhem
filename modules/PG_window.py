@@ -1,12 +1,14 @@
 from pygame import display
+from modules.PG_shapes import PG_Rect
 from random import randint
 
 class PG_Window:
     ''' wrapper for the pygame window, containing the surface
         the surface bounds determine the effective game area
     '''
-    def __init__(self, caption: str, w: int, h: int, bounds_padding: dict, fill_color):
+    def __init__(self, caption: str, w: int, h: int, bounds_padding: dict, fill_color, bounds_fill_color):
         self.fill_color = fill_color
+        self.bounds_fill_color = bounds_fill_color
         self.bounds_padding = bounds_padding
         
         self.width = w
@@ -18,6 +20,24 @@ class PG_Window:
             'min_y': int(self.bounds_padding['min_y']),
             'max_y': int(self.height - self.bounds_padding['max_y']),
         }
+        ''' bounds contain the surface area used by active game area\n
+            Allows for separation of UI, etc.\n
+            Keys: 
+            * 'min_x'
+            * 'max_x'
+            * 'min_y'
+            * 'max_y'
+        '''
+        bounds_width = (self.bounds['max_x'] - self.bounds['min_x'])
+        bounds_height = (self.bounds['max_y'] - self.bounds['min_y'])
+        self.bounds_rect = PG_Rect(
+            self,
+            self.bounds['min_x'],
+            self.bounds['min_y'],
+            bounds_width,
+            bounds_height,
+            0, self.bounds_fill_color, None
+        )
         self.set_caption(caption)
 
     def set_caption(self, text):
@@ -42,9 +62,12 @@ class PG_Window:
     def get_rand_y_inbound(self, height_adj: int):
         return randint(self.bounds['min_y'], self.bounds['max_y'] - height_adj)
 
-    def fill(self):
-        ''' fills the surface with a set color '''
-        self.surface.fill(self.fill_color)
+    def fill_surface(self, alt_color: tuple | None):
+        ''' uses self.fill_color if alt color is set to None '''
+        if alt_color:
+            self.surface.fill(alt_color)
+        else:
+            self.surface.fill(self.fill_color)
     
     def update(self):
         ''' refreshes display surface '''

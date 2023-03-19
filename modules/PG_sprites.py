@@ -5,7 +5,7 @@ from modules.exceptions import LogicError
 
 
 class Static_Interactive(pg.sprite.Sprite):
-    ''' ### Static object with none or constant velocity/mass.
+    ''' ### Static object with none or predetermined velocity/mass.
         * Supports a custom or generic trigger.
         * Position        = Vec2(x, y)
         * Size            = Vec2(w, h)
@@ -54,17 +54,24 @@ class Static_Interactive(pg.sprite.Sprite):
         self.trigger_weight = trigger_weight
 
         # create surface and get its rect
-        self.image = pg.Surface(size)
+        self.image = pg.Surface(self.size)
         self.rect = self.image.get_rect()
         self.rect.topleft = self.position
         self.image.fill(self.color)
+
+    def update_image(self):
+        self.image = pg.Surface(self.size)
 
     def create_rect(self):
         ''' create rect from self.surface '''
         pass
     
-    def fill_surface(self):
-        pass
+    def fill_image(self, alt_color: tuple | None):
+        ''' uses sprite self.color if alt color is set to None '''
+        if alt_color:
+            self.image.fill(alt_color)
+        else:
+            self.image.fill(self.color)
 
     def update(self):
         pass
