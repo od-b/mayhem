@@ -4,9 +4,13 @@ from .colors import RGB, PALLETTES
 # types within the config is meant as a user guideline of the expected type value
 CONFIG = {
     'general': {
-        'max_fps': int(60),  # frames per second, None == uncapped
         'req_pygame_version': str('2.1.2'),
+    },
+    'exceptions': {
         'version_error_fatal': True,  # whether to warn or quit if version is wrong
+    },
+    'timing': {
+        'fps_limit': int(60),  # frames per second, None == uncapped
     },
     'window': {
         'caption': str('< caption >'),
@@ -36,7 +40,9 @@ CONFIG = {
         'bold': "media/fonts/JetBrainsMono-Bold.ttf",
     },
     'physics': {
-        'gravity': float(0.001),
+        # gravitational constant to avoid standstill of objects with mass and 0 velocity
+        # also prevents potential division by zero
+        'gravity': float(0.0001),
     },
     'environment': {
         'n_obstacles': int(10),

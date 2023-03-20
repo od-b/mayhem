@@ -4,93 +4,83 @@ from modules.PG_shapes import PG_Rect
 
 
 class PG_Text_Box(PG_Rect):
-    ''' 
-        Extends PG_Rect. All rendered text in pygame must have a rect, so by extending
-        we can utilize relevant pre-existing methods.
-        
-        * is_static determines whether the internal parts (render+rect) is to be updated before each blit.
-        ** i.e; for textboxes that will not have their text changed, set is_static = True
+    ''' Extends PG_Rect. All rendered text in pygame must have a rect, so by extending we can access
+        relevant pre-existing methods.
 
+        * is_static determines whether the internal parts (render+rect) is to be updated before each blit.
         * If border_width is set, a color must also be set. (see PG_Rect)
-        
         * apply_aa is whether or not to apply antialiasing when rendering
-        
         * will auto get string if not static and provided a getter function
+
+        For objects with a getter_func, the initial string serves as a 'pre-text'
+        and will consist even when self.content is updated.
+        For no pre-text, simply pass content as an empty string -> ''
     '''
+
     def __init__(self, window, content: str, font_path: str, font_size: int, apply_aa: bool, font_color: tuple,
                  bg_color: None | tuple, border_color: None | tuple, border_width: int, getter_func: Callable | None,
                  x: int, y: int, is_static: bool):
 
         # rect is dynamically created through update_txt_rect, so init with 0-values for w/h
         super().__init__(window, x+border_width, y+border_width, 0, 0, border_width, bg_color, border_color)
-        #   def __init__(window, x, y, w, h, border_width, bg_color, border_color):
 
-        ## misc:
         self.font_color = font_color
         self.content = content
         self.apply_aa = apply_aa
         self.is_static = is_static
         self.getter_func = getter_func
+        self.txt_bg_color = self.bg_color
+        
         if (self.getter_func):
             self.pretext = self.content
 
-        # load the font, then render the text
+        # load the font, then render the text and create rect
         self.font = pg.font.Font(str(font_path), int(font_size))
-        self.txt: pg.Surface
-        self.render_txt()
+        self.render: pg.Surface
+
+        # initialize the rendering, and then get its rect
+        self.replace_rendered_text()
         self.replace_rect()
-        
-        # if (self.border_width > 0):
-        #     self.create_border()
 
-    def update_content(self, new_content: str):
-        ''' update the string to display '''
-        self.content = new_content
-
-    def render_txt(self):
-        ''' replace self.txt with a new rendering, using self.content string '''
-        self.txt = self.font.render(
-            self.content,
-            self.apply_aa,
-            self.font_color,
-            self.bg_color
-        )
+    def replace_rendered_text(self) -> pg.Surface:
+        ''' replaces self.render with a text render of the self.content text '''
+        self.render = self.font.render(self.content, self.apply_aa, self.font_color, self.txt_bg_color)
 
     def replace_rect(self):
-        ''' apply correct position to the internal rect '''
+        ''' replaces self.re with a rect from the rendering '''
         # get rect from current rendering
-        new_rect = self.txt.get_rect()
+        new_rect = self.render.get_rect()
         # apply position from the current rect, then replace
         new_rect.x = self.re.x
         new_rect.y = self.re.y
         self.re = new_rect
-    
+
+    def update_content(self, new_content: str):
+        ''' update the string (or pretext, if getter exists) to display '''
+        self.content = new_content
+
     def update(self):
-        ''' update (unless static), draw rect if bg_color/border_color, then blit'''
-        # if not static, update first
+        ''' update content if a getter exists. Does nothing if object is static
+            * Recreates text rendering, rect and border to fit the new content '''
+
         if not self.is_static:
             # auto-get new string if a getter is provided
             if self.getter_func:
                 self.content = f'{self.pretext}{self.getter_func()}'
 
-            # update rendering @ self.txt
-            self.render_txt()
-
-            # replace rect @ self.re
-            # replacing is nescessary as simply moving the prev rect would not allow
-            # for a rect with varying size.
+            # re-render and get the new rect
+            self.replace_rendered_text()
             self.replace_rect()
 
             # re-create the border if its set to be displayed
-            if self.border_width > 0:
-                self.create_border()
-                self.draw_border()
-        else:
-            if self.border_width > 0:
-                self.draw_border()
+            if self.border:
+                self.replace_border_rect()
 
-        # finally, blit the rendered text onto the rect
-        self.window.surface.blit(self.txt, self.re)
+    def draw(self):
+        ''' draw/blit the rect (and border if it exists )'''
+        if self.border:
+            self.draw_border()
+        self.window.surface.blit(self.render, self.re)
 
 
 class PG_Text_Box_Child(PG_Text_Box):
@@ -113,8 +103,8 @@ class PG_Text_Box_Child(PG_Text_Box):
         self.offset = offset
         self.align_func: Callable
 
-        # refer alignment to the correct function
-        match parent_alignment:
+        # match alignment setting to the correct placement function
+        match (parent_alignment):
             case 'top':
                 self.align_func = self.align_to_top_of
             case 'bottom':
@@ -137,9 +127,5 @@ class PG_Text_Box_Child(PG_Text_Box):
 
     def replace_rect(self):
         # overwrite parent method to replace rect
-        # new_rect = self.txt.get_rect()
-        # # apply position from the current rect, then replace
-        # new_rect.x = self.re.x
-        # new_rect.y = self.re.y
-        self.re = self.txt.get_rect()
+        self.re = self.render.get_rect()
         self.align_func(self.parent, self.offset)

@@ -26,13 +26,15 @@ class PG_App:
         * contains most objects relevant to the app
         * initializes and sets up pygame objects from the given config
         * contains game loop, specialized setup-functions
+        * methods used internally and only once start with '_'
     '''
+
     def __init__(self, config: dict[str, any]):
-        # load and store the CONFIG
         self.cf = config
-        # init pygame and perform version control
-        self._pygame_init()
-        # create the window
+        ''' reference to the 'CONFIG' dict from ./constants/config.py '''
+
+        self._pygame_init() # init pygame and perform version control
+
         self.window = PG_Window(
             self.cf['window']['caption'],
             self.cf['window']['width'],
@@ -41,61 +43,108 @@ class PG_App:
             self.cf['window']['fill_color'],
             self.cf['window']['bounds_fill_color'],
         )
-        # pygame specific timer object
-        self.timer = PG_Timer(self.cf['general']['max_fps'])
-        # set up UI
-        self.ui_tbox_core: list[PG_Text_Box] = []
-        self.ui_tbox_children: list[PG_Text_Box_Child] = []
-        
+        ''' object containing main surface window and bounds '''
+
+        self.timer = PG_Timer(self.cf['timing']['fps_limit'])   
+        ''' pygame specific timer object '''
+
+        self.UI = self._set_up_ui_constants()
+        ''' constant tuple of ui objects to be updated in the order of addition '''
+
+        self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
+        ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
+
+        self.update_group = Group()
+        ''' group of sprites that are to be updated '''
+
+        self.draw_group = Group()
+        ''' group of sprites that are to be drawn '''
+
+        # outline the game area with blocks:
+        self.spawn_terrain_outline(None, None, self.draw_group, self.window.bounds)
+
+        # place obstacles within the game area, adjusted for player size + settings:
+        w_padding = int(self.cf['player']['width'] + self.cf['environment']['obstacle_padding'])
+        h_padding = int(self.cf['player']['height'] + self.cf['environment']['obstacle_padding'])
+        self.spawn_static_obstacles(None, None, self.draw_group, w_padding, h_padding)
+
+        # create the player sprite:
+        self.player = self.create_controllable_sprite(self.cf['player'], None, None)
+        self.draw_group.add(self.player)
+        self.update_group.add(self.player)
+
+    def _set_up_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
+        ''' set up UI constants, objects that will exist until the app is exited '''
+
+        # create as a list
+        elems = []
+
         # create the 'root' element and manually set its position to bottom left (+default padding),
         UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.timer.get_duration)
         UI_TIME.re.bottomleft = (
             self.cf['ui']['default_padding'],
             self.window.height - self.cf['ui']['default_padding'])
-        self.ui_tbox_core.append(UI_TIME)
-        
+        elems.append(UI_TIME)
+
         # create the fps frame as a child of time, located to the right
         UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
-        self.ui_tbox_children.append(UI_FPS)
+        elems.append(UI_FPS)
 
-        self.update_group = Group()
-        ''' group of sprites that are to be updated '''
-        self.draw_group = Group()
-        ''' group of sprites that are to be drawn '''
-
-        # outline the game area with blocks
-        self.spawn_terrain_outline(None, None, self.draw_group, self.window.bounds)
-        # place obstacles within the game area, adjusted for player size + settings
-        w_padding = int(self.cf['player']['width'] + self.cf['environment']['obstacle_padding'])
-        h_padding = int(self.cf['player']['height'] + self.cf['environment']['obstacle_padding'])
-        self.spawn_static_obstacles(None, None, self.draw_group, w_padding, h_padding)
-        
-        # load the player sprite
-        self.player = self.create_controllable_sprite(self.cf['player'], None, None)
-        self.draw_group.add(self.player)
-        self.update_group.add(self.player)
+        # return as a tuple
+        return tuple(elems)
 
     def _pygame_init(self):
         ''' initialize pygame and verify pygame version '''
 
         pg.init()
-        _pg_version = str(pg.__version__)
-        _req_pg_version = str(self.cf['general']['req_pygame_version'])
-        if not (_pg_version == _req_pg_version):
-            # if version does not match, print a message. Quit if fatal
-            if (self.cf['general']['version_error_fatal']):
-                raise VersionError("Pygame", _pg_version, _req_pg_version)
-            print(f'Error: Pygame version {_pg_version} initialized\
-                required version is {_req_pg_version}. App may not work correctly.')
+        pg_version = str(pg.__version__)
+        req_pg_version = str(self.cf['general']['req_pygame_version'])
+        if not (pg_version == req_pg_version):
+            raise VersionError("Pygame", pg_version, req_pg_version)
+
+    def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
+        
+        ''' create textbox core using default settings '''
+
+        return PG_Text_Box(
+            self.window, content,
+            self.cf['fonts']['semibold'],
+            self.cf['ui']['default_font_size'],
+            self.cf['ui']['apply_aa'],
+            self.cf['ui']['text_color_light'], 
+            self.cf['ui']['default_bg_color'],
+            self.cf['ui']['default_border_color'],
+            self.cf['ui']['default_border_width'],
+            getter_func, x, y, is_static
+        )
+
+    def create_tbox_child(self, content: str, parent: PG_Text_Box | PG_Rect, alignment: str,
+                          getter_func: Callable | None):
+        
+        ''' create textbox child using default settings '''
+
+        return PG_Text_Box_Child(
+            self.window, content,
+            self.cf['fonts']['semibold'],
+            self.cf['ui']['default_font_size'],
+            self.cf['ui']['apply_aa'],
+            self.cf['ui']['text_color_light'], 
+            self.cf['ui']['default_bg_color'],
+            self.cf['ui']['default_border_color'],
+            self.cf['ui']['default_border_width'],
+            getter_func, parent, alignment,
+            self.cf['ui']['default_padding'],
+        )
 
     def get_rand_list_elem(self, list: list):
         ''' get random elem from non-empty list '''
         return list[randint(1, len(list)-1)]
 
-    def create_controllable_sprite(
-        self, config: dict, trigger_func: Callable | None, trigger_weight: float | None):
+    def create_controllable_sprite(self, config: dict, trigger_func: Callable | None,
+                                   trigger_weight: float | None):
+        
         ''' create and return a controllable type sprite from the given config '''
-
+        
         MAX_VELOCITY = Vec2(
             float(config['max_velocity_x']),
             float(config['max_velocity_y']))
@@ -128,7 +177,8 @@ class PG_App:
         return SPRITE
 
     def spawn_terrain_outline(self, trigger_func: Callable | None, trigger_weight: float | None,
-                               group: Group, bounds: dict):
+                              group: Group, bounds: dict):
+
         ''' encapsulate the given bounds with rects '''
 
         # constant declarations for readability and convenience:
@@ -224,6 +274,7 @@ class PG_App:
 
     def spawn_static_obstacles(self, trigger_func: Callable | None, trigger_weight: float | None,
                                 group: Group, width_padding: int, height_padding: int):
+        
         ''' obstacle spawning algorithm '''
 
         n_obstacles = self.cf['environment']['n_obstacles']
@@ -273,85 +324,62 @@ class PG_App:
                     msg += f'current obstacle count: {i} / {n_obstacles}'
                     raise LogicError(msg)
 
-    def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
-        ''' create textbox core using default settings '''
-
-        return PG_Text_Box(
-            self.window, content,
-            self.cf['fonts']['semibold'],
-            self.cf['ui']['default_font_size'],
-            self.cf['ui']['apply_aa'],
-            self.cf['ui']['text_color_light'], 
-            self.cf['ui']['default_bg_color'],
-            self.cf['ui']['default_border_color'],
-            self.cf['ui']['default_border_width'],
-            getter_func, x, y, is_static
-        )
-
-    def create_tbox_child(self, content: str, parent: PG_Text_Box | PG_Rect, alignment: str,
-                          getter_func: Callable | None):
-        ''' create textbox child using default settings '''
-
-        return PG_Text_Box_Child(
-            self.window, content,
-            self.cf['fonts']['semibold'],
-            self.cf['ui']['default_font_size'],
-            self.cf['ui']['apply_aa'],
-            self.cf['ui']['text_color_light'], 
-            self.cf['ui']['default_bg_color'],
-            self.cf['ui']['default_border_color'],
-            self.cf['ui']['default_border_width'],
-            getter_func, parent, alignment,
-            self.cf['ui']['default_padding'],
-        )
-
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
+
         running: bool = True
 
         # init the timer before first loop
-        self.timer.start_first_segment(pg.time.get_ticks(), 1)
+        self.timer.start_first_segment(ref=None)
 
         while (running):
-            # fill the window before drawing/rendering
+            # fill the main surface, then the game bounds
             self.window.fill_surface(None)
-            self.window.bounds_rect.draw()
+            self.window.bounds_rect.draw_background()
 
-            # update objects for the next frame
-            for elem in self.ui_tbox_core:
-                elem.update()
-
-            for elem in self.ui_tbox_children:
-                elem.update()
-            
+            # draw sprites
             self.draw_group.draw(self.window.surface)
+
+            # draw the ui
+            for obj in self.UI:
+                obj.draw()
+
+            for obj in self.UI_temp:
+                obj.draw()
 
             # refresh the display, applying drawing etc.
             self.window.update()
-            
-            # update sprites before next frame
-            self.update_group.update()
 
             # loop through events
             for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    running = False  # exit the app
-    
-                elif event.type == pg.MOUSEBUTTONDOWN:
-                    # mouse click
-                    # MOUSE_POS = pg.mouse.get_pos()
-                    # print(MOUSE_POS)
-                    pass
+                # check if event type matches any triggers
+                match (event.type):
+                    case pg.QUIT:
+                        running = False  # exit the app
+        
+                    case pg.MOUSEBUTTONDOWN:
+                        # mouse click
+                        # MOUSE_POS = pg.mouse.get_pos()
+                        # print(MOUSE_POS)
+                        pass
 
-                elif (event.type == pg.KEYDOWN):
-                    # match keydown event to an action, or pass
-                    match (event.key):
-                        case pg.K_ESCAPE:
-                            running = False
-                        case _:
-                            pass
+                    case pg.KEYDOWN:
+                        # match keydown event to an action, or pass
+                        match (event.key):
+                            case pg.K_ESCAPE:
+                                running = False
 
-            # limit the framerate
+            # update the dynamic objects in core UI, and then temp UI
+            for obj in self.UI:
+                obj.update()
+
+            for obj in self.UI_temp:
+                obj.update()
+
+            # now that events are read, update sprites before next frame
+            self.update_group.update()
+
+            # update the timer. Also limits the framerate if set
             self.timer.update()
 
 if __name__ == '__main__':

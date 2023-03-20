@@ -25,7 +25,11 @@ class Static_Interactive(pg.sprite.Sprite):
         * may have a trigger_func without trigger_weight, but not vice-versa
     '''
     def __init__(self,
-                 window: pg.Surface, color: tuple, position: Vec2, size: tuple, image: pg.Surface | None,
+                 window: pg.Surface,
+                 color: tuple,
+                 position: Vec2,
+                 size: tuple,
+                 image: pg.Surface | None,
                  mass: None | float,
                  velocity: None | Vec2,
                  max_velocity: None | Vec2,
@@ -54,14 +58,15 @@ class Static_Interactive(pg.sprite.Sprite):
         self.trigger_func = trigger_func
         self.trigger_weight = trigger_weight
 
-        # create surface and get its rect
+        # create surface, either as an image or color
         if not image:
             self.image = pg.Surface(self.size)
+            self.image.fill(self.color)
         else:
             self.image = image
+
         self.rect = self.image.get_rect()
         self.rect.topleft = self.position
-        self.image.fill(self.color)
 
     def update_image(self):
         self.image = pg.Surface(self.size)
@@ -116,6 +121,8 @@ class Controllable(pg.sprite.Sprite):
         # verify parameters
         if (trigger_weight != None) and (trigger_func == None):
             raise LogicError("trigger_weight should be None without a trigger_func")
+        if (image != None) and (color != None):
+            raise LogicError("sprites with an image do not need a color")
 
         # initalize as pygame sprite
         pg.sprite.Sprite.__init__(self)
@@ -142,14 +149,18 @@ class Controllable(pg.sprite.Sprite):
         print(self.max_velocity.y)
         print(self.terminal_velocity)
 
-        # create surface and get its rect
+        # create image surface, or store the passed surface as image
         if not image:
             self.image = pg.Surface(self.size)
+            self.image.fill(self.color)
         else:
             self.image = image
+            # TODO:
+            # transform to size
+
+        # get the surface
         self.rect = self.image.get_rect()
         self.rect.topleft = self.position
-        self.image.fill(self.color)
 
     def update_image(self):
         self.image = pg.Surface(self.size)
