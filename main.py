@@ -1,7 +1,6 @@
 # default python library imports
 from typing import Callable     # type hint for function pointers
 from random import randint, uniform
-from copy import deepcopy
 
 # library imports
 import pygame as pg
@@ -10,12 +9,12 @@ from pygame.sprite import Group
 
 # local imports
 ## general:
-from config import CONFIG as WRAPPER_CONFIG
+from constants.config import CONFIG as CF
 from modules.exceptions import VersionError, LogicError
-from modules.timing import Timer
 ## pygame specific:
 from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
+from modules.PG_timer import PG_Timer
 from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
 # sprites:
 from modules.PG_sprites import Static_Interactive, Controllable
@@ -28,9 +27,12 @@ class PG_App:
         * initializes and sets up pygame objects from the given config
         * contains game loop, specialized setup-functions
     '''
-    def __init__(self, CONFIG: dict[str, any]):
-        self.cf = CONFIG
+    def __init__(self, config: dict[str, any]):
         # load and store the CONFIG
+        self.cf = config
+        # init pygame and perform version control
+        self._pygame_init()
+        # create the window
         self.window = PG_Window(
             self.cf['window']['caption'],
             self.cf['window']['width'],
@@ -39,27 +41,21 @@ class PG_App:
             self.cf['window']['fill_color'],
             self.cf['window']['bounds_fill_color'],
         )
-        # the timer is not pygame specific and depends on a clock for updates
-        # pygame clock
-        self.clock = pg.time.Clock()
-        self.timer = Timer()
-
-        # misc
-        self.max_fps: int = self.cf['misc']['max_fps']
-
+        # pygame specific timer object
+        self.timer = PG_Timer(self.cf['general']['max_fps'])
         # set up UI
         self.ui_tbox_core: list[PG_Text_Box] = []
         self.ui_tbox_children: list[PG_Text_Box_Child] = []
         
         # create the 'root' element and manually set its position to bottom left (+default padding),
-        UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.get_duration)
+        UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.timer.get_duration)
         UI_TIME.re.bottomleft = (
             self.cf['ui']['default_padding'],
             self.window.height - self.cf['ui']['default_padding'])
         self.ui_tbox_core.append(UI_TIME)
         
         # create the fps frame as a child of time, located to the right
-        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.get_fps_int)
+        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
         self.ui_tbox_children.append(UI_FPS)
 
         self.update_group = Group()
@@ -79,20 +75,27 @@ class PG_App:
         self.draw_group.add(self.player)
         self.update_group.add(self.player)
 
+    def _pygame_init(self):
+        ''' initialize pygame and verify pygame version '''
+
+        pg.init()
+        _pg_version = str(pg.__version__)
+        _req_pg_version = str(self.cf['general']['req_pygame_version'])
+        if not (_pg_version == _req_pg_version):
+            # if version does not match, print a message. Quit if fatal
+            if (self.cf['general']['version_error_fatal']):
+                raise VersionError("Pygame", _pg_version, _req_pg_version)
+            print(f'Error: Pygame version {_pg_version} initialized\
+                required version is {_req_pg_version}. App may not work correctly.')
+
     def get_rand_list_elem(self, list: list):
         ''' get random elem from non-empty list '''
         return list[randint(1, len(list)-1)]
 
-    def get_duration(self):
-        ''' to allow referencing the function before first segment is initialized '''
-        return self.timer.active_segment.get_duration_formatted()
-
-    def get_fps_int(self):
-        ''' get fps, rounded to the nearest integer '''
-        return round(self.clock.get_fps(), None)
-
-    def create_controllable_sprite(self, config: dict, trigger_func: Callable | None, trigger_weight: float | None):
+    def create_controllable_sprite(
+        self, config: dict, trigger_func: Callable | None, trigger_weight: float | None):
         ''' create and return a controllable type sprite from the given config '''
+
         MAX_VELOCITY = Vec2(
             float(config['max_velocity_x']),
             float(config['max_velocity_y']))
@@ -127,6 +130,7 @@ class PG_App:
     def spawn_terrain_outline(self, trigger_func: Callable | None, trigger_weight: float | None,
                                group: Group, bounds: dict):
         ''' encapsulate the given bounds with rects '''
+
         # constant declarations for readability and convenience:
         CF = self.cf['environment']['terrain_block']
         MIN_X = bounds['min_x']
@@ -221,6 +225,7 @@ class PG_App:
     def spawn_static_obstacles(self, trigger_func: Callable | None, trigger_weight: float | None,
                                 group: Group, width_padding: int, height_padding: int):
         ''' obstacle spawning algorithm '''
+
         n_obstacles = self.cf['environment']['n_obstacles']
         # how many obstacle placement attempts to allow before deciding a solution can't be found:
         FAIL_LIMIT = self.cf['environment']['obstacle_placement_attempt_limit']
@@ -270,6 +275,7 @@ class PG_App:
 
     def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
         ''' create textbox core using default settings '''
+
         return PG_Text_Box(
             self.window, content,
             self.cf['fonts']['semibold'],
@@ -282,8 +288,10 @@ class PG_App:
             getter_func, x, y, is_static
         )
 
-    def create_tbox_child(self, content: str, parent: PG_Text_Box | PG_Rect, alignment: str, getter_func: Callable | None):
+    def create_tbox_child(self, content: str, parent: PG_Text_Box | PG_Rect, alignment: str,
+                          getter_func: Callable | None):
         ''' create textbox child using default settings '''
+
         return PG_Text_Box_Child(
             self.window, content,
             self.cf['fonts']['semibold'],
@@ -344,18 +352,9 @@ class PG_App:
                             pass
 
             # limit the framerate
-            self.clock.tick(self.max_fps)
-            self.timer.update(pg.time.get_ticks())
+            self.timer.update()
 
 if __name__ == '__main__':
-    # initialize pygame
-    pg.init()
-
-    # verify pygame version
-    req_pg_version = str(WRAPPER_CONFIG['misc']['req_pygame_version'])
-    if not (str(pg.__version__) == req_pg_version):
-        raise VersionError("Pygame", str(pg.__version__), req_pg_version)
-
     # load the game
-    APP = PG_App(WRAPPER_CONFIG)
+    APP = PG_App(CF)
     APP.loop()

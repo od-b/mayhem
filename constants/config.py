@@ -1,11 +1,12 @@
 ''' config file containing various constants and parameter weights '''
-from colors import RGB, PALLETTES
+from .colors import RGB, PALLETTES
 
 # types within the config is meant as a user guideline of the expected type value
 CONFIG = {
-    'misc': {
-        'max_fps': int(60),
+    'general': {
+        'max_fps': int(60),  # frames per second, None == uncapped
         'req_pygame_version': str('2.1.2'),
+        'version_error_fatal': True,  # whether to warn or quit if version is wrong
     },
     'window': {
         'caption': str('< caption >'),

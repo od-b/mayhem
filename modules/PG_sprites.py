@@ -2,7 +2,7 @@ from typing import Callable     # type hint for function pointers
 import pygame as pg
 from pygame.math import Vector2 as Vec2
 from math import sqrt, pow
-from modules.exceptions import LogicError
+from .exceptions import LogicError
 
 
 class Static_Interactive(pg.sprite.Sprite):

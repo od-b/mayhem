@@ -1,4 +1,5 @@
 import pygame as pg
+from .exceptions import LogicError
 
 ''' abstract root classes for pygame, typically extendeded '''
 
@@ -6,9 +7,9 @@ class PG_Rect:
     ''' wrapper for pygame rects '''
     def __init__(self, window, x: int, y: int, w: int, h: int, border_width: int,
                  bg_color: None | tuple, border_color: None | tuple):
-        
+
         if (border_width > 0) and (not border_color):
-            raise ValueError('border needs a color when set')
+            raise LogicError('border needs a color when set')
             # however, border color without width is allowed
             # means the width can be adjusted later to display,
             # without considering color
@@ -16,9 +17,10 @@ class PG_Rect:
             raise ValueError('border width must be >=0')
 
         self.window = window
-        self.border_width: int = border_width
-        self.border_color: None | tuple = border_color
-        self.bg_color: None | tuple = bg_color
+        self.bg_color = bg_color
+        self.border_width = border_width
+        self.border_color = border_color
+
         self.border: pg.Rect | None = None
         self.bounds: dict[str, int] = window.get_bounds()
         self.re = pg.Rect(int(x), int(y), int(w), int(h))
@@ -129,4 +131,5 @@ class PG_Rect:
         pg.draw.rect(self.window.surface, self.border_color, self.border)
 
     def draw(self):
-        pg.draw.rect(self.window.surface, self.bg_color, self.re)
+        # pg.draw.rect(self.window.surface, self.bg_color, self.re)
+        pass
