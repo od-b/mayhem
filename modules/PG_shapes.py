@@ -9,18 +9,11 @@ class PG_Rect:
                  bg_color: None | pg.Color, border_color: None | pg.Color):
 
         if (border_width < 0):
-            raise ValueError('border width must be >=0')
+            raise LogicError('border width must be >=0')
 
         if (border_width > 0) and (not border_color):
             # use bg color as border color if width is set and not color
             border_color = bg_color
-
-        # # transform to pygame colors if tuples are given
-        # if (type(bg_color) == tuple):
-        #     bg_color = pg.Color(bg_color)
-
-        # if (type(border_color) == tuple):
-        #     border_color = pg.Color(border_color)
 
         self.window = window
         self.bg_color: pg.Color | None = bg_color
@@ -46,6 +39,10 @@ class PG_Rect:
             self.re.h + WIDTH_X_2,
         )
 
+    def adjust_rect_padding(self, rect: pg.Rect, x: int, y: int):
+        ''' returns a rect with padding added to the size '''
+        return rect.inflate(x, y)
+
     def set_bounds(self, min_x: int, max_x: int, min_y: int, max_y: int):
         ''' for setting bounds to something other than the window surface '''
 
@@ -65,7 +62,7 @@ class PG_Rect:
             ((self.re.y + self.re.h) > self.bounds['max_y'])):
             return False
         return True
-    
+
     def x_out_of_bounds(self):
         ''' returns 0 if inbound, otherwise returns how much out of x-bound (left:- / right:+)'''
 
@@ -91,14 +88,6 @@ class PG_Rect:
             return int((self.re.y + self.re.h) - self.bounds['max_y'])
 
         return 0
-
-    def set_x(self, x: int):
-        ''' set top left x pos '''
-        self.re.x = x
-
-    def set_y(self, y: int):
-        ''' set top left y pos '''
-        self.re.y = y
 
     def set_bg_color(self, color: None | pg.Color):
         self.bg_color = color
@@ -146,19 +135,19 @@ class PG_Rect:
 
     def align_to_left_of(self, parent: pg.Rect, offset: int):
         self.re.right = parent.re.left - offset
-        self.set_y(parent.re.y)
+        self.re.y = parent.re.y
 
     def align_to_right_of(self, parent: pg.Rect, offset: int):
         self.re.left = parent.re.right + offset
-        self.set_y(parent.re.y)
+        self.re.y = parent.re.y
 
     def align_to_top_of(self, parent: pg.Rect, offset: int):
         self.re.bottom = parent.re.top - offset
-        self.set_x(parent.re.x)
+        self.re.x = parent.re.x
 
     def align_to_bottom_of(self, parent: pg.Rect, offset: int):
         self.re.top = parent.re.bottom + offset
-        self.set_x(parent.re.x)
+        self.re.x = parent.re.x
 
     def draw_background_alt(self, color: pg.Color):
         ''' draw background of the rect with the given color '''

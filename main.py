@@ -6,6 +6,7 @@ from random import randint, uniform
 import pygame as pg
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Group
+from pygame.sprite import Sprite
 
 # local imports
 ## general:
@@ -29,8 +30,8 @@ class PG_App:
         * methods used internally and only once start with '_'
     '''
 
-    def __init__(self, config: dict[str, any]):
-        self.cf = config
+    def __init__(self, cf: dict[str, any]):
+        self.cf = cf
         ''' reference to the 'CONFIG' dict from ./constants/config.py '''
 
         self._pygame_init() # init pygame and perform version control
@@ -57,41 +58,64 @@ class PG_App:
         self.update_group = Group()
         ''' group of sprites that are to be updated '''
 
-        self.draw_group = Group()
-        ''' group of sprites that are to be drawn '''
-
-        # outline the game area with blocks:
-        self.spawn_terrain_outline(None, None, self.draw_group, self.window.bounds)
-
-        # place obstacles within the game area, adjusted for player size + settings:
-        w_padding = int(self.cf['player']['width'] + self.cf['environment']['obstacle_padding'])
-        h_padding = int(self.cf['player']['height'] + self.cf['environment']['obstacle_padding'])
-        self.spawn_static_obstacles(None, None, self.draw_group, w_padding, h_padding)
+        self.map_group = Group()
+        ''' group of constant, map-related sprites '''
+        
+        self.active_group = Group()
+        ''' group of misc. sprites, including the player(s) '''
 
         # create the player sprite:
         self.player = self.create_controllable_sprite(self.cf['player'], None, None)
-        self.draw_group.add(self.player)
+        self.active_group.add(self.player)
         self.update_group.add(self.player)
 
+        # create the terrain:
+        self._set_up_map(self.map_group)
+
+    def get_rand_list_elem(self, list: list):
+        ''' generic helper function. get random elem from a given, non-empty list '''
+        return list[randint(1, len(list)-1)]
+
     def _set_up_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
-        ''' set up UI constants, objects that will exist until the app is exited '''
+        ''' set up UI constants: objects that will exist until the app is exited '''
 
-        # create as a list
+        # create a list to allow appending
         elems = []
+        DEFAULT_CONFIG = self.cf['ui']['textbox']['default']
 
-        # create the 'root' element and manually set its position to bottom left (+default padding),
-        UI_TIME = self.create_tbox_core("Time: ", 0, 0, False, self.timer.get_duration)
+        # create the 'root' UI element. Pass (0, 0) as top left pos, seeing as
+        # we don't know it's pixel size before rendering and want to place it bottom left
+        UI_TIME = self.create_tbox_core(DEFAULT_CONFIG, "Time: ", 0, 0, False, self.timer.get_duration)
+
+        # after its rendered, set the position to bottom left (adjusted for default padding)
         UI_TIME.re.bottomleft = (
-            self.cf['ui']['default_padding'],
-            self.window.height - self.cf['ui']['default_padding'])
+            self.cf['ui']['default']['padding'],
+            (self.window.height - self.cf['ui']['default']['padding']))
         elems.append(UI_TIME)
 
-        # create the fps frame as a child of time, located to the right
-        UI_FPS = self.create_tbox_child("FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
+        # create the fps frame anchored to the right of UI_TIME
+        UI_FPS = self.create_tbox_child(DEFAULT_CONFIG, "FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
         elems.append(UI_FPS)
 
-        # return as a tuple
+        # return the list as a tuple
         return tuple(elems)
+
+    def _set_up_map(self, group: Group):
+        ''' spawn various static sprites around the map. Add to the given group '''
+
+        # outline the entire game bounds with terrain_blocks:
+        terrain_facing = 0
+        self.spawn_terrain_outline(
+            self.cf['environment']['terrain_block'],
+            None, None, group, self.window.bounds_rect.re, terrain_facing
+        )
+
+        # place obstacle_blocks within the game area
+        self.spawn_static_obstacles(
+            self.cf['environment']['obstacle_block'],
+            self.cf['environment']['n_obstacles'],
+            None, None, group
+        )
 
     def _pygame_init(self):
         ''' initialize pygame and verify pygame version '''
@@ -102,43 +126,46 @@ class PG_App:
         if not (pg_version == req_pg_version):
             raise VersionError("Pygame", pg_version, req_pg_version)
 
-    def create_tbox_core(self, content: str, x: int, y: int, is_static: bool, getter_func: Callable | None):
-        
-        ''' create textbox core using default settings '''
+    def create_tbox_core(self, config: dict, content: str, x: int, y: int,
+                         is_static: bool, getter_func: Callable | None):
 
+        ''' return textbox set up using the given config settings '''
+        
+        # converting every setting to its correct type to avoid any python magic
         return PG_Text_Box(
-            self.window, content,
-            self.cf['fonts']['semibold'],
-            self.cf['ui']['default_font_size'],
-            self.cf['ui']['apply_aa'],
-            self.cf['ui']['text_color_light'], 
-            self.cf['ui']['default_bg_color'],
-            self.cf['ui']['default_border_color'],
-            self.cf['ui']['default_border_width'],
+            self.window, content, 
+            str(config['font_path']),
+            int(config['font_size']),
+            pg.Color(config['font_color']), 
+            config['apply_aa'],
+            pg.Color(config['bg_color']),
+            pg.Color(config['border_color']),
+            int(config['border_width']),
+            int(config['internal_padding_w']),
+            int(config['internal_padding_h']),
             getter_func, x, y, is_static
         )
 
-    def create_tbox_child(self, content: str, parent: PG_Text_Box | PG_Rect, alignment: str,
-                          getter_func: Callable | None):
-        
-        ''' create textbox child using default settings '''
+    def create_tbox_child(self, config: dict, content: str, parent: PG_Text_Box | PG_Rect,
+                          parent_alignment: str, getter_func: Callable | None):
 
+        ''' return textbox child set up using the given config settings '''
+
+        # converting every setting to its correct type to avoid any python magic
         return PG_Text_Box_Child(
-            self.window, content,
-            self.cf['fonts']['semibold'],
-            self.cf['ui']['default_font_size'],
-            self.cf['ui']['apply_aa'],
-            self.cf['ui']['text_color_light'], 
-            self.cf['ui']['default_bg_color'],
-            self.cf['ui']['default_border_color'],
-            self.cf['ui']['default_border_width'],
-            getter_func, parent, alignment,
-            self.cf['ui']['default_padding'],
+            self.window, content, 
+            str(config['font_path']),
+            int(config['font_size']),
+            pg.Color(config['font_color']), 
+            config['apply_aa'],
+            pg.Color(config['bg_color']),
+            pg.Color(config['border_color']),
+            int(config['border_width']),
+            int(config['internal_padding_w']),
+            int(config['internal_padding_h']),
+            getter_func, parent, parent_alignment,
+            int(config['parent_padding']),
         )
-
-    def get_rand_list_elem(self, list: list):
-        ''' get random elem from non-empty list '''
-        return list[randint(1, len(list)-1)]
 
     def create_controllable_sprite(self, config: dict, trigger_func: Callable | None,
                                    trigger_weight: float | None):
@@ -176,116 +203,164 @@ class PG_App:
         )
         return SPRITE
 
-    def spawn_terrain_outline(self, trigger_func: Callable | None, trigger_weight: float | None,
-                              group: Group, bounds: dict):
+    def spawn_terrain_outline(self, config: dict, trigger_func: Callable | None,
+                              trigger_weight: float | None, group: Group, bounds: pg.Rect, facing: int):
 
-        ''' encapsulate the given bounds with rects '''
+        ''' encapsulate the given bounds with smaller rect blocks
+            * facing decides the alignment of the blocks relative to the bounds axis':
+            * -1 => inwards
+            * 0  => center
+            * 1  => outwards
+        '''
 
-        # constant declarations for readability and convenience:
-        CF = self.cf['environment']['terrain_block']
-        MIN_X = bounds['min_x']
-        MAX_X = bounds['max_x']
-        MIN_Y = bounds['min_y']
-        MAX_Y = bounds['max_y']
-        
+        # constant declarations for readability
+        CF = config
+        MIN_X = bounds.left
+        MAX_X = bounds.right
+        MIN_Y = bounds.top
+        MAX_Y = bounds.bottom
+
         # below are four loops that together will outline the entire bounds
-        last_block: Static_Interactive | None = None  # for remembering the last block placed
+        # the loop places blocks in a clockwise path, following each axis
+        # until a new bound is encountered, then swapping axis' and continuing
+        # the first loop is explicit and commented, while the last three
+        # are not, and are also slightly condensed. The logic is allround similar.
+        # (they are way too specific to create a working generalized loop function, however)
+
+        # last_block is for storing the last block placed when swapping axis'
+        last_block: Static_Interactive | None = None
 
         # 1) topleft --> topright
-        curr_pos_y = MIN_Y
         curr_pos_x = MIN_X
         while curr_pos_x < MAX_X:
             # set random height/width from within the ranges
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
-            # ensure no overlap: 
+
+            # ensure no edge overlap by checking for the last block:
             if (curr_pos_x + width) > MAX_X:
-                width = MAX_X - curr_pos_x
-            position = Vec2(curr_pos_x, curr_pos_y)
+                width = (MAX_X - curr_pos_x)
+            
+            # create a vector to contain the position of the block
+            position = Vec2(curr_pos_x, 0.0)
+
+            # get a random color from the given list
             color = self.get_rand_list_elem(CF['color_pool'])
+            
+            # assemble the block
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
-            last_block = BLOCK
+
+            # adjust position according to facing
+            match (facing):
+                case (-1):
+                    BLOCK.rect.top = MIN_Y
+                case (0):
+                    BLOCK.rect.centery = MIN_Y
+                case (1):
+                    BLOCK.rect.bottom = MIN_Y
+
+            # add to the given group and update last block
             group.add(BLOCK)
-            curr_pos_x = BLOCK.rect.right
-        
+            last_block = BLOCK
+
+            # increment position for placing the next block
+            curr_pos_x = BLOCK.rect.right + CF['padding']
+
         # 2) topright --> bottomright
         curr_pos_y = last_block.rect.bottom
-        curr_pos_x = MAX_X
         while curr_pos_y < MAX_Y:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
             if (curr_pos_y + height) > MAX_Y:
-                height = MAX_Y - curr_pos_y 
-            position = Vec2(0.0, curr_pos_y)
+                height = MAX_Y - curr_pos_y
             color = self.get_rand_list_elem(CF['color_pool'])
+            position = Vec2(0.0, curr_pos_y)
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
-            BLOCK.rect.right = curr_pos_x
+            match (facing):
+                case (-1):
+                    BLOCK.rect.right = MAX_X
+                case (0):
+                    BLOCK.rect.centerx = MAX_X
+                case (1):
+                    BLOCK.rect.left = MAX_X
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.bottom
+            curr_pos_y = BLOCK.rect.bottom + CF['padding']
 
         # 3) bottomright --> bottomleft
         curr_pos_x = last_block.rect.left
-        curr_pos_y = MAX_Y
         while curr_pos_x > MIN_X:
-            # set random height/width from within the ranges
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
-            # ensure no overlap: 
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
-            position = Vec2()
             color = self.get_rand_list_elem(CF['color_pool'])
+            position = Vec2()
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
-            BLOCK.rect.bottom = curr_pos_y
             BLOCK.rect.right = curr_pos_x
+            match (facing):
+                case (-1):
+                    BLOCK.rect.bottom = MAX_Y
+                case (0):
+                    BLOCK.rect.centery = MAX_Y
+                case (1):
+                    BLOCK.rect.top = MAX_Y
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_x = BLOCK.rect.left
+            curr_pos_x = BLOCK.rect.left + CF['padding']
 
         # 4) bottomleft --> topright
-        curr_pos_x = MIN_X
         curr_pos_y = last_block.rect.top
         while curr_pos_y > MIN_Y:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
-            position = Vec2()
             color = self.get_rand_list_elem(CF['color_pool'])
+            position = Vec2()
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
                 None, None, None, trigger_func, trigger_weight
             )
-            BLOCK.rect.left = curr_pos_x
             BLOCK.rect.bottom = curr_pos_y
+            match (facing):
+                case (-1):
+                    BLOCK.rect.left = MIN_X
+                case (0):
+                    BLOCK.rect.centerx = MIN_X
+                case (1):
+                    BLOCK.rect.right = MIN_X
+
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.top
+            curr_pos_y = BLOCK.rect.top + CF['padding']
 
-    def spawn_static_obstacles(self, trigger_func: Callable | None, trigger_weight: float | None,
-                                group: Group, width_padding: int, height_padding: int):
+    def spawn_static_obstacles(self, config: dict, n_obstacles: int, trigger_func: Callable | None,
+                               trigger_weight: float | None, group: Group):
         
         ''' obstacle spawning algorithm '''
 
-        n_obstacles = self.cf['environment']['n_obstacles']
-        # how many obstacle placement attempts to allow before deciding a solution can't be found:
-        FAIL_LIMIT = self.cf['environment']['obstacle_placement_attempt_limit']
-        # relevant dict for readability:
-        CF = self.cf['environment']['obstacle_block']
+        # shorten some constants for readability
+        CF = config
+        FAIL_LIMIT = self.cf['general']['loop_limit']
 
-        i = 0
-        failed = 0
-        while i < n_obstacles:
+        # padding, taking into account the player size to not completely block paths:
+        W_PADDING = int(self.player.rect.w + CF['padding'])
+        H_PADDING = int(self.player.rect.h + CF['padding'])
+
+        # initiate the loop
+        placed_blocks = 0
+        failed_attempts = 0
+        while placed_blocks < n_obstacles:
             # set random height/width from within the ranges
             color = CF['color_pool'][randint(1, len(CF['color_pool'])-1)]
             width = randint(CF['min_width'], CF['max_width'])
@@ -300,50 +375,55 @@ class PG_App:
             )
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
-            # 2) we don't want to lock the spaceship in by bad rng
+            # 2) we don't want to lock the player in by bad rng
 
-            # solution: create a copy of the rect and inflate it using the spaceship size + set padding
-            inflated_rect = BLOCK.rect.copy().inflate(width_padding, height_padding)
+            # solution: create a copy of the rect and inflate it using the player size + set padding
+            inflated_rect = BLOCK.rect.copy().inflate(W_PADDING, H_PADDING)
+
             # temporarily swap the rect with the one of the block, while saving the original
             # this is to allow for easy and fast spritecollide checking
             original_rect = BLOCK.rect.copy()
             BLOCK.rect = inflated_rect
 
-            # if the block + spaceship rect doesn't collide with any terrain, add it to the group
+            # if the block + player rect doesn't collide with any terrain, add it to the group
             if len(pg.sprite.spritecollide(BLOCK, group, False)) == 0:
                 # it doesn't collide, swap rect back
                 BLOCK.rect = original_rect
                 group.add(BLOCK)
-                i += 1
+                placed_blocks += 1
             else:
                 # otherwise, free (delete) the sprite and try again
                 del BLOCK
-                failed += 1
-                if (failed > FAIL_LIMIT):
+                failed_attempts += 1
+                if (failed_attempts > FAIL_LIMIT):
                     msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.'
-                    msg += f'current obstacle count: {i} / {n_obstacles}'
+                    msg += f'current obstacle count: {placed_blocks} / {n_obstacles}'
                     raise LogicError(msg)
+
+            # make sure the temp rect is not saved in memory
+            del inflated_rect
 
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
 
-        running: bool = True
-
-        # init the timer before first loop
+        # init the timer as the loop is about to start
         self.timer.start_first_segment(ref=None)
 
+        running = True
         while (running):
             # fill the main surface, then the game bounds
             self.window.fill_surface(None)
             self.window.bounds_rect.draw_background()
 
-            # draw sprites
-            self.draw_group.draw(self.window.surface)
+            # draw map constants
+            self.map_group.draw(self.window.surface)
+
+            # draw other sprites
+            self.active_group.draw(self.window.surface)
 
             # draw the ui
             for obj in self.UI:
                 obj.draw()
-
             for obj in self.UI_temp:
                 obj.draw()
 
