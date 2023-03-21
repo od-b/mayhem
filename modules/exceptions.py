@@ -24,3 +24,13 @@ class ConfigError(Exception):
         if self.relevant_config:
             self.msg += f'\n[Relevant config dict: {self.relevant_config}]\n'
         super().__init__(self.msg+'>')
+
+
+class CollisionError(Exception):
+    ''' Exception raised for config errors. pass the relevant config dict to print it. '''
+
+    def __init__(self, msg: str, sprite_a, sprite_b):
+        # create message, adding relevant config
+        self.msg = f'\n< {msg}\nsprite_a = {sprite_a}\nsprite_b = {sprite_b}\n >'
+
+        super().__init__(self.msg+'>')

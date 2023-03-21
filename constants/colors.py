@@ -27,6 +27,10 @@ RGB = {
     'pastel_green': (158, 161, 212),
     'pastel_teal': (134, 200, 188),
     'pastel_blue': (158, 161, 212),
+    'pastel_offwhite': (255, 242, 204),
+    'pastel_yellow_vibrant': (255, 217, 102),
+    'pastel_peach_2': (244, 177, 131),
+    'pastel_brown': (223, 166, 123),
     # grays
     'darkgray_darker': (42, 42, 42),
     'darkgray_dark': (70, 70, 70),
@@ -42,7 +46,7 @@ RGB = {
 ''' RGB color tuples -- most are sourced from <https://colorhunt.co> '''
 
 PALLETTES = {
-    'PASTEL_LIGHT': [
+    'PASTEL_MIX': [
         RGB['pastel_orange'],
         RGB['pastel_peach'],
         RGB['pastel_pink'],
@@ -50,6 +54,14 @@ PALLETTES = {
         RGB['pastel_yellow_light'],
         RGB['pastel_red'],
         RGB['pastel_blue']
+    ],
+    'PASTEL_WARM': [
+        RGB['pastel_offwhite'],
+        RGB['pastel_yellow_vibrant'],
+        RGB['pastel_orange'],
+        RGB['pastel_peach_2'],
+        RGB['pastel_brown'],
+        RGB['pastel_red']
     ],
     'SHADES_OF_GRAY': [
         RGB['darkgray_darker'],

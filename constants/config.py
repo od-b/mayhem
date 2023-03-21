@@ -1,6 +1,5 @@
 from .colors import RGB, PALLETTES
 import pygame as pg     # to access constants such as keys
-# key cheatsheet <https://www.pygame.org/docs/ref/key.html>
 
 
 CONFIG = {
@@ -12,7 +11,8 @@ CONFIG = {
         'loop_limit': int(10000),
     },
     'timing': {
-        'fps_limit': int(140),  # frames per second, None == uncapped
+        'fps_limit': int(120),  # frames per second, 0 == uncapped
+        'accurate_timing': True   # how strict the time tick function should be. True uses a lot more cpu
     },
     'window': {
         'caption': str('< caption >'),
@@ -56,17 +56,26 @@ CONFIG = {
         'gravity': float(0.0001),
     },
     'environment': {
-        # starting number of obstacles to spawn
+        # number of obstacles to spawn (center blocks)
         'n_obstacles': int(20),
         # customize the obstacle / terrain blocks
+        # padding must be positive
         'BLOCK': {
             'obstacle': {
-                'color_pool': PALLETTES['PASTEL_LIGHT'],
+                'color_pool': PALLETTES['PASTEL_WARM'],
                 'min_height': int(10),
                 'max_height': int(80),
                 'min_width': int(8),
                 'max_width': int(90),
                 'padding': int(50),
+            },
+            'obstacle_outline': {
+                'color_pool': PALLETTES['SHADES_OF_GRAY'],
+                'min_height': int(10),
+                'max_height': int(16),
+                'min_width': int(8),
+                'max_width': int(20),
+                'padding': int(0),
             },
             'terrain': {
                 'color_pool': PALLETTES['SHADES_OF_GRAY'],
@@ -80,6 +89,8 @@ CONFIG = {
     },
     'special_sprites': {
         'UNIQUE_CONTROLLABLE': {
+            # key cheatsheet <https://www.pygame.org/docs/ref/key.html>
+            # create the main player sprite
             'player': {
                 'color': RGB['black'],
                 'image': None,
@@ -111,7 +122,8 @@ CONFIG = {
         }
     }
 }
-''' config dict containing various constants and parameter weights.
+''' 
+    config dict containing various constants and parameter weights.
     * type conversions within the config is mainly a guideline of the expected type value
     * colors and pallettes within the config refer to a different dict @ ./colors.py
     

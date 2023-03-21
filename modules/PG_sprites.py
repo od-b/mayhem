@@ -60,13 +60,20 @@ class Static_Interactive(pg.sprite.Sprite):
 
         # create surface, either as an image or color
         if not image:
-            self.image = pg.Surface(self.size)
-            self.image.fill(self.color)
+            IMG = pg.Surface(self.size).convert()
+            IMG.fill(self.color)
+            self.image = IMG
         else:
             self.image = image
+            # self.image.set_colorkey()
+            # print(self.image.get_colorkey())
+            self.image = self.image.convert_alpha()
 
         self.rect = self.image.get_rect()
         self.rect.topleft = self.position
+        
+        # create a mask for fast collision detection
+        self.mask = pg.mask.from_surface(self.image)
 
     def update_image(self):
         self.image = pg.Surface(self.size)
@@ -122,7 +129,7 @@ class Controllable(pg.sprite.Sprite):
         if (trigger_weight != None) and (trigger_func == None):
             raise LogicError("trigger_weight should be None without a trigger_func")
         if (image != None) and (color != None):
-            raise LogicError("sprites with an image do not need a color")
+            raise LogicError("sprites should have a color OR an image")
 
         # initalize as pygame sprite
         pg.sprite.Sprite.__init__(self)
@@ -149,12 +156,13 @@ class Controllable(pg.sprite.Sprite):
 
         # create image surface, or store the passed surface as image
         if not image:
-            self.image = pg.Surface(self.size)
-            self.image.fill(self.color)
+            IMG = pg.Surface(self.size).convert()
+            IMG.fill(self.color)
+            self.image = IMG
         else:
-            self.image = image
+            self.image = image.convert_alpha()
             # TODO:
-            # transform to size
+            # transform image to size
 
         # get the surface
         self.rect = self.image.get_rect()
@@ -200,7 +208,7 @@ class Controllable(pg.sprite.Sprite):
     def update(self):
         self.velocity.y += self.get_gravity_factor()
         # self.limit_velocity()
-        self.velocity.normalize_ip()
-        self.position += self.velocity
-        print(self.velocity.y)
-        self.rect.topleft = (int(self.position.x), int(self.position.y))
+        self.position += self.velocity.normalize()
+        # self.position.x = round(self.position.x)
+        # self.position.y = round(self.position.y)
+        self.rect.topleft = self.position

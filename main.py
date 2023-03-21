@@ -6,12 +6,13 @@ from random import randint, uniform
 import pygame as pg
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Group
+from pygame import Color
 from pygame.sprite import Sprite
 
 # local imports
 ## general:
 from constants.config import CONFIG as CF
-from modules.exceptions import VersionError, LogicError, ConfigError
+from modules.exceptions import VersionError, ConfigError
 ## pygame specific modules:
 from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
@@ -45,7 +46,7 @@ class PG_App:
         )
         ''' object containing main surface window and bounds '''
 
-        self.timer = PG_Timer(self.cf['timing']['fps_limit'])   
+        self.timer = PG_Timer(self.cf['timing'])   
         ''' pygame specific timer object '''
 
         self.UI = self._set_up_ui_constants()
@@ -53,15 +54,23 @@ class PG_App:
 
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
         ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
+        
+        # specific groups
+        self.obstacle_group = Group()
+        ''' group specifically containing the obstacles '''
 
+        self.bounds_group = Group()
+        ''' group specifically containing the map outline sprites '''
+
+        # combined groups
         self.update_group = Group()
-        ''' group of sprites that are to be updated '''
+        ''' combined group group of sprites that are to be updated '''
 
         self.map_group = Group()
-        ''' group of constant, map-related sprites '''
-        
+        ''' combined group of constant, anchored sprites '''
+
         self.active_group = Group()
-        ''' group of misc. sprites, including the player(s) '''
+        ''' combined group group of misc. sprites, including the player(s) '''
 
         # create the player sprite, then add to relevant groups
         self.player = self.create_controllable_sprite(
@@ -72,11 +81,12 @@ class PG_App:
         self.update_group.add(self.player)
 
         # create the terrain:
-        self._set_up_map(self.map_group)
-        self._print_info()
+        self._set_up_map()
+        # self._print_info()
 
     def _print_info(self):
         ''' debugging prints '''
+        print(f'player: {self.player}')
         print(f'player.velocity.y == {self.player.velocity.y}')
         print(f'player.max_velocity.y == {self.player.max_velocity.y}')
         print(f'player.terminal_velocity == {self.player.terminal_velocity}')
@@ -109,22 +119,32 @@ class PG_App:
         # return the list as a tuple
         return tuple(elems)
 
-    def _set_up_map(self, group: Group):
+    def _set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''
 
         # outline the entire game bounds with terrain_blocks:
-        terrain_facing = 0
+        terrain_facing = -1
         self.spawn_axis_outline(
-            self.cf['environment']['BLOCK']['terrain'],
-            None, None, group, self.window.bounds_rect.re, terrain_facing
+            self.cf['environment']['BLOCK']['terrain'], None, None,
+            self.bounds_group, self.window.bounds_rect.re, terrain_facing, None
         )
+        self.map_group.add(self.bounds_group)
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
             self.cf['environment']['BLOCK']['obstacle'],
             self.cf['environment']['n_obstacles'],
-            None, None, group
+            None, None, self.obstacle_group
         )
+
+        # outline the obstacles with smaller rects to create more jagged terrain
+        terrain_facing = 0
+        for BLOCK in self.obstacle_group:
+            self.spawn_axis_outline(
+                self.cf['environment']['BLOCK']['obstacle_outline'], None, None,
+                self.obstacle_group, BLOCK.rect, terrain_facing, BLOCK.color
+            )
+        self.map_group.add(self.obstacle_group)
 
     def _pygame_init(self):
         ''' initialize pygame and verify pygame version '''
@@ -213,9 +233,12 @@ class PG_App:
         return SPRITE
 
     def spawn_axis_outline(self, config: dict, trigger_func: Callable | None,
-                              trigger_weight: float | None, group: Group, bounds: pg.Rect, facing: int):
+                              trigger_weight: float | None, group: Group, bounds: pg.Rect,
+                              facing: int, override_color: None | Color):
 
         ''' encapsulate the given bounds with smaller rect blocks
+            * if iverride_color is None, uses the config color list at random
+            * otherwise, choose the given color for all blocks
             * facing decides the alignment of the blocks relative to the bounds axis':
             * -1 => inwards
             * 0  => center
@@ -237,6 +260,7 @@ class PG_App:
         # (they are way too specific to create a working generalized loop function, however)
 
         # last_block is for storing the last block placed when swapping axis'
+        color = override_color
         last_block: Static_Interactive | None = None
 
         # 1) topleft --> topright
@@ -248,14 +272,16 @@ class PG_App:
 
             # ensure no edge overlap by checking for the last block:
             if (curr_pos_x + width) > MAX_X:
+                # if the block will be last, adjust size before creating
                 width = (MAX_X - curr_pos_x)
-            
+
             # create a vector to contain the position of the block
             position = Vec2(curr_pos_x, 0.0)
 
-            # get a random color from the given list
-            color = self.get_rand_list_elem(CF['color_pool'])
-            
+            # get a random color from the config list if override_color is None
+            if not (override_color):
+                color = self.get_rand_list_elem(CF['color_pool'])
+
             # assemble the block
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -285,7 +311,8 @@ class PG_App:
             height = randint(CF['min_height'], CF['max_height'])
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
-            color = self.get_rand_list_elem(CF['color_pool'])
+            if not (override_color):
+                color = self.get_rand_list_elem(CF['color_pool'])
             position = Vec2(0.0, curr_pos_y)
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -309,7 +336,8 @@ class PG_App:
             height = randint(CF['min_height'], CF['max_height'])
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
-            color = self.get_rand_list_elem(CF['color_pool'])
+            if not (override_color):
+                color = self.get_rand_list_elem(CF['color_pool'])
             position = Vec2()
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -325,7 +353,7 @@ class PG_App:
                     BLOCK.rect.top = MAX_Y
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_x = BLOCK.rect.left + CF['padding']
+            curr_pos_x = BLOCK.rect.left - CF['padding']
 
         # 4) bottomleft --> topright
         curr_pos_y = last_block.rect.top
@@ -334,7 +362,8 @@ class PG_App:
             height = randint(CF['min_height'], CF['max_height'])
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
-            color = self.get_rand_list_elem(CF['color_pool'])
+            if not (override_color):
+                color = self.get_rand_list_elem(CF['color_pool'])
             position = Vec2()
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -350,12 +379,14 @@ class PG_App:
                     BLOCK.rect.right = MIN_X
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.top + CF['padding']
+            curr_pos_y = BLOCK.rect.top - CF['padding']
 
     def spawn_static_obstacles(self, config: dict, n_obstacles: int, trigger_func: Callable | None,
                                trigger_weight: float | None, group: Group):
         
-        ''' obstacle spawning algorithm '''
+        ''' obstacle spawning algorithm
+            * checks for collision with the passed group, and self.map_group before placing
+        '''
 
         # shorten some constants for readability
         CF = config
@@ -394,8 +425,9 @@ class PG_App:
             BLOCK.rect = inflated_rect
 
             # if the block + player rect doesn't collide with any terrain, add it to the group
-            if len(pg.sprite.spritecollide(BLOCK, group, False)) == 0:
-                # it doesn't collide, swap rect back
+            if ((pg.sprite.spritecollideany(BLOCK, self.map_group) == None)
+                     and (pg.sprite.spritecollideany(BLOCK, group) == None)):
+                # block doesn't collide with anything, swap rect back and add block
                 BLOCK.rect = original_rect
                 group.add(BLOCK)
                 placed_blocks += 1
@@ -403,12 +435,13 @@ class PG_App:
                 # otherwise, free (delete) the sprite and try again
                 del BLOCK
                 failed_attempts += 1
+                # check if attempt limit is reached
                 if (failed_attempts > FAIL_LIMIT):
                     msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.\n'
                     msg += f'Current obstacle count: {placed_blocks} / {n_obstacles}'
                     raise ConfigError(msg, config)
 
-            # make sure the temp rect is not saved in memory
+            # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
     def loop(self):
