@@ -11,13 +11,17 @@ RGB = {
     'dutchwhite': (244, 228, 186),
     'marygold': (240, 162, 2),
     'orange': (255, 123, 84),
+    'orange_1': (255, 111, 60),
+    'orange_2': (255, 154, 60),
+    'orange_3': (255, 201, 60),
     'peach': (255, 178, 107),
     'peach': (255, 178, 107),
     'yellow': (255, 213, 111),
     'navy': (32, 82, 149),
+    'navy_black': (21, 82, 99),
     'purple': (164, 89, 209),
     # pastel
-    'pastel_pink': (245, 234, 234),
+    'pastel_pink': (255, 172, 172),
     'pastel_red': (253, 138, 138),
     'pastel_red_dark': (241, 103, 103),
     'pastel_peach': (255, 212, 178),
@@ -51,7 +55,6 @@ PALLETTES = {
         RGB['pastel_peach'],
         RGB['pastel_pink'],
         RGB['pastel_yellow'],
-        RGB['pastel_yellow_light'],
         RGB['pastel_red'],
         RGB['pastel_blue']
     ],
@@ -62,6 +65,12 @@ PALLETTES = {
         RGB['pastel_peach_2'],
         RGB['pastel_brown'],
         RGB['pastel_red']
+    ],
+    'ORANGES': [
+        RGB['orange_1'],
+        RGB['orange_2'],
+        RGB['orange_3'],
+        RGB['navy_black']
     ],
     'SHADES_OF_GRAY': [
         RGB['darkgray_darker'],

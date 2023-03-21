@@ -1,0 +1,12 @@
+pygame.math.Vector2.length_squared() -> float
+    * returns the squared Euclidean length of the vector.
+    calculates the Euclidean length of the vector which follows from the 
+    Pythagorean theorem: vec.length_squared() == vec.x**2 + vec.y**2. 
+    This is faster than vec.length() because it avoids the square root.
+
+
+## pg.math
+length()
+returns the Euclidean length of the vector.
+length() -> float
+calculates the Euclidean length of the vector which follows from the Pythagorean theorem: vec.length() == math.sqrt(vec.x**2 + vec.y**2)

@@ -1,7 +1,9 @@
 from typing import Callable     # type hint for function pointers
 import pygame as pg
+# import pygame.math
 from pygame.math import Vector2 as Vec2
 from math import sqrt, pow
+
 from .exceptions import LogicError
 
 
@@ -108,7 +110,7 @@ class Controllable(pg.sprite.Sprite):
         * may have a trigger_func without trigger_weight, but not vice-versa
     '''
     def __init__(self,
-                 window: pg.Surface, 
+                 window: pg.Surface,
                  physics: dict, 
                  color: tuple, 
                  position: Vec2, 
@@ -136,37 +138,63 @@ class Controllable(pg.sprite.Sprite):
         
         # store attributes
         self.window = window
-        self.physics = physics
-        self.color = pg.Color(color)
-        self.position = position
-        self.size = size
-        self.mass = mass
-        self.velocity: Vec2 = velocity
-        self.max_velocity = max_velocity
+        self.color = color
+
         self.trigger_func = trigger_func
         self.trigger_weight = trigger_weight
-        self.angle = angle
+
         self.max_health = max_health
         self.max_mana = max_mana
         self.health = health
         self.mana = mana
 
-        # max positive y-velocity, taking mass into account
-        self.terminal_velocity = (self.max_velocity.y + self.mass + self.physics['gravity'])
+        self.physics = physics
+        self.position = position
+        self.size = size
+        self.mass = float(1 - mass)
+        self.velocity = velocity
+        self.max_velocity = max_velocity
+        self.angle = angle
 
-        # create image surface, or store the passed surface as image
-        if not image:
-            IMG = pg.Surface(self.size).convert()
-            IMG.fill(self.color)
-            self.image = IMG
-        else:
-            self.image = image.convert_alpha()
-            # TODO:
-            # transform image to size
+        self.G_CONST = float(self.physics['gravity'])
+        self.G_MULTI = float(self.physics['gravity'])
+
+        # max positive y-velocity, taking mass into account
+        print(f'max_velocity.y: {self.max_velocity.y}')
+        
+        self.max_velocity.y += (self.mass / (1 + self.mass - (self.mass * self.G_CONST)))
+
+        print(f'max_velocity.y: {self.max_velocity.y}')
+        self.image = self._set_up_image_surface(image)
 
         # get the surface
-        self.rect = self.image.get_rect()
+        self.rect: pg.Rect
         self.rect.topleft = self.position
+
+    def _set_up_image_surface(self, image: pg.Surface | None):
+        ''' create image surface, or store the passed surface as image
+            * if an image is not provided, draws an illustration as the surface
+        '''
+
+        # if an image is not provided, draw an illustration
+        if not image:
+            IMG = pg.Surface(self.size)
+            self.rect = IMG.get_rect()
+            # IMG.fill(self.color)
+            p1 = Vec2(self.rect.midtop)
+            p2 = Vec2(self.rect.bottomright)
+            p3 = Vec2(self.rect.bottomleft)
+            pg.draw.polygon(
+                IMG,
+                self.color,
+                [p1, p2, p3]
+            )
+        else:
+            IMG = image.convert_alpha()
+            # TODO:
+            # transform image to size
+        
+        return IMG.convert_alpha()
 
     def update_image(self):
         self.image = pg.Surface(self.size)
@@ -180,20 +208,11 @@ class Controllable(pg.sprite.Sprite):
 
     def get_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''
-        # speed = sqrt(
-        #     pow(abs(self.velocity.x), 2) 
-        #     + pow(abs(self.velocity.y), 2)
-        # )
-        downforce = abs(self.velocity.y) * self.mass
-        return float(
-            (downforce / 
-                (self.velocity.y 
-                 + self.physics['gravity'])
-            )
-            + self.physics['gravity']
-        )
+        vel_y = (abs(self.velocity.y) + self.G_CONST)
+        return self.G_MULTI * (vel_y / self.mass)
 
     def limit_velocity(self):
+        ''' check velocity, if needed clamps the velocity between min/max '''
         if (abs(self.velocity.x) > self.max_velocity.x):
             if self.velocity.x > 0:
                 self.velocity.x = self.max_velocity.x
@@ -202,13 +221,13 @@ class Controllable(pg.sprite.Sprite):
         
         if (self.velocity.y < 0) and (abs(self.velocity.y) > self.max_velocity.y):
             self.velocity.y = -self.max_velocity.y
-        elif self.velocity.y > self.terminal_velocity:
-            self.velocity.y = self.terminal_velocity
+        elif self.velocity.y > self.max_velocity.y:
+            self.velocity.y = self.max_velocity.y
 
     def update(self):
         self.velocity.y += self.get_gravity_factor()
-        # self.limit_velocity()
-        self.position += self.velocity.normalize()
-        # self.position.x = round(self.position.x)
-        # self.position.y = round(self.position.y)
+        self.limit_velocity()
+
+        print(f'self.velocity: {self.velocity}')
+        self.position += self.velocity.elementwise()
         self.rect.topleft = self.position

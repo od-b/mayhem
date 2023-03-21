@@ -89,7 +89,6 @@ class PG_App:
         print(f'player: {self.player}')
         print(f'player.velocity.y == {self.player.velocity.y}')
         print(f'player.max_velocity.y == {self.player.max_velocity.y}')
-        print(f'player.terminal_velocity == {self.player.terminal_velocity}')
 
     def get_rand_list_elem(self, list: list):
         ''' generic helper function. get random elem from a given, non-empty list '''
@@ -215,7 +214,7 @@ class PG_App:
         SPRITE = Controllable(
             self.window,
             self.cf['physics'],
-            config['color'],
+            Color(config['color']),
             POSITION,
             SIZE,
             config['image'],
@@ -444,6 +443,12 @@ class PG_App:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
+    def _debug_testing(self):
+        if (self.player.velocity.y == self.player.max_velocity.y):
+            print("terminal velocity reached @ \n")
+            print(f'ms: {self.timer.total_time}')
+            print(f'secs: {self.timer.active_segment.get_duration_formatted()}')
+
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
 
@@ -502,6 +507,7 @@ class PG_App:
 
             # update the timer. Also limits the framerate if set
             self.timer.update()
+            self._debug_testing()
 
 
 if __name__ == '__main__':

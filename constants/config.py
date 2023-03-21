@@ -51,9 +51,13 @@ CONFIG = {
         },
     },
     'physics': {
-        # gravitational constant to avoid standstill of objects with mass and 0 velocity
+        # global physics
+        # increment and reduce these extremely carefully. Change mass of objects instead
+        # gravity: gravitational constant to avoid standstill of objects with mass and 0 velocity
         # also prevents potential division by zero
-        'gravity': float(0.0001),
+        'gravity': float(0.02),             # default: 0.02
+        # controls the relation multiplier between mass, max velocity and terminal velocity
+        'gravity_multiplier': float(0.01)   # default: 0.01
     },
     'environment': {
         # number of obstacles to spawn (center blocks)
@@ -62,7 +66,7 @@ CONFIG = {
         # padding must be positive
         'BLOCK': {
             'obstacle': {
-                'color_pool': PALLETTES['PASTEL_WARM'],
+                'color_pool': PALLETTES['PASTEL_MIX'],
                 'min_height': int(10),
                 'max_height': int(80),
                 'min_width': int(8),
@@ -70,7 +74,7 @@ CONFIG = {
                 'padding': int(50),
             },
             'obstacle_outline': {
-                'color_pool': PALLETTES['SHADES_OF_GRAY'],
+                'color_pool': PALLETTES['ORANGES'],
                 'min_height': int(10),
                 'max_height': int(16),
                 'min_width': int(8),
@@ -92,15 +96,16 @@ CONFIG = {
             # key cheatsheet <https://www.pygame.org/docs/ref/key.html>
             # create the main player sprite
             'player': {
-                'color': RGB['black'],
+                'color': RGB['pastel_yellow_vibrant'],
                 'image': None,
                 'width': int(40),
                 'height': int(40),
-                'mass': float(0.1),
+                'mass': float(0.1),             # default: 0.1, 0 < mass < 1
                 'max_health': int(150),
                 'max_mana': int(150),
-                'max_velocity_x': float(1),
-                'max_velocity_y': float(1),
+                'max_velocity_x': float(2.5),   # default: 2.5
+                # note: max velocity_y is also affected by mass/gravity
+                'max_velocity_y': float(2.5),   # default: 2.5
                 # set initial position
                 'initial_vectors': {
                     'health': int(100),
@@ -108,8 +113,8 @@ CONFIG = {
                     'pos_x': int(400),
                     'pos_y': int(400),
                     'angle': float(0),
-                    'velocity_x': float(0.2),
-                    'velocity_y': float(0.2),
+                    'velocity_x': float(0),
+                    'velocity_y': float(0),
                 },
                 # configure player keyboard controls
                 'controls': {
