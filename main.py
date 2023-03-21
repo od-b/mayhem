@@ -1,8 +1,8 @@
-# default python library imports
+# default library imports
 from typing import Callable     # type hint for function pointers
 from random import randint, uniform
 
-# library imports
+# installed library imports
 import pygame as pg
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Group
@@ -11,13 +11,12 @@ from pygame.sprite import Sprite
 # local imports
 ## general:
 from constants.config import CONFIG as CF
-from modules.exceptions import VersionError, LogicError
-## pygame specific:
+from modules.exceptions import VersionError, LogicError, ConfigError
+## pygame specific modules:
 from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
 from modules.PG_timer import PG_Timer
 from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
-# sprites:
 from modules.PG_sprites import Static_Interactive, Controllable
 
 
@@ -34,7 +33,7 @@ class PG_App:
         self.cf = cf
         ''' reference to the 'CONFIG' dict from ./constants/config.py '''
 
-        self._pygame_init() # init pygame and perform version control
+        self._pygame_init() # init pygame & perform version control
 
         self.window = PG_Window(
             self.cf['window']['caption'],
@@ -64,13 +63,23 @@ class PG_App:
         self.active_group = Group()
         ''' group of misc. sprites, including the player(s) '''
 
-        # create the player sprite:
-        self.player = self.create_controllable_sprite(self.cf['player'], None, None)
+        # create the player sprite, then add to relevant groups
+        self.player = self.create_controllable_sprite(
+            self.cf['special_sprites']['UNIQUE_CONTROLLABLE']['player'],
+            None, None
+        )
         self.active_group.add(self.player)
         self.update_group.add(self.player)
 
         # create the terrain:
         self._set_up_map(self.map_group)
+        self._print_info()
+
+    def _print_info(self):
+        ''' debugging prints '''
+        print(f'player.velocity.y == {self.player.velocity.y}')
+        print(f'player.max_velocity.y == {self.player.max_velocity.y}')
+        print(f'player.terminal_velocity == {self.player.terminal_velocity}')
 
     def get_rand_list_elem(self, list: list):
         ''' generic helper function. get random elem from a given, non-empty list '''
@@ -81,7 +90,7 @@ class PG_App:
 
         # create a list to allow appending
         elems = []
-        DEFAULT_CONFIG = self.cf['ui']['textbox']['default']
+        DEFAULT_CONFIG = self.cf['ui']['TEXTBOX']['default']
 
         # create the 'root' UI element. Pass (0, 0) as top left pos, seeing as
         # we don't know it's pixel size before rendering and want to place it bottom left
@@ -89,8 +98,8 @@ class PG_App:
 
         # after its rendered, set the position to bottom left (adjusted for default padding)
         UI_TIME.re.bottomleft = (
-            self.cf['ui']['default']['padding'],
-            (self.window.height - self.cf['ui']['default']['padding']))
+            self.cf['ui']['container_padding'],
+            (self.window.height - self.cf['ui']['container_padding']))
         elems.append(UI_TIME)
 
         # create the fps frame anchored to the right of UI_TIME
@@ -105,14 +114,14 @@ class PG_App:
 
         # outline the entire game bounds with terrain_blocks:
         terrain_facing = 0
-        self.spawn_terrain_outline(
-            self.cf['environment']['terrain_block'],
+        self.spawn_axis_outline(
+            self.cf['environment']['BLOCK']['terrain'],
             None, None, group, self.window.bounds_rect.re, terrain_facing
         )
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
-            self.cf['environment']['obstacle_block'],
+            self.cf['environment']['BLOCK']['obstacle'],
             self.cf['environment']['n_obstacles'],
             None, None, group
         )
@@ -203,7 +212,7 @@ class PG_App:
         )
         return SPRITE
 
-    def spawn_terrain_outline(self, config: dict, trigger_func: Callable | None,
+    def spawn_axis_outline(self, config: dict, trigger_func: Callable | None,
                               trigger_weight: float | None, group: Group, bounds: pg.Rect, facing: int):
 
         ''' encapsulate the given bounds with smaller rect blocks
@@ -339,7 +348,6 @@ class PG_App:
                     BLOCK.rect.centerx = MIN_X
                 case (1):
                     BLOCK.rect.right = MIN_X
-
             last_block = BLOCK
             group.add(BLOCK)
             curr_pos_y = BLOCK.rect.top + CF['padding']
@@ -396,9 +404,9 @@ class PG_App:
                 del BLOCK
                 failed_attempts += 1
                 if (failed_attempts > FAIL_LIMIT):
-                    msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.'
-                    msg += f'current obstacle count: {placed_blocks} / {n_obstacles}'
-                    raise LogicError(msg)
+                    msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.\n'
+                    msg += f'Current obstacle count: {placed_blocks} / {n_obstacles}'
+                    raise ConfigError(msg, config)
 
             # make sure the temp rect is not saved in memory
             del inflated_rect
@@ -461,6 +469,7 @@ class PG_App:
 
             # update the timer. Also limits the framerate if set
             self.timer.update()
+
 
 if __name__ == '__main__':
     # load the game

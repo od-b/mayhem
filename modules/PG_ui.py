@@ -1,7 +1,6 @@
 from typing import Callable     # type hint for function pointers
 import pygame as pg
 from modules.PG_shapes import PG_Rect
-from pygame.math import Vector2 as Vec2
 
 
 class PG_Text_Box(PG_Rect):
@@ -144,7 +143,7 @@ class PG_Text_Box_Child(PG_Text_Box):
                 self.align_func = self.align_to_center_y_of
             case _:
                 raise ValueError(f'parent_alignment expected "top", "bottom", "left", "right",\
-                    "centerx" or "centery". Got "{parent_alignment}"')
+                    "centerx" or "centery". Found "{parent_alignment}"')
 
         # the super call is done post self-initialization, as self.align_func must
         # be defined before the super init will call _reposition_rect, modified below

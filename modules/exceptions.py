@@ -1,31 +1,26 @@
-from constants.config import CONFIG as CF
-
-
 class VersionError(Exception):
-    ''' Exception raised for various version errors.\n
-        Will abort the program if config version_error_fatal is set, otherwise just print '''
+    ''' Exception raised for various version errors. '''
 
     def __init__(self, modulename: str, v_found: str, v_req: str):
-        self.msg = f'{modulename} version <{v_found}> initialized. Expected: <{v_req}>'
-
-        if CF['exceptions']['version_error_fatal']:
-            self.msg = f'[FATAL]: {self.msg}'
-            super().__init__(self.msg)
-        else:
-            self.msg = f'[VersionError]: {self.msg}'
-            print(self.msg)
+        self.msg = f'\n< {modulename} version "{v_found}" initialized. Expected: "{v_req}" >'
+        super().__init__(self.msg)
 
 
 class LogicError(Exception):
-    ''' Exception raised for logical errors.\n
-        Will abort the program if config version_error_fatal is set, otherwise just print '''
+    ''' Exception raised for logical errors.'''
 
     def __init__(self, msg: str):
-        self.msg = msg
+        self.msg = f'\n< {msg} >'
+        super().__init__(self.msg)
 
-        if CF['exceptions']['version_error_fatal']:
-            self.msg = f'[FATAL]: {self.msg}'
-            super().__init__(self.msg)
-        else:
-            self.msg = f'[LogicError]: {self.msg}'
-            print(self.msg)
+
+class ConfigError(Exception):
+    ''' Exception raised for config errors. pass the relevant config dict to print it. '''
+
+    def __init__(self, msg: str, relevant_config: dict | None):
+        self.relevant_config = relevant_config
+        # create message, adding relevant config
+        self.msg = f'\n< {msg} '
+        if self.relevant_config:
+            self.msg += f'\n[Relevant config dict: {self.relevant_config}]\n'
+        super().__init__(self.msg+'>')

@@ -146,8 +146,6 @@ class Controllable(pg.sprite.Sprite):
 
         # max positive y-velocity, taking mass into account
         self.terminal_velocity = (self.max_velocity.y + self.mass + self.physics['gravity'])
-        print(self.max_velocity.y)
-        print(self.terminal_velocity)
 
         # create image surface, or store the passed surface as image
         if not image:
@@ -172,10 +170,20 @@ class Controllable(pg.sprite.Sprite):
         else:
             self.image.fill(self.color)
 
-    def gravity(self):
-        speed = sqrt(pow(self.velocity.x,2) + pow(self.velocity.y,2))
-        downforce = speed * self.mass
-        return float((downforce / (speed + self.physics['gravity'])) + self.physics['gravity'])
+    def get_gravity_factor(self):
+        ''' return a positive float based on velocity, mass and global gravity constant '''
+        # speed = sqrt(
+        #     pow(abs(self.velocity.x), 2) 
+        #     + pow(abs(self.velocity.y), 2)
+        # )
+        downforce = abs(self.velocity.y) * self.mass
+        return float(
+            (downforce / 
+                (self.velocity.y 
+                 + self.physics['gravity'])
+            )
+            + self.physics['gravity']
+        )
 
     def limit_velocity(self):
         if (abs(self.velocity.x) > self.max_velocity.x):
@@ -190,7 +198,9 @@ class Controllable(pg.sprite.Sprite):
             self.velocity.y = self.terminal_velocity
 
     def update(self):
-        self.velocity.y += self.gravity()
-        self.limit_velocity()
+        self.velocity.y += self.get_gravity_factor()
+        # self.limit_velocity()
+        self.velocity.normalize_ip()
         self.position += self.velocity
+        print(self.velocity.y)
         self.rect.topleft = (int(self.position.x), int(self.position.y))
