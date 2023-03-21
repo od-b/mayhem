@@ -48,12 +48,6 @@ class PG_App:
 
         self.timer = PG_Timer(self.cf['timing'])   
         ''' pygame specific timer object '''
-
-        self.UI = self._set_up_ui_constants()
-        ''' constant tuple of ui objects to be updated in the order of addition '''
-
-        self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
-        ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
         
         # specific groups
         self.obstacle_group = Group()
@@ -82,6 +76,11 @@ class PG_App:
 
         # create the terrain:
         self._set_up_map()
+        self.UI = self._set_up_ui_constants()
+        ''' constant tuple of ui objects to be updated in the order of addition '''
+
+        self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
+        ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
         # self._print_info()
 
     def _print_info(self):
@@ -114,6 +113,9 @@ class PG_App:
         # create the fps frame anchored to the right of UI_TIME
         UI_FPS = self.create_tbox_child(DEFAULT_CONFIG, "FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
         elems.append(UI_FPS)
+
+        PLAYER_ANGLE = self.create_tbox_child(DEFAULT_CONFIG, "Angle: ", UI_FPS, 'right', self.player.get_angle)
+        elems.append(PLAYER_ANGLE)
 
         # return the list as a tuple
         return tuple(elems)
@@ -508,7 +510,6 @@ class PG_App:
             # update the timer. Also limits the framerate if set
             self.timer.update()
             self._debug_testing()
-
 
 if __name__ == '__main__':
     # load the game

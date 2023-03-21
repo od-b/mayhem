@@ -1,6 +1,7 @@
 from typing import Callable     # type hint for function pointers
 import pygame as pg
-# import pygame.math
+import pygame.math
+from pygame import gfxdraw
 from pygame.math import Vector2 as Vec2
 from math import sqrt, pow
 
@@ -180,20 +181,25 @@ class Controllable(pg.sprite.Sprite):
         if not image:
             IMG = pg.Surface(self.size)
             self.rect = IMG.get_rect()
-            # IMG.fill(self.color)
             p1 = Vec2(self.rect.midtop)
             p2 = Vec2(self.rect.bottomright)
             p3 = Vec2(self.rect.bottomleft)
+
             pg.draw.polygon(
                 IMG,
                 self.color,
-                [p1, p2, p3]
+                (p1, p2, p3)
             )
+            # IMG = pg.transform.flip(IMG, True, False)
+            self.angle = Vec2(self.rect.center).angle_to(p1)
+            IMG = pg.transform.rotate(IMG, -self.angle)
+            self.rect = IMG.get_rect()
+            self.rect.center = self.position
         else:
-            IMG = image.convert_alpha()
-            # TODO:
-            # transform image to size
-        
+            # TODO: choose an image instead
+            IMG = pg.Surface(self.size)
+            pass
+
         return IMG.convert_alpha()
 
     def update_image(self):
@@ -224,10 +230,28 @@ class Controllable(pg.sprite.Sprite):
         elif self.velocity.y > self.max_velocity.y:
             self.velocity.y = self.max_velocity.y
 
+    def key_event(self, key):
+        keys = pg.key.get_pressed()
+        if keys[pg.K_a]:
+            pass
+        elif keys[pg.K_d]:
+            pass
+        if keys[pg.K_SPACE]:
+            pass
+
+    def get_angle(self):
+        return round(self.angle, 2)
+    
+    def rotate_image(self):
+        new_img = pg.transform.rotate(self.image, self.angle)
+        self.image = new_img
+        new_img_rect = self.image.get_rect()
+        new_img_rect.center = self.position
+        self.rect = new_img_rect
+
     def update(self):
         self.velocity.y += self.get_gravity_factor()
+        # self.velocity = self.velocity.rotate(self.angle)
         self.limit_velocity()
-
-        print(f'self.velocity: {self.velocity}')
         self.position += self.velocity.elementwise()
-        self.rect.topleft = self.position
+        self.rect.center = self.position

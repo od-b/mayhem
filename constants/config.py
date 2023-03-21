@@ -98,7 +98,7 @@ CONFIG = {
             'player': {
                 'color': RGB['pastel_yellow_vibrant'],
                 'image': None,
-                'width': int(40),
+                'width': int(30),
                 'height': int(40),
                 'mass': float(0.1),             # default: 0.1, 0 < mass < 1
                 'max_health': int(150),
@@ -118,10 +118,12 @@ CONFIG = {
                 },
                 # configure player keyboard controls
                 'controls': {
-                    'rotate_c_clockwise': pg.K_a,    # rotate counter-clockwise // steer left
-                    'rotate_clockwise':   pg.K_d,    # rotate clockwise // steer right
-                    'accelerate_forward': pg.K_w,    # accelerate towards facing angle
-                    'accelerate_reverse': pg.K_s,    # accelerate away from facing angle
+                    'rotate_c_clockwise': pg.K_a,       # rotate counter-clockwise // steer left
+                    'rotate_clockwise':   pg.K_d,       # rotate clockwise // steer right
+                    'rotate_c_clockwise': pg.K_LEFT,    # rotate counter-clockwise // steer left
+                    'rotate_clockwise':   pg.K_RIGHT,   # rotate clockwise // steer right
+                    'accelerate_forward': pg.K_SPACE,   # accelerate towards facing angle
+                    'accelerate_reverse': pg.K_c,       # accelerate away from facing angle
                 }
             }
         }
