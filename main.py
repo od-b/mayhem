@@ -81,13 +81,6 @@ class PG_App:
 
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
         ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
-        # self._print_info()
-
-    def _print_info(self):
-        ''' debugging prints '''
-        print(f'player: {self.player}')
-        print(f'player.velocity.y == {self.player.velocity.y}')
-        print(f'player.max_velocity.y == {self.player.max_velocity.y}')
 
     def get_rand_list_elem(self, list: list):
         ''' generic helper function. get random elem from a given, non-empty list '''
@@ -445,11 +438,34 @@ class PG_App:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def _debug_testing(self):
+    def debug_print_velocity(self):
         if (self.player.velocity.y == self.player.max_velocity.y):
             print("terminal velocity reached @ \n")
             print(f'ms: {self.timer.total_time}')
             print(f'secs: {self.timer.active_segment.get_duration_formatted()}')
+
+    def debug_visualize_mask(self, sprite: Sprite):
+        ''' visualize mask outline '''
+        mask: pg.mask.Mask = sprite.mask
+        p_list = mask.outline()
+        color = pg.Color(255, 255, 255)
+        pg.draw.lines(sprite.image, color, 2, p_list)
+
+    def debug_visualize_mask_bounds(self, mask: pg.mask.Mask):
+        '''
+            Returns a surface with the mask drawn on it
+            to_surface(
+                surface=None,
+                setsurface=None,
+                unsetsurface=None,
+                setcolor=(255, 255, 255, 255),
+                unsetcolor=(0, 0, 0, 255),
+                dest=(0, 0)
+            ) -> Surface
+        '''
+        p_list = mask.outline()
+        color = pg.Color(255, 255, 255)
+        pg.draw.lines(self.window.surface, color, 2, p_list)
 
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
@@ -475,6 +491,7 @@ class PG_App:
             for obj in self.UI_temp:
                 obj.draw()
 
+            # self.debug_visualize_mask(self.player)
             # refresh the display, applying drawing etc.
             self.window.update()
 
@@ -486,6 +503,7 @@ class PG_App:
                         running = False  # exit the app
         
                     case pg.MOUSEBUTTONDOWN:
+                        self.player.rotate_c_clockwise(3.0)
                         # mouse click
                         # MOUSE_POS = pg.mouse.get_pos()
                         # print(MOUSE_POS)
@@ -509,7 +527,6 @@ class PG_App:
 
             # update the timer. Also limits the framerate if set
             self.timer.update()
-            self._debug_testing()
 
 if __name__ == '__main__':
     # load the game

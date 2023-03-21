@@ -131,8 +131,6 @@ class Controllable(pg.sprite.Sprite):
         # verify parameters
         if (trigger_weight != None) and (trigger_func == None):
             raise LogicError("trigger_weight should be None without a trigger_func")
-        if (image != None) and (color != None):
-            raise LogicError("sprites should have a color OR an image")
 
         # initalize as pygame sprite
         pg.sprite.Sprite.__init__(self)
@@ -162,49 +160,36 @@ class Controllable(pg.sprite.Sprite):
 
         # max positive y-velocity, taking mass into account
         print(f'max_velocity.y: {self.max_velocity.y}')
-        
         self.max_velocity.y += (self.mass / (1 + self.mass - (self.mass * self.G_CONST)))
-
         print(f'max_velocity.y: {self.max_velocity.y}')
-        self.image = self._set_up_image_surface(image)
 
-        # get the surface
-        self.rect: pg.Rect
-        self.rect.topleft = self.position
-
-    def _set_up_image_surface(self, image: pg.Surface | None):
-        ''' create image surface, or store the passed surface as image
-            * if an image is not provided, draws an illustration as the surface
-        '''
-
-        # if an image is not provided, draw an illustration
+        # set up surface aka image
         if not image:
-            IMG = pg.Surface(self.size)
-            self.rect = IMG.get_rect()
-            p1 = Vec2(self.rect.midtop)
-            p2 = Vec2(self.rect.bottomright)
-            p3 = Vec2(self.rect.bottomleft)
+            # crucial to store the original image and rect for transformation
+            # pygame will literally flood memory in seconds if not. spent hours debugging
+            IMG = pg.Surface(self.size).convert_alpha()
+            # IMG.fill(self.window.bounds_fill_color)
+            # IMG.set_colorkey(self.window.bounds_fill_color)
+            RECT = IMG.get_rect().copy()
+            self.original_image = IMG
+            self.original_rect = RECT
 
-            pg.draw.polygon(
-                IMG,
-                self.color,
-                (p1, p2, p3)
-            )
-            # IMG = pg.transform.flip(IMG, True, False)
-            self.angle = Vec2(self.rect.center).angle_to(p1)
-            IMG = pg.transform.rotate(IMG, -self.angle)
-            self.rect = IMG.get_rect()
-            self.rect.center = self.position
+            # draw polygon
+            p1 = Vec2(self.original_rect.midtop)
+            p2 = Vec2(self.original_rect.bottomright)
+            p3 = Vec2(self.original_rect.bottomleft)
+            pg.draw.polygon(self.original_image, self.color, (p1, p2, p3))
+
+            self.image = pg.transform.rotate(self.original_image, self.angle)
+            self.rect = self.original_image.get_rect(center=self.position).copy()
+            self.mask = pg.mask.from_surface(self.original_image)
         else:
-            # TODO: choose an image instead
-            IMG = pg.Surface(self.size)
-            pass
-
-        return IMG.convert_alpha()
+            # TODO: support actual images
+            raise ValueError("not yet implemented, don't include an image")
 
     def update_image(self):
         self.image = pg.Surface(self.size)
-    
+
     def fill_image(self, alt_color: tuple | None):
         ''' uses sprite self.color if alt color is set to None '''
         if alt_color:
@@ -241,16 +226,33 @@ class Controllable(pg.sprite.Sprite):
 
     def get_angle(self):
         return round(self.angle, 2)
-    
-    def rotate_image(self):
-        new_img = pg.transform.rotate(self.image, self.angle)
-        self.image = new_img
-        new_img_rect = self.image.get_rect()
-        new_img_rect.center = self.position
-        self.rect = new_img_rect
+
+    def rotate_clockwise(self, weight: float):
+        ''' rotate <weight> degrees counter-clockwise '''
+        self.angle -= weight
+        # handle overflow:
+        if ((self.angle - weight) < -180):
+            self.angle *= -1
+        self.update_image()
+
+    def rotate_c_clockwise(self, weight: float):
+        ''' rotate <weight> degrees counter-clockwise '''
+        self.angle += weight
+        # handle overflow:
+        if ((self.angle + weight) > 180):
+            self.angle *= -1
+        self.update_image()
+
+    def update_image(self):
+        ''' rotate image, rect and mask to the correct angle '''
+        # get new and rotated image & rect from originals
+        self.image = pg.transform.rotate(self.original_image, self.angle)
+        self.rect = self.image.get_rect(center=self.original_rect.center)
+        # get new mask
+        self.mask = pg.mask.from_surface(self.image)
 
     def update(self):
-        self.velocity.y += self.get_gravity_factor()
+        # self.velocity.y += self.get_gravity_factor()
         # self.velocity = self.velocity.rotate(self.angle)
         self.limit_velocity()
         self.position += self.velocity.elementwise()
