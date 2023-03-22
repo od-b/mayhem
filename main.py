@@ -493,7 +493,7 @@ class PG_App:
 
             # self.debug_visualize_mask(self.player)
             # refresh the display, applying drawing etc.
-            self.window.update()
+            pg.display.update()
 
             # loop through events
             for event in pg.event.get():
@@ -527,6 +527,7 @@ class PG_App:
 
             # update the timer. Also limits the framerate if set
             self.timer.update()
+
 
 if __name__ == '__main__':
     # load the game

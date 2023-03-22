@@ -22,9 +22,9 @@ CONFIG = {
         'bounds_fill_color': RGB['offblack'],
         # adjust the bounds of the active game board
         'bounds_padding': {
-            'min_x': int(40),
-            'max_x': int(40),
-            'min_y': int(40),
+            'min_x': int(0),
+            'max_x': int(0),
+            'min_y': int(0),
             'max_y': int(60),
         }
     },

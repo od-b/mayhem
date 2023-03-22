@@ -68,10 +68,6 @@ class PG_Window:
             self.surface.fill(alt_color)
         else:
             self.surface.fill(self.fill_color)
-    
-    def update(self):
-        ''' refreshes display surface '''
-        display.update()
 
     def __str__(self):
         msg = f'< PG_Window: width={self.width}, height={self.height},\n  bounds='+'{'

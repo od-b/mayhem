@@ -1,9 +1,6 @@
 from typing import Callable     # type hint for function pointers
 import pygame as pg
-import pygame.math
-from pygame import gfxdraw
 from pygame.math import Vector2 as Vec2
-from math import sqrt, pow
 
 from .exceptions import LogicError
 
@@ -248,12 +245,14 @@ class Controllable(pg.sprite.Sprite):
         # get new and rotated image & rect from originals
         self.image = pg.transform.rotate(self.original_image, self.angle)
         self.rect = self.image.get_rect(center=self.original_rect.center)
-        # get new mask
+        # get new mask for collision checking
         self.mask = pg.mask.from_surface(self.image)
 
     def update(self):
         # self.velocity.y += self.get_gravity_factor()
         # self.velocity = self.velocity.rotate(self.angle)
+        self.rotate_c_clockwise(2.0)
+        self.update_image()
         self.limit_velocity()
-        self.position += self.velocity.elementwise()
+        self.position += self.velocity
         self.rect.center = self.position
