@@ -1,19 +1,22 @@
-# default library imports
-from typing import Callable     # type hint for function pointers
-from random import randint, uniform
+# python default library imports
+## Callable allows type hinting 'function pointers':
+from typing import Callable
+from random import randint
 
 # installed library imports
 import pygame as pg
-from pygame.math import Vector2 as Vec2
-from pygame.sprite import Group
 from pygame import Color
+from pygame.sprite import Group
 from pygame.sprite import Sprite
+## import and simplify as Vec2 instead of writing 'pygame.math.Vector2(...)' every damn time:
+from pygame.math import Vector2 as Vec2
 
-# local imports
-## general:
-from constants.config import CONFIG as CF
+# local dir imports
+## config dict
+from constants.config import CONFIG as GLOBAL_CF
+## general classes
 from modules.exceptions import VersionError, ConfigError
-## pygame specific modules:
+## pygame specific classes
 from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
 from modules.PG_timer import PG_Timer
@@ -22,76 +25,84 @@ from modules.PG_sprites import Static_Interactive, Controllable
 
 
 class PG_App:
-    ''' singleton app class
-        * takes in a config dict specifying various constants and parameters
-        * contains most objects relevant to the app
-        * initializes and sets up pygame objects from the given config
-        * contains game loop, specialized setup-functions
-        * methods used internally and only once start with '_'
+    ''' Singleton app class.
+        Takes in a config dict specifying various predefined constants / weights
+        * Contains most objects relevant to the app
+        * Initializes and sets up pygame objects from the given config
+        * Handles game loop and specialized setup-functions
+
+        * Conventions defined for the scope of this class:
+        * Methods that start with _ are helper methods, or only called once
+            E.g.; if the method spawns blocks, config should be a dict from ['environment']['BLOCKS'].
+        * Methods that start with 'create_' will return the object. 'spawn_' functions are void
+        * Methods that take in 'config' as a parameter will refer to the relevant subdict of self.cf.
+            The expected config is listed in the method docstring.
     '''
 
     def __init__(self, cf: dict[str, any]):
         self.cf = cf
         ''' reference to the 'CONFIG' dict from ./constants/config.py '''
 
-        self._pygame_init() # init pygame & perform version control
-
         self.window = PG_Window(
-            self.cf['window']['caption'],
-            self.cf['window']['width'],
-            self.cf['window']['height'],
+            str(self.cf['window']['caption']),
+            int(self.cf['window']['width']),
+            int(self.cf['window']['height']),
             self.cf['window']['bounds_padding'],
-            self.cf['window']['fill_color'],
-            self.cf['window']['bounds_fill_color'],
+            Color(self.cf['window']['fill_color']),
+            Color(self.cf['window']['bounds_fill_color']),
+            self.cf['window']['vsync']
         )
         ''' object containing main surface window and bounds '''
 
-        self.timer = PG_Timer(self.cf['timing'])   
+        self.timer = PG_Timer(
+            self.cf['timer']['fps_limit'],
+            self.cf['timer']['accurate_timing']
+        )
         ''' pygame specific timer object '''
-        
+
+        self.global_physics: dict[str, float] = self.cf['physics']
+        ''' global physics weights '''
+
         # specific groups
         self.obstacle_group = Group()
         ''' group specifically containing the obstacles '''
-
         self.bounds_group = Group()
         ''' group specifically containing the map outline sprites '''
 
         # combined groups
         self.update_group = Group()
         ''' combined group group of sprites that are to be updated '''
-
         self.map_group = Group()
         ''' combined group of constant, anchored sprites '''
-
         self.active_group = Group()
         ''' combined group group of misc. sprites, including the player(s) '''
 
         # create the player sprite, then add to relevant groups
         self.player = self.create_controllable_sprite(
-            self.cf['special_sprites']['UNIQUE_CONTROLLABLE']['player'],
+            self.cf['special_sprites']['UNIQUE_CONTROLLABLES']['player'],
             None, None
         )
         self.active_group.add(self.player)
         self.update_group.add(self.player)
 
         # create the terrain:
-        self._set_up_map()
-        self.UI = self._set_up_ui_constants()
+        self.set_up_map()
+        self.UI = self.create_ui_constants()
         ''' constant tuple of ui objects to be updated in the order of addition '''
 
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
         ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
 
-    def get_rand_list_elem(self, list: list):
-        ''' generic helper function. get random elem from a given, non-empty list '''
+    def get_rand_elem(self, list: list):
+        ''' generic function. get random elem from a given, non-empty list '''
         return list[randint(1, len(list)-1)]
 
-    def _set_up_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
+    def create_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
         ''' set up UI constants: objects that will exist until the app is exited '''
 
         # create a list to allow appending
         elems = []
-        DEFAULT_CONFIG = self.cf['ui']['TEXTBOX']['default']
+        DEFAULT_CONFIG = self.cf['ui']['TEXTBOXES']['default']
 
         # create the 'root' UI element. Pass (0, 0) as top left pos, seeing as
         # we don't know it's pixel size before rendering and want to place it bottom left
@@ -113,49 +124,42 @@ class PG_App:
         # return the list as a tuple
         return tuple(elems)
 
-    def _set_up_map(self):
+    def set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''
 
         # outline the entire game bounds with terrain_blocks:
         terrain_facing = -1
         self.spawn_axis_outline(
-            self.cf['environment']['BLOCK']['terrain'], None, None,
+            self.cf['environment']['BLOCKS']['terrain'], None, None,
             self.bounds_group, self.window.bounds_rect.re, terrain_facing, None
         )
         self.map_group.add(self.bounds_group)
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
-            self.cf['environment']['BLOCK']['obstacle'],
+            self.cf['environment']['BLOCKS']['obstacle'],
             self.cf['environment']['n_obstacles'],
-            None, None, self.obstacle_group
+            self.obstacle_group
         )
 
         # outline the obstacles with smaller rects to create more jagged terrain
         terrain_facing = 0
         for BLOCK in self.obstacle_group:
             self.spawn_axis_outline(
-                self.cf['environment']['BLOCK']['obstacle_outline'], None, None,
+                self.cf['environment']['BLOCKS']['obstacle_outline'], None, None,
                 self.obstacle_group, BLOCK.rect, terrain_facing, BLOCK.color
             )
         self.map_group.add(self.obstacle_group)
 
-    def _pygame_init(self):
-        ''' initialize pygame and verify pygame version '''
-
-        pg.init()
-        pg_version = str(pg.__version__)
-        req_pg_version = str(self.cf['general']['req_pygame_version'])
-        if not (pg_version == req_pg_version):
-            raise VersionError("Pygame", pg_version, req_pg_version)
-
     def create_tbox_core(self, config: dict, content: str, x: int, y: int,
                          is_static: bool, getter_func: Callable | None):
 
-        ''' return textbox set up using the given config settings '''
+        ''' return textbox set up using the given config settings 
+            * Config: ['ui']['TEXTBOXES'][...]
+        '''
         
         # converting every setting to its correct type to avoid any python magic
-        return PG_Text_Box(
+        TEXTBOX =  PG_Text_Box(
             self.window, content, 
             str(config['font_path']),
             int(config['font_size']),
@@ -168,14 +172,17 @@ class PG_App:
             int(config['internal_padding_h']),
             getter_func, x, y, is_static
         )
+        return TEXTBOX
 
     def create_tbox_child(self, config: dict, content: str, parent: PG_Text_Box | PG_Rect,
                           parent_alignment: str, getter_func: Callable | None):
 
-        ''' return textbox child set up using the given config settings '''
+        ''' return textbox child set up using the given config settings 
+            * Config: ['ui']['TEXTBOXES'][...]
+        '''
 
         # converting every setting to its correct type to avoid any python magic
-        return PG_Text_Box_Child(
+        TEXTBOX = PG_Text_Box_Child(
             self.window, content, 
             str(config['font_path']),
             int(config['font_size']),
@@ -189,40 +196,41 @@ class PG_App:
             getter_func, parent, parent_alignment,
             int(config['parent_padding']),
         )
+        return TEXTBOX
 
     def create_controllable_sprite(self, config: dict, trigger_func: Callable | None,
                                    trigger_weight: float | None):
+
+        ''' create and return a controllable type sprite from the given config 
+            * Config: ['special_sprites']['UNIQUE_CONTROLLABLES'][...]
+        '''
         
-        ''' create and return a controllable type sprite from the given config '''
-        
-        MAX_VELOCITY = Vec2(
-            float(config['max_velocity_x']),
-            float(config['max_velocity_y']))
-        VELOCITY = Vec2(
-            float(config['initial_vectors']['velocity_x']),
-            float(config['initial_vectors']['velocity_y']))
-        POSITION = Vec2(
-            int(config['initial_vectors']['pos_x']),
-            int(config['initial_vectors']['pos_y']))
-        SIZE = (int(config['width']), int(config['height']))
+        starting_pos = Vec2(400.0, 400.0)
+        size = (int(config['surface']['width']), int(config['surface']['height']))
+        max_velocity = Vec2(
+            float(config['weights']['max_velocity_x']),
+            float(config['weights']['max_velocity_y'])
+        )
+        starting_velocity = Vec2(0.0, 0.0)
+        starting_angle = float(0)
 
         SPRITE = Controllable(
             self.window,
-            self.cf['physics'],
-            Color(config['color']),
-            POSITION,
-            SIZE,
-            config['image'],
-            float(config['mass']),
-            VELOCITY,
-            MAX_VELOCITY,
+            self.global_physics,
+            Color(config['surface']['color']),
+            starting_pos,
+            size,
+            config['surface']['image'],
+            float(config['weights']['mass']),
+            starting_velocity,
+            max_velocity,
             trigger_func,
             trigger_weight,
-            float(config['initial_vectors']['angle']),
-            int(config['max_health']),
-            int(config['max_mana']),
-            int(config['initial_vectors']['health']),
-            int(config['initial_vectors']['mana'])
+            starting_angle,
+            int(config['weights']['max_health']),
+            int(config['weights']['max_mana']),
+            int(config['weights']['max_health']),
+            int(config['weights']['max_mana'])
         )
         return SPRITE
 
@@ -231,6 +239,7 @@ class PG_App:
                               facing: int, override_color: None | Color):
 
         ''' encapsulate the given bounds with smaller rect blocks
+            * config: ['environment']['BLOCKS'][...]
             * if iverride_color is None, uses the config color list at random
             * otherwise, choose the given color for all blocks
             * facing decides the alignment of the blocks relative to the bounds axis':
@@ -274,7 +283,7 @@ class PG_App:
 
             # get a random color from the config list if override_color is None
             if not (override_color):
-                color = self.get_rand_list_elem(CF['color_pool'])
+                color = self.get_rand_elem(CF['color_pool'])
 
             # assemble the block
             BLOCK = Static_Interactive(
@@ -306,7 +315,7 @@ class PG_App:
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
             if not (override_color):
-                color = self.get_rand_list_elem(CF['color_pool'])
+                color = self.get_rand_elem(CF['color_pool'])
             position = Vec2(0.0, curr_pos_y)
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -331,7 +340,7 @@ class PG_App:
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
             if not (override_color):
-                color = self.get_rand_list_elem(CF['color_pool'])
+                color = self.get_rand_elem(CF['color_pool'])
             position = Vec2()
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -357,7 +366,7 @@ class PG_App:
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
             if not (override_color):
-                color = self.get_rand_list_elem(CF['color_pool'])
+                color = self.get_rand_elem(CF['color_pool'])
             position = Vec2()
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
@@ -375,11 +384,11 @@ class PG_App:
             group.add(BLOCK)
             curr_pos_y = BLOCK.rect.top - CF['padding']
 
-    def spawn_static_obstacles(self, config: dict, n_obstacles: int, trigger_func: Callable | None,
-                               trigger_weight: float | None, group: Group):
+    def spawn_static_obstacles(self, config: dict, n_obstacles: int, group: Group):
         
         ''' obstacle spawning algorithm
-            * checks for collision with the passed group, and self.map_group before placing
+            * config: ['environment']['BLOCKS'][...]
+            * checks for collision with the passed group and self.map_group before placing
         '''
 
         # shorten some constants for readability
@@ -404,7 +413,7 @@ class PG_App:
             )
             BLOCK = Static_Interactive(
                 self.window, color, position, (width, height), None,
-                None, None, None, trigger_func, trigger_weight
+                None, None, None, None, None
             )
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
@@ -438,32 +447,23 @@ class PG_App:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def debug_print_velocity(self):
+    def debug__print_player_velocity(self):
         if (self.player.velocity.y == self.player.max_velocity.y):
             print("terminal velocity reached @ \n")
             print(f'ms: {self.timer.total_time}')
             print(f'secs: {self.timer.active_segment.get_duration_formatted()}')
 
-    def debug_visualize_mask(self, sprite: Sprite):
-        ''' visualize mask outline '''
-        mask: pg.mask.Mask = sprite.mask
-        p_list = mask.outline()
+    def debug__draw_mask_outline(self, sprite: Sprite):
+        ''' visualize mask outline by drawing lines along the set pixel points '''
+        # get a list of cooordinates from the mask outline
+        p_list = sprite.mask.outline()
         color = pg.Color(255, 255, 255)
         pg.draw.lines(sprite.image, color, 2, p_list)
 
-    def debug_visualize_mask_bounds(self, mask: pg.mask.Mask):
-        '''
-            Returns a surface with the mask drawn on it
-            to_surface(
-                surface=None,
-                setsurface=None,
-                unsetsurface=None,
-                setcolor=(255, 255, 255, 255),
-                unsetcolor=(0, 0, 0, 255),
-                dest=(0, 0)
-            ) -> Surface
-        '''
-        p_list = mask.outline()
+    def debug__draw_mask_bounding_box(self, sprite: Sprite):
+        ''' visualize the bounding rect of the mask '''
+        # get a list of cooordinates from the mask outline
+        p_list = sprite.mask.outline()
         color = pg.Color(255, 255, 255)
         pg.draw.lines(self.window.surface, color, 2, p_list)
 
@@ -471,12 +471,12 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
 
         # init the timer as the loop is about to start
-        self.timer.start_first_segment(ref=None)
+        self.timer.start_first_segment(None)
 
         running = True
         while (running):
             # fill the main surface, then the game bounds
-            self.window.fill_surface(None)
+            self.window.fill_surface()
             self.window.bounds_rect.draw_background()
 
             # draw map constants
@@ -491,7 +491,9 @@ class PG_App:
             for obj in self.UI_temp:
                 obj.draw()
 
-            # self.debug_visualize_mask(self.player)
+            # self.debug__draw_mask_outline(self.player)
+            
+            
             # refresh the display, applying drawing etc.
             pg.display.update()
 
@@ -501,7 +503,7 @@ class PG_App:
                 match (event.type):
                     case pg.QUIT:
                         running = False  # exit the app
-        
+
                     case pg.MOUSEBUTTONDOWN:
                         self.player.rotate_c_clockwise(3.0)
                         # mouse click
@@ -530,6 +532,14 @@ class PG_App:
 
 
 if __name__ == '__main__':
+    # initialize pygame and verify the version before anything else
+    pg.init()
+
+    if (pg.__version__ != GLOBAL_CF['general']['req_pygame_version']):
+        raise VersionError("Pygame", pg.__version__,
+            GLOBAL_CF['general']['req_pygame_version']
+        )
+
     # load the game
-    APP = PG_App(CF)
+    APP = PG_App(GLOBAL_CF)
     APP.loop()

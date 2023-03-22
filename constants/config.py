@@ -4,22 +4,45 @@ import pygame as pg     # to access constants such as keys
 
 CONFIG = {
     'general': {
+        # req_pygame_version:
+        #   the required pygame version for the app. will be verified on init.
+        #   set this value to your installed version if you would like to try running anyways
         'req_pygame_version': str('2.1.2'),
-        # general loop limit, mainly for debugging and configuration purposes:
-        # how many failed attempts to allow when performing pseudorandom loops
-        # breaks out of forever-loops, and useful to print how close the algorithm was to success
+        # loop_limit:
+        #   General loop limit, mainly for debugging and configuration purposes.
+        #   In effect, set how many failed attempts to allow when performing pseudorandom
+        #   algorithms that have a chance to not being capable of success, depending on settings.
+        #   Avoids program crash by breaking out of loops that would never finish,
+        #   and can be useful to print how close an algorithm was to success.
         'loop_limit': int(10000),
+        # debug_color: high contrast color used for visualizing certain screen elements
+        #   should not occur anywhere else on the screen. 
+        #   Do not use black as screen defaults to black.
+        'debug_highlight_color': RGB['uranianblue'],
     },
-    'timing': {
-        'fps_limit': int(120),  # frames per second, 0 == uncapped
-        'accurate_timing': True   # how strict the time tick function should be. True uses a lot more cpu
+    'timer': {
+        # fps_limit:
+        #   due to how tick works with sync limitations, especially at higher values,
+        #   fps should be set to one of the following values: [30, 62, 125, 200, 250]
+        #   any value will work, but in essence, it will not actually sync correctly to other values
+        #   this can be checked by setting accurate_timing to true
+        #   for example, when trying to set an FPS of 220, it will automatically snap to 250 instead.
+        #   (i'm not entirely sure why this happens, but it's not really an issue.)
+        #   setting FPS to 0 will leave it uncapped
+        'fps_limit': int(125),      # default: 125
+        # accurate_timing:
+        #   how strict the time tick function should be.
+        #   Uses more resources if set to true
+        #   docref: https://www.pygame.org/docs/ref/time.html#pygame.time.Clock.tick_busy_loop
+        'accurate_timing': True,    # default: True
     },
     'window': {
-        'caption': str('< caption >'),
+        'caption': str('< app >'),
         'height': int(840),
         'width': int(1400),
         'fill_color': RGB['gray_soft_2'],
         'bounds_fill_color': RGB['offblack'],
+        'vsync': False,
         # adjust the bounds of the active game board
         'bounds_padding': {
             'min_x': int(0),
@@ -30,10 +53,10 @@ CONFIG = {
     },
     'ui': {
         'container_padding': 6,
-        'CONTAINER': {
+        'CONTAINERS': {
             # create the bottom 
         },
-        'TEXTBOX': {
+        'TEXTBOXES': {
             # default textbox option
             'default': {
                 'font_path': "media/fonts/JetBrainsMono-SemiBold.ttf",
@@ -51,12 +74,14 @@ CONFIG = {
         },
     },
     'physics': {
-        # global physics
-        # increment and reduce these extremely carefully. Change mass of objects instead
-        # gravity: gravitational constant to avoid standstill of objects with mass and 0 velocity
-        # also prevents potential division by zero
+        ## global physics-related constants
+        #   increment and reduce these extremely carefully. Change object weights such as mass instead
+        # gravity:
+        #   gravitational constant to avoid standstill of objects with mass and 0 velocity
+        #   also prevents potential division by zero
         'gravity': float(0.02),             # default: 0.02
-        # controls the relation multiplier between mass, max velocity and terminal velocity
+        # gravity_multiplier:
+        #   controls the relation multiplier between mass, max velocity and terminal velocity
         'gravity_multiplier': float(0.01)   # default: 0.01
     },
     'environment': {
@@ -64,7 +89,7 @@ CONFIG = {
         'n_obstacles': int(20),
         # customize the obstacle / terrain blocks
         # padding must be positive
-        'BLOCK': {
+        'BLOCKS': {
             'obstacle': {
                 'color_pool': PALLETTES['PASTEL_MIX'],
                 'min_height': int(10),
@@ -92,29 +117,26 @@ CONFIG = {
         },
     },
     'special_sprites': {
-        'UNIQUE_CONTROLLABLE': {
-            # key cheatsheet <https://www.pygame.org/docs/ref/key.html>
-            # create the main player sprite
+        'UNIQUE_CONTROLLABLES': {
+            ## key cheatsheet docref: https://www.pygame.org/docs/ref/key.html
             'player': {
-                'color': RGB['pastel_yellow_vibrant'],
-                'image': None,
-                'width': int(30),
-                'height': int(40),
-                'mass': float(0.1),             # default: 0.1, 0 < mass < 1
-                'max_health': int(150),
-                'max_mana': int(150),
-                'max_velocity_x': float(2.5),   # default: 2.5
-                # note: max velocity_y is also affected by mass/gravity
-                'max_velocity_y': float(2.5),   # default: 2.5
-                # set initial position
-                'initial_vectors': {
-                    'health': int(100),
-                    'mana': int(100),
-                    'pos_x': int(400),
-                    'pos_y': int(400),
-                    'angle': float(0),
-                    'velocity_x': float(0),
-                    'velocity_y': float(0),
+                # settings that determine how the sprite will look
+                'surface': {
+                    'color': RGB['pastel_yellow_vibrant'],  # color, if image is not set
+                    'texture': None,                # not yet implemented. Leave as None
+                    'image': None,                  # not yet implemented. Leave as None
+                    'width': int(30),               # width of object surface
+                    'height': int(40),              # height of object surface
+                },
+                # weights that will affect physics and/or gameplay
+                'weights': {
+                    'max_health': int(150),         # maximum amount of health
+                    'max_mana': int(150),           # maximum amount of mana (resources)
+                    'steering': float(2.0),         # how effective steering will be
+                    'mass': float(0.1),             # default: 0.1, 0 < mass < 1
+                    'max_velocity_x': float(2.5),   # default: 2.5
+                    'max_velocity_y': float(2.5),   # default: 2.5
+                    # note: actual max velocity_y is also affected by mass/gravity
                 },
                 # configure player keyboard controls
                 'controls': {

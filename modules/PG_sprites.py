@@ -47,9 +47,8 @@ class Static_Interactive(pg.sprite.Sprite):
         # initalize as pygame sprite
         pg.sprite.Sprite.__init__(self)
         
-        # store attributes
         self.window = window
-        self.color = pg.Color(color)
+        self.color = color
         self.position = position
         self.size = size
         self.mass = mass
@@ -74,9 +73,6 @@ class Static_Interactive(pg.sprite.Sprite):
         
         # create a mask for fast collision detection
         self.mask = pg.mask.from_surface(self.image)
-
-    def update_image(self):
-        self.image = pg.Surface(self.size)
     
     def fill_image(self, alt_color: tuple | None):
         ''' uses sprite self.color if alt color is set to None '''
@@ -160,32 +156,31 @@ class Controllable(pg.sprite.Sprite):
         self.max_velocity.y += (self.mass / (1 + self.mass - (self.mass * self.G_CONST)))
         print(f'max_velocity.y: {self.max_velocity.y}')
 
-        # set up surface aka image
+        # set up surface, aka image
         if not image:
-            # crucial to store the original image and rect for transformation
-            # pygame will literally flood memory in seconds if not. spent hours debugging
-            IMG = pg.Surface(self.size).convert_alpha()
-            # IMG.fill(self.window.bounds_fill_color)
-            # IMG.set_colorkey(self.window.bounds_fill_color)
-            RECT = IMG.get_rect().copy()
-            self.original_image = IMG
-            self.original_rect = RECT
+            # it's crucial to store the original image and rect for transformation
+            # otherwise, pygame will flood the memory in a matter of seconds
+            # in short, ensures the original image is rotated, not the mutated one
+            self.ORIGINAL_IMAGE = pg.Surface(self.size).convert_alpha()
+            self.ORIGINAL_RECT = self.ORIGINAL_IMAGE.get_rect()
 
-            # draw polygon
-            p1 = Vec2(self.original_rect.midtop)
-            p2 = Vec2(self.original_rect.bottomright)
-            p3 = Vec2(self.original_rect.bottomleft)
-            pg.draw.polygon(self.original_image, self.color, (p1, p2, p3))
+            # create a polygon using the rect bounds as reference points
+            p1 = Vec2(self.ORIGINAL_RECT.midtop)
+            p2 = Vec2(self.ORIGINAL_RECT.bottomright)
+            p3 = Vec2(self.ORIGINAL_RECT.bottomleft)
+            # draw the polygon to the original image surface
+            pg.draw.polygon(self.ORIGINAL_IMAGE, self.color, (p1, p2, p3))
 
-            self.image = pg.transform.rotate(self.original_image, self.angle)
-            self.rect = self.original_image.get_rect(center=self.position).copy()
-            self.mask = pg.mask.from_surface(self.original_image)
+            # set sprite staple attributes
+            self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+            self.rect = self.ORIGINAL_IMAGE.get_rect(center=self.position).copy()
+            
+            # a mask is a bitmap of set pixels in an image, used for fast collision checking
+            # https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask
+            self.mask = pg.mask.from_surface(self.ORIGINAL_IMAGE)
         else:
             # TODO: support actual images
             raise ValueError("not yet implemented, don't include an image")
-
-    def update_image(self):
-        self.image = pg.Surface(self.size)
 
     def fill_image(self, alt_color: tuple | None):
         ''' uses sprite self.color if alt color is set to None '''
@@ -241,11 +236,20 @@ class Controllable(pg.sprite.Sprite):
         self.update_image()
 
     def update_image(self):
-        ''' rotate image, rect and mask to the correct angle '''
-        # get new and rotated image & rect from originals
-        self.image = pg.transform.rotate(self.original_image, self.angle)
-        self.rect = self.image.get_rect(center=self.original_rect.center)
+        ''' Rotate image and to the correct angle. Create new rect and mask. '''
+
+        # get a new image by rotating the original image
+        # not referring to the original image will result in catastrophic memory flooding
+        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+
+        # set rect to the new images rect bounds
+        # get_rect(**kwargs: Any) accepts a position value as parameter
+        self.rect = self.image.get_rect(center=self.ORIGINAL_RECT.center)
+
         # get new mask for collision checking
+        # > Note A new mask needs to be recreated each time a sprite's image is changed  
+        # > (e.g. if a new image is used or the existing image is rotated).  
+        #   https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask  
         self.mask = pg.mask.from_surface(self.image)
 
     def update(self):

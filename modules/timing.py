@@ -1,17 +1,24 @@
 
 class Segment:
-    ''' ref is an ID of sort. can be for example a given map/challenge/algorithm '''
+    ''' Time segment used by Timer
+        * ref is an ID of sort. can be for example a given map/challenge/algorithm
+        * ref can be None if separating segment types is not needed
+    '''
+
     def __init__(self, start: int, ref: int | None):
-        self.ref: int | None = ref
-        self.start: int = start
-        self.duration: int = 0
+        self.ref = ref
+        self.start = start
+        self.duration = int()
 
     def get_duration_int(self):
         ''' returns milliseconds that have passed since segment started '''
         return self.duration
     
     def get_duration_formatted(self):
-        ''' returns <mm:ss>, or <hh:mm:ss> if hh > 0'''
+        ''' Formats from milliseconds to a readable format
+            * returns <mm:ss>, or <hh:mm:ss> if hh > 0 
+        '''
+
         secs = int(self.duration/1000) % 60
         mins = int(self.duration/(1000*60)) % 60
         hours = int(self.duration/(1000*60*60)) % 24
@@ -26,9 +33,11 @@ class Segment:
 
 class Timer:
     ''' Segment based time tracking.
+        * relies on an external clock to provide values through update
         * Tracking activates when .start_first_segment() is called, not on __init__
-        * start_first_segment MUST be called before ANY other methods are called.
+        * >> start_first_segment MUST be called before ANY other methods are called.
     '''
+
     def __init__(self):
         self.start_time: int = 0
         self.total_time: int = 0
