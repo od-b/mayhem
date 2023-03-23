@@ -71,15 +71,15 @@ class PG_App:
         self.active_group = Group()
         ''' combined group group of misc. sprites, including the player(s) '''
 
-        # create the map
+        # set up the map
         self.set_up_map()
 
         # spawn the player
         self.player: Controllable
-
         self.spawn_player(self.config_player)
-        # create the UI
-        self.UI = self.create_ui_constants(self.config_textbox_default)
+
+        # set up the UI
+        self.UI = self.create_ui_constants()
         ''' constant tuple of ui objects to be updated in the order of addition '''
 
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
@@ -95,12 +95,13 @@ class PG_App:
         self.active_group.add(self.player)
         self.update_group.add(self.player)
 
-    def create_ui_constants(self, config: dict) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
+    def create_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
         ''' set up UI constants: objects that will exist until the app is exited
             * config: ['ui']['TEXTBOXES'][...]
         '''
 
         # create a list to allow appending
+        config = self.config_textbox_default
         textboxes = []
 
         # create the 'root' UI element. Pass (0, 0) as top left pos, seeing as
@@ -453,9 +454,8 @@ class PG_App:
             for obj in self.UI_temp:
                 obj.draw()
 
-            # self.debug__draw_mask_outline(self.player)
-            
-            
+            self.debug__draw_mask_outline(self.player)
+
             # refresh the display, applying drawing etc.
             pg.display.update()
 
@@ -479,18 +479,19 @@ class PG_App:
                             case pg.K_ESCAPE:
                                 running = False
 
-            # update the dynamic objects in core UI, and then temp UI
-            for obj in self.UI:
-                obj.update()
-
-            for obj in self.UI_temp:
-                obj.update()
 
             # now that events are read, update sprites before next frame
             self.update_group.update()
 
             # update the timer. Also limits the framerate if set
             self.timer.update()
+
+            # update the dynamic objects in core UI, and then temp UI
+            for obj in self.UI:
+                obj.update()
+
+            for obj in self.UI_temp:
+                obj.update()
 
 
 if __name__ == '__main__':

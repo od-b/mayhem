@@ -216,7 +216,7 @@ class Controllable(Sprite):
         # handle overflow:
         if ((self.angle - weight) < -180):
             self.angle *= -1
-        self.update_image()
+        self.update_image_angle()
 
     def rotate_c_clockwise(self, weight: float):
         ''' rotate <weight> degrees counter-clockwise '''
@@ -224,10 +224,10 @@ class Controllable(Sprite):
         # handle overflow:
         if ((self.angle + weight) > 180):
             self.angle *= -1
-        self.update_image()
+        self.update_image_angle()
 
-    def update_image(self):
-        ''' Rotate image and to the correct angle. Create new rect and mask. '''
+    def update_image_angle(self):
+        ''' Rotate image to the correct angle. Create new rect and mask. '''
 
         # get a new image by rotating the original image
         # not referring to the original image will result in catastrophic memory flooding
@@ -244,10 +244,10 @@ class Controllable(Sprite):
         self.mask = pg.mask.from_surface(self.image)
 
     def update(self):
-        # self.velocity.y += self.get_gravity_factor()
+        self.velocity.y += self.get_gravity_factor()
         # self.velocity = self.velocity.rotate(self.angle)
-        self.rotate_c_clockwise(2.0)
-        self.update_image()
+        # self.rotate_c_clockwise(1.0)
+        # self.update_image_angle()
         self.limit_velocity()
         self.position += self.velocity
         self.rect.center = self.position
