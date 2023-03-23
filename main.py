@@ -41,14 +41,17 @@ class PG_App:
     def __init__(self, cf: dict[str, any]):
         self.cf = cf
         ''' reference to the 'CONFIG' dict from ./constants/config.py '''
+        
+        # store some important config sections for readability purposes
+        self.LOOP_LIM = self.cf['general']['loop_limit']
+        self.ui_container_padding = self.cf['ui']['container_padding']
+        self.config_player = self.cf['sprites']['UNIQUE']['player']
+        self.config_textbox_default = self.cf['ui']['TEXTBOXES']['default']
 
         self.window = PG_Window(cf['window'], cf['map'])
         ''' object containing main surface window and bounds '''
 
-        self.timer = PG_Timer(
-            self.cf['timer']['fps_limit'],
-            self.cf['timer']['accurate_timing']
-        )
+        self.timer = PG_Timer(self.cf['timer']['fps_limit'], self.cf['timer']['accurate_timing'])
         ''' pygame specific timer object '''
 
         self.global_physics: dict[str, float] = self.cf['physics']
@@ -68,13 +71,15 @@ class PG_App:
         self.active_group = Group()
         ''' combined group group of misc. sprites, including the player(s) '''
 
-        self.main_player_cf = self.cf['special_sprites']['UNIQUE_CONTROLLABLES']['player']
-        self.player: Controllable
-        self.spawn_player(self.main_player_cf)
-
-        # create the terrain:
+        # create the map
         self.set_up_map()
-        self.UI = self.create_ui_constants()
+
+        # spawn the player
+        self.player: Controllable
+
+        self.spawn_player(self.config_player)
+        # create the UI
+        self.UI = self.create_ui_constants(self.config_textbox_default)
         ''' constant tuple of ui objects to be updated in the order of addition '''
 
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
@@ -90,32 +95,34 @@ class PG_App:
         self.active_group.add(self.player)
         self.update_group.add(self.player)
 
-    def create_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
-        ''' set up UI constants: objects that will exist until the app is exited '''
+    def create_ui_constants(self, config: dict) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
+        ''' set up UI constants: objects that will exist until the app is exited
+            * config: ['ui']['TEXTBOXES'][...]
+        '''
 
         # create a list to allow appending
-        elems = []
-        DEFAULT_CONFIG = self.cf['ui']['TEXTBOXES']['default']
+        textboxes = []
 
         # create the 'root' UI element. Pass (0, 0) as top left pos, seeing as
         # we don't know it's pixel size before rendering and want to place it bottom left
-        UI_TIME = self.create_tbox_core(DEFAULT_CONFIG, "Time: ", 0, 0, False, self.timer.get_duration)
+        UI_TIME = self.create_tbox_core(config, "Time: ", 0, 0, False, self.timer.get_duration)
 
         # after its rendered, set the position to bottom left (adjusted for default padding)
         UI_TIME.re.bottomleft = (
-            self.cf['ui']['container_padding'],
-            (self.window.height - self.cf['ui']['container_padding']))
-        elems.append(UI_TIME)
+            self.ui_container_padding,
+            (self.window.height - self.ui_container_padding)
+        )
+        textboxes.append(UI_TIME)
 
         # create the fps frame anchored to the right of UI_TIME
-        UI_FPS = self.create_tbox_child(DEFAULT_CONFIG, "FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
-        elems.append(UI_FPS)
+        UI_FPS = self.create_tbox_child(config, "FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
+        textboxes.append(UI_FPS)
 
-        PLAYER_ANGLE = self.create_tbox_child(DEFAULT_CONFIG, "Angle: ", UI_FPS, 'right', self.player.get_angle)
-        elems.append(PLAYER_ANGLE)
+        PLAYER_ANGLE = self.create_tbox_child(config, "Angle: ", UI_FPS, 'right', self.player.get_angle)
+        textboxes.append(PLAYER_ANGLE)
 
         # return the list as a tuple
-        return tuple(elems)
+        return tuple(textboxes)
 
     def set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''
@@ -123,29 +130,32 @@ class PG_App:
         # outline the entire game bounds with terrain_blocks:
         terrain_facing = -1
         self.spawn_rect_outline(
-            self.cf['map']['BLOCKS']['terrain'], None, None,
-            self.bounds_group, self.window.map_bounds_rect.re, terrain_facing, None
+            self.cf['sprites']['BLOCKS']['terrain'],
+            None, None, self.bounds_group,
+            self.window.map_bounds_rect.re, terrain_facing, None
         )
+        # add map bounds outline blocks to the general map group
         self.map_group.add(self.bounds_group)
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
-            self.cf['map']['BLOCKS']['obstacle'],
+            self.cf['sprites']['BLOCKS']['obstacle'],
+            None, None, self.obstacle_group,
             self.cf['map']['n_obstacles'],
-            self.obstacle_group, None, None
         )
 
         # outline the obstacles with smaller rects to create more jagged terrain
         terrain_facing = 0
         for BLOCK in self.obstacle_group:
-            trigger_func = None
-            trigger_weight = None
+            # for each block in obstacle_group, outline the block rect
             color_pool = [BLOCK.color]
             self.spawn_rect_outline(
-                self.cf['map']['BLOCKS']['obstacle_outline'],
-                trigger_func, trigger_weight,
-                self.obstacle_group, BLOCK.rect, terrain_facing, color_pool
+                self.cf['sprites']['BLOCKS']['obstacle_outline'],
+                None, None, self.obstacle_group, 
+                BLOCK.rect, terrain_facing, color_pool
             )
+        
+        # add obstacle blocks and their outline blocks to the general map group
         self.map_group.add(self.obstacle_group)
 
     def create_tbox_core(self, config: dict, content: str, x: int, y: int,
@@ -200,7 +210,7 @@ class PG_App:
                               facing: int, special_color_pool: None | list[Color]):
 
         ''' encapsulate the given rects' bounds with blocks
-            * config: ['map']['BLOCKS'][...]
+            * config: ['sprites']['BLOCKS'][...]
             * if iverride_color is None, uses the config color list at random
             * otherwise, choose the given color for all blocks
             * facing decides the alignment of the blocks relative to the bounds axis':
@@ -210,7 +220,6 @@ class PG_App:
         '''
 
         # constant declarations for readability
-        CF = config
         MIN_X = bounds.left
         MAX_X = bounds.right
         MIN_Y = bounds.top
@@ -230,8 +239,8 @@ class PG_App:
         curr_pos_x = MIN_X
         while curr_pos_x < MAX_X:
             # set random height/width from within the ranges
-            width = randint(CF['min_width'], CF['max_width'])
-            height = randint(CF['min_height'], CF['max_height'])
+            width = randint(config['min_width'], config['max_width'])
+            height = randint(config['min_height'], config['max_height'])
 
             # create a vector to contain the position of the block
             position = Vec2(curr_pos_x, 0.0)
@@ -242,7 +251,7 @@ class PG_App:
                 width = (MAX_X - curr_pos_x)
 
             # assemble the block
-            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
             
             # set trigger weight if applicable
             if (trigger_weight and trigger_func):
@@ -262,18 +271,18 @@ class PG_App:
             last_block = BLOCK
 
             # increment position for placing the next block
-            curr_pos_x = BLOCK.rect.right + CF['padding']
+            curr_pos_x = BLOCK.rect.right + config['padding']
 
         # 2) topright --> bottomright
         curr_pos_y = last_block.rect.bottom
         while curr_pos_y < MAX_Y:
-            width = randint(CF['min_width'], CF['max_width'])
-            height = randint(CF['min_height'], CF['max_height'])
+            width = randint(config['min_width'], config['max_width'])
+            height = randint(config['min_height'], config['max_height'])
             position = Vec2(0.0, curr_pos_y)
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
 
-            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
             if (trigger_weight and trigger_func):
                 BLOCK.set_trigger_parameter(trigger_weight)
 
@@ -286,18 +295,18 @@ class PG_App:
                     BLOCK.rect.left = MAX_X
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.bottom + CF['padding']
+            curr_pos_y = BLOCK.rect.bottom + config['padding']
 
         # 3) bottomright --> bottomleft
         curr_pos_x = last_block.rect.left
         while curr_pos_x > MIN_X:
-            width = randint(CF['min_width'], CF['max_width'])
-            height = randint(CF['min_height'], CF['max_height'])
+            width = randint(config['min_width'], config['max_width'])
+            height = randint(config['min_height'], config['max_height'])
             position = Vec2()
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
 
-            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
             if (trigger_weight and trigger_func):
                 BLOCK.set_trigger_parameter(trigger_weight)
             BLOCK.rect.right = curr_pos_x
@@ -311,18 +320,18 @@ class PG_App:
                     BLOCK.rect.top = MAX_Y
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_x = BLOCK.rect.left - CF['padding']
+            curr_pos_x = BLOCK.rect.left - config['padding']
 
         # 4) bottomleft --> topright
         curr_pos_y = last_block.rect.top
         while curr_pos_y > MIN_Y:
-            width = randint(CF['min_width'], CF['max_width'])
-            height = randint(CF['min_height'], CF['max_height'])
+            width = randint(config['min_width'], config['max_width'])
+            height = randint(config['min_height'], config['max_height'])
             position = Vec2()
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
 
-            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
             if (trigger_weight and trigger_func):
                 BLOCK.set_trigger_parameter(trigger_weight)
             BLOCK.rect.bottom = curr_pos_y
@@ -336,37 +345,33 @@ class PG_App:
                     BLOCK.rect.right = MIN_X
             last_block = BLOCK
             group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.top - CF['padding']
+            curr_pos_y = BLOCK.rect.top - config['padding']
 
-    def spawn_static_obstacles(self, config: dict, n_obstacles: int, group: Group,
-                               trigger_func: Callable | None, trigger_weight):
-        
+    def spawn_static_obstacles(self, config: dict, trigger_func: Callable | None, trigger_weight,
+                               group: Group, n_obstacles: int):
+
         ''' obstacle spawning algorithm
-            * config: ['map']['BLOCKS'][...]
+            * config: ['sprites']['BLOCKS'][...]
             * checks for collision with the passed group and self.map_group before placing
         '''
 
-        # shorten some constants for readability
-        CF = config
-        FAIL_LIMIT = self.cf['general']['loop_limit']
-
         # padding, taking into account the player size to not completely block paths:
-        W_PADDING = int(self.player.rect.w + CF['padding'])
-        H_PADDING = int(self.player.rect.h + CF['padding'])
+        H_PADDING = int(self.config_player['surface']['height'] + config['padding'])
+        W_PADDING = int(self.config_player['surface']['width'] + config['padding'])
 
         # initiate the loop
         placed_blocks = 0
         failed_attempts = 0
         while placed_blocks < n_obstacles:
             # set random height/width from within the ranges
-            width = randint(CF['min_width'], CF['max_width'])
-            height = randint(CF['min_height'], CF['max_height'])
+            width = randint(config['min_width'], config['max_width'])
+            height = randint(config['min_height'], config['max_height'])
             position = Vec2(
                 self.window.get_rand_x_inbound(width),
                 self.window.get_rand_y_inbound(height)
             )
             # assemble the block
-            BLOCK = Block(CF, None, (width, height), position, trigger_func)
+            BLOCK = Block(config, None, (width, height), position, trigger_func)
 
             # set trigger weight if applicable
             if (trigger_weight and trigger_func):
@@ -396,8 +401,8 @@ class PG_App:
                 del BLOCK
                 failed_attempts += 1
                 # check if attempt limit is reached
-                if (failed_attempts > FAIL_LIMIT):
-                    msg = f'Fail limit of {FAIL_LIMIT} attempts reached. Too many or too large obstacles.\n'
+                if (failed_attempts > self.LOOP_LIM):
+                    msg = f'Fail limit of {self.LOOP_LIM} attempts reached. Too many or too large obstacles.\n'
                     msg += f'Current obstacle count: {placed_blocks} / {n_obstacles}'
                     raise ConfigError(msg, config)
 
