@@ -18,7 +18,7 @@ CONFIG = {
         # debug_color: high contrast color used for visualizing certain screen elements
         #   should not occur anywhere else on the screen. 
         #   Do not use black as screen defaults to black.
-        'debug_highlight_color': RGB['uranianblue'],
+        'debug_color': RGB['uranianblue'],
     },
     'timer': {
         # fps_limit:
@@ -51,9 +51,9 @@ CONFIG = {
         #   defined using positive padding values with reference to window width/height
         #   e.g. all valyes set to 0 will create a map as large as the entire window surface
         'padded_bounds': {
-            'min_x': int(0),
-            'max_x': int(0),
-            'min_y': int(0),
+            'min_x': int(20),
+            'max_x': int(20),
+            'min_y': int(20),
             'max_y': int(60),
         },
         # number of obstacles to spawn (randomly positioned floating blocks)

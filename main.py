@@ -9,6 +9,7 @@ import pygame as pg
 from pygame import Color, Rect, Surface, draw
 from pygame.sprite import Sprite, Group
 from pygame.math import Vector2 as Vec2
+from pygame.mask import Mask
 
 # local dir imports
 ## config dict
@@ -66,13 +67,15 @@ class PG_App:
         # combined groups
         self.update_group = Group()
         ''' combined group group of sprites that are to be updated '''
-        self.map_group = Group()
+        self.block_group = Group()
         ''' combined group of constant, anchored sprites '''
         self.active_group = Group()
         ''' combined group group of misc. sprites, including the player(s) '''
 
         # set up the map
         self.set_up_map()
+
+        # self.map_mask = pg.mask.from_surface(self.window.surface)
 
         # spawn the player
         self.player: Controllable
@@ -85,7 +88,7 @@ class PG_App:
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
         ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
 
-    def spawn_player(self, config):
+    def spawn_player(self, config: dict):
         # create the player sprite, then add to relevant groups
         velo = Vec2(float(0), float(0))
         angle = 0
@@ -133,10 +136,10 @@ class PG_App:
         self.spawn_rect_outline(
             self.cf['sprites']['BLOCKS']['terrain'],
             None, None, self.bounds_group,
-            self.window.map_bounds_rect.re, terrain_facing, None
+            self.window.map_bounds_rect, terrain_facing, None
         )
         # add map bounds outline blocks to the general map group
-        self.map_group.add(self.bounds_group)
+        self.block_group.add(self.bounds_group)
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
@@ -157,7 +160,7 @@ class PG_App:
             )
         
         # add obstacle blocks and their outline blocks to the general map group
-        self.map_group.add(self.obstacle_group)
+        self.block_group.add(self.obstacle_group)
 
     def create_tbox_core(self, config: dict, content: str, x: int, y: int,
                          is_static: bool, getter_func: Callable | None):
@@ -353,7 +356,7 @@ class PG_App:
 
         ''' obstacle spawning algorithm
             * config: ['sprites']['BLOCKS'][...]
-            * checks for collision with the passed group and self.map_group before placing
+            * checks for collision with the passed group and self.block_group before placing
         '''
 
         # padding, taking into account the player size to not completely block paths:
@@ -391,7 +394,7 @@ class PG_App:
             BLOCK.rect = inflated_rect
 
             # if the block + player rect doesn't collide with any terrain, add it to the group
-            if ((pg.sprite.spritecollideany(BLOCK, self.map_group) == None)
+            if ((pg.sprite.spritecollideany(BLOCK, self.block_group) == None)
                      and (pg.sprite.spritecollideany(BLOCK, group) == None)):
                 # block doesn't collide with anything, swap rect back and add block
                 BLOCK.rect = original_rect
@@ -416,37 +419,42 @@ class PG_App:
             print(f'ms: {self.timer.total_time}')
             print(f'secs: {self.timer.active_segment.get_duration_formatted()}')
 
-    def debug__draw_mask_outline(self, sprite: Sprite):
+    def debug__sprite_mask_outline(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
+    
         # get a list of cooordinates from the mask outline
         p_list = sprite.mask.outline()
-        color = pg.Color(255, 255, 255)
-        pg.draw.lines(sprite.image, color, 2, p_list)
+        color = self.cf['general']['debug_color']
+        pg.draw.lines(sprite.image, color, 1, p_list)
 
-    def debug__draw_mask_bounding_box(self, sprite: Sprite):
-        ''' visualize the bounding rect of the mask '''
+    def debug__mask_outline(self, mask: Mask):
+        ''' visualize mask outline by drawing lines along the set pixel points '''
+    
         # get a list of cooordinates from the mask outline
-        p_list = sprite.mask.outline()
-        color = pg.Color(255, 255, 255)
-        pg.draw.lines(self.window.surface, color, 2, p_list)
+        p_list = mask.outline()
+        color = self.cf['general']['debug_color']
+        pg.draw.lines(self.window.surface, color, 1, p_list)
 
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
 
         # init the timer as the loop is about to start
+        self.window.fill_surface()
+        self.window.fill_map_surface()
+        self.block_group.draw(self.window.map_surface)
         self.timer.start_first_segment(None)
 
         running = True
         while (running):
             # fill the main surface, then the game bounds
             self.window.fill_surface()
-            self.window.map_bounds_rect.draw_background()
+            self.window.fill_map_surface()
 
-            # draw map constants
-            self.map_group.draw(self.window.surface)
+            # draw map blocks
+            self.block_group.draw(self.window.map_surface)
 
             # draw other sprites
-            self.active_group.draw(self.window.surface)
+            self.active_group.draw(self.window.map_surface)
 
             # draw the ui
             for obj in self.UI:
@@ -454,7 +462,18 @@ class PG_App:
             for obj in self.UI_temp:
                 obj.draw()
 
-            self.debug__draw_mask_outline(self.player)
+            # debug draw masks
+            # self.debug__sprite_mask_outline(self.player)
+            
+            # for BLOCK in self.obstacle_group:
+            #     self.debug__sprite_mask_outline(BLOCK)
+
+            # for BLOCK in self.block_group:
+            #     self.debug__sprite_mask_outline(BLOCK)
+            # self.debug__sprite_mask_outline(self.player)
+            
+            # self.map_mask = pg.mask.from_surface(self.window.map_surface)
+            # self.debug__mask_outline(self.map_mask)
 
             # refresh the display, applying drawing etc.
             pg.display.update()

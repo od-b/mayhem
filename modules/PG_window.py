@@ -1,4 +1,5 @@
-from pygame import display, Color
+import pygame as pg
+from pygame import display, Color, Surface, Rect
 from modules.PG_shapes import PG_Rect
 from random import randint
 
@@ -24,7 +25,7 @@ class PG_Window:
         self.height = int(config['height'])
         self.surface = display.set_mode((self.width, self.height), vsync=config['vsync'])
 
-        # set up map
+        # set up map surface
         self.map_fill_color = Color(map_config['fill_color'])
         self.map_bounds: dict[str, int] = {
             'min_x': int(map_config['padded_bounds']['min_x']),
@@ -32,31 +33,27 @@ class PG_Window:
             'min_y': int(map_config['padded_bounds']['min_y']),
             'max_y': int(self.height - map_config['padded_bounds']['max_y']),
         }
-        ''' Dict containing the surface area used by active game area.
-            Allows for separation of game and UI, etc.
-            Keys: 
-            * 'min_x'
-            * 'max_x'
-            * 'min_y'
-            * 'max_y'
-        '''
+        ''' Dict containing the surface area used by active game area. '''
 
-        self.map_bounds_rect = PG_Rect(
-            self,
-            self.map_bounds['min_x'],
-            self.map_bounds['min_y'],
-            (self.map_bounds['max_x'] - self.map_bounds['min_x']),
-            (self.map_bounds['max_y'] - self.map_bounds['min_y']),
-            0, self.map_fill_color, None
+        self.map_bounds_rect = Rect(
+            int(self.map_bounds['min_x']),
+            int(self.map_bounds['min_y']),
+            int((self.map_bounds['max_x'] - self.map_bounds['min_x'])),
+            int((self.map_bounds['max_y'] - self.map_bounds['min_y']))
         )
-        ''' like self.map_bounds, but as a pygame Rect '''
+
+        self.map_surface = self.surface.subsurface(self.map_bounds_rect)
+        ''' subsurface from map_bounds_rect, containing the map surface area '''
+
+        self.map_bounds_rect = self.map_surface.get_rect()
+        ''' like self.map_bounds, but as a pygame.Rect '''
 
         self.set_caption(config['caption'])
 
     def set_caption(self, text):
         ''' sets the window caption '''
         display.set_caption(text)
-    
+
     def get_bounds(self):
         return self.map_bounds
 
@@ -84,6 +81,9 @@ class PG_Window:
     
     def fill_surface(self):
         self.surface.fill(self.fill_color)
+
+    def fill_map_surface(self):
+        self.map_surface.fill(self.map_fill_color)
 
     def __str__(self):
         msg = f'< PG_Window: width={self.width}, height={self.height},\n  map_bounds='+'{'

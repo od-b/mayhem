@@ -69,6 +69,12 @@ class Block(Sprite):
             # create surface and fill using color
             IMG = pg.Surface(self.size).convert()
             IMG.fill(self.color)
+            # IMG.set_alpha(None, pg.RLEACCEL)
+            ''' > The optional flags argument can be set to pygame.RLEACCEL to 
+                > provide better performance on non accelerated displays. 
+                > An RLEACCEL Surface will be slower to modify, but quicker to blit as a source.
+                https://www.pygame.org/docs/ref/surface.html#pygame.Surface.set_alpha
+            '''
             self.image = IMG
         else:
             raise ValueError('not yet implemented. Set texture to none')
@@ -244,10 +250,9 @@ class Controllable(Sprite):
         self.mask = pg.mask.from_surface(self.image)
 
     def update(self):
-        self.velocity.y += self.get_gravity_factor()
+        # self.velocity.y += self.get_gravity_factor()
         # self.velocity = self.velocity.rotate(self.angle)
-        # self.rotate_c_clockwise(1.0)
-        # self.update_image_angle()
+        self.rotate_c_clockwise(2.0)
         self.limit_velocity()
         self.position += self.velocity
         self.rect.center = self.position
