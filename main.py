@@ -75,11 +75,20 @@ class PG_App:
         # set up the map
         self.set_up_map()
 
-        # self.map_mask = pg.mask.from_surface(self.window.surface)
-
         # spawn the player
         self.player: Controllable
         self.spawn_player(self.config_player)
+        
+        # not sure if this is needed, but i want to be on the safe side:
+        # define movement key constants to ensure dict access doesn't impact performance
+        PLAYER_CONTROLS = self.cf['sprites']['UNIQUE']['player']['controls']
+        self.STEER_UP = int(PLAYER_CONTROLS['steer_up'])
+        self.STEER_LEFT = int(PLAYER_CONTROLS['steer_left'])
+        self.STEER_DOWN = int(PLAYER_CONTROLS['steer_down'])
+        self.STEER_RIGHT = int(PLAYER_CONTROLS['steer_right'])
+        self.ACCELERATE = int(PLAYER_CONTROLS['accelerate'])
+        self.REV_ACCELERATE = int(PLAYER_CONTROLS['rev_accelerate'])
+        # pg.key.set_repeat(self.timer.fps_limit, self.timer.fps_limit)
 
         # set up the UI
         self.UI = self.create_ui_constants()
@@ -168,7 +177,7 @@ class PG_App:
         ''' return textbox set up using the given config settings 
             * Config: ['ui']['TEXTBOXES'][...]
         '''
-        
+
         # converting every setting to its correct type to avoid any python magic
         TEXTBOX =  PG_Text_Box(
             self.window, content, 
@@ -439,9 +448,6 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
 
         # init the timer as the loop is about to start
-        self.window.fill_surface()
-        self.window.fill_map_surface()
-        self.block_group.draw(self.window.map_surface)
         self.timer.start_first_segment(None)
 
         running = True
@@ -462,18 +468,11 @@ class PG_App:
             for obj in self.UI_temp:
                 obj.draw()
 
-            # debug draw masks
-            # self.debug__sprite_mask_outline(self.player)
-            
             # for BLOCK in self.obstacle_group:
             #     self.debug__sprite_mask_outline(BLOCK)
-
             # for BLOCK in self.block_group:
             #     self.debug__sprite_mask_outline(BLOCK)
             # self.debug__sprite_mask_outline(self.player)
-            
-            # self.map_mask = pg.mask.from_surface(self.window.map_surface)
-            # self.debug__mask_outline(self.map_mask)
 
             # refresh the display, applying drawing etc.
             pg.display.update()
@@ -484,20 +483,50 @@ class PG_App:
                 match (event.type):
                     case pg.QUIT:
                         running = False  # exit the app
-
                     case pg.MOUSEBUTTONDOWN:
-                        self.player.rotate_c_clockwise(3.0)
-                        # mouse click
-                        # MOUSE_POS = pg.mouse.get_pos()
-                        # print(MOUSE_POS)
-                        pass
-
+                        self.player.rotate_c_clockwise()
                     case pg.KEYDOWN:
                         # match keydown event to an action, or pass
                         match (event.key):
                             case pg.K_ESCAPE:
                                 running = False
-
+                            case self.STEER_UP:
+                                self.player.dir_y -= 1
+                                self.player.update_angle()
+                            case self.STEER_DOWN:
+                                self.player.dir_y += 1
+                                self.player.update_angle()
+                            case self.STEER_LEFT:
+                                self.player.dir_x -= 1
+                                self.player.update_angle()
+                            case self.STEER_RIGHT:
+                                self.player.dir_x += 1
+                                self.player.update_angle()
+                            case self.ACCELERATE:
+                                self.player.acceleration = 1
+                            case _:
+                                pass
+                    case pg.KEYUP:
+                        # match keydown event to an action, or pass
+                        match (event.key):
+                            case self.STEER_UP:
+                                self.player.dir_y += 1
+                                self.player.update_angle()
+                            case self.STEER_DOWN:
+                                self.player.dir_y -= 1
+                                self.player.update_angle()
+                            case self.STEER_LEFT:
+                                self.player.dir_x += 1
+                                self.player.update_angle()
+                            case self.STEER_RIGHT:
+                                self.player.dir_x -= 1
+                                self.player.update_angle()
+                            case self.ACCELERATE:
+                                self.player.acceleration = 0
+                            case _:
+                                pass
+                    case _:
+                        pass
 
             # now that events are read, update sprites before next frame
             self.update_group.update()

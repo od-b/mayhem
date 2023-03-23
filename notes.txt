@@ -28,3 +28,43 @@ calculates the Euclidean length of the vector which follows from the Pythagorean
         #### Notes: 
         * x, y, w and h is stored in .rect
         * may have a trigger_func without trigger_weight, but not vice-versa
+
+
+
+    def _update_angle(self):
+        ''' update target angle based on pressed keys '''
+
+        if (self.dir_x == -1):
+            if (self.dir_y == -1):
+                # left + up
+                self.target_angle = 45.0
+            elif (self.dir_y == 1):
+                # left + down
+                self.target_angle = 135.0
+            else:
+                # only left
+                self.target_angle = 90.0
+        elif (self.dir_x == 1):
+            if (self.dir_y == -1):
+                # right + up
+                self.target_angle = -45.0
+            elif (self.dir_y == 1):
+                # right + down
+                self.target_angle = -135.0
+            else:
+                # only right
+                self.target_angle = -90.0
+        elif (self.dir_y == 1):
+            # only down
+            if (self.angle > 0):
+                # shortest way down is to the left
+                self.target_angle = 180
+            else:
+                # shortest way down is to the right
+                self.target_angle = -180
+        elif (self.dir_y == -1):
+            # only up   --    use abs(selfangle)
+            self.target_angle = 0
+        else:
+            # stay on current angle
+            self.target_angle = self.angle

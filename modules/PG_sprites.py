@@ -134,22 +134,22 @@ class Controllable(Sprite):
         self.angle = initial_angle
         self.health = self.max_health
         self.mana = self.max_mana
-        
+
         # adjust max positive y-velocity, taking mass into account
         # print(f'max_velocity.y: {self.max_velocity.y}')
         self.max_velocity.y += (self.mass / (1 + self.mass - (self.mass * self.G_CONST)))
         # print(f'max_velocity.y: {self.max_velocity.y}')
 
-        # # rate of change of velocity
+        # rate of change of velocity
+        self.STEERING_FORCE: float = float(config['weights']['steering_force'])
         # self.acceleration: Vec2 = Vec2(float(0), float(0))
-        # self.steering_force: float = float(config['weights']['steering_force'])
-        # # attributes for external queuing of velocity and angle. Read on update.
-        # self.pending_q_rotate: bool = False
-        # self.pending_q_rotate: bool = False
-        # ''' rotation to be applied on update '''
-        # self.q_rotate = float(0)
-        # ''' rotation to be applied on update '''
-        # self.q_thrust = float(0)
+
+        # attributes for queuing movement
+        self.dir_x: int = int(0)
+        self.dir_y: int = int(0)
+        self.direction = Vec2(0.0, 0.0)
+        self.acceleration: float = float(0)
+        self.target_angle = float(0)
 
         if self.trigger_func:
             self.trigger_func_param: any = None
@@ -164,6 +164,8 @@ class Controllable(Sprite):
             # it's crucial to store the original image and rect for transformation
             # otherwise, pygame will flood the memory in a matter of seconds
             # in short, ensures the original image is rotated, not the mutated one
+            # IMG = pg.Surface(self.size).convert_alpha()
+            # self.ORIGINAL_IMAGE = pg.transform.flip(IMG, False, True)
             self.ORIGINAL_IMAGE = pg.Surface(self.size).convert_alpha()
             self.ORIGINAL_RECT = self.ORIGINAL_IMAGE.get_rect()
 
@@ -173,18 +175,19 @@ class Controllable(Sprite):
             p3 = Vec2(self.ORIGINAL_RECT.bottomleft)
             # draw the polygon to the original image surface
             pg.draw.polygon(self.ORIGINAL_IMAGE, self.color, (p1, p2, p3))
+                
+            # set sprite staple attributes: image, rect & mask
+            self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+            self.rect = self.ORIGINAL_IMAGE.get_rect(center=self.position).copy()
+
+            # a mask is a bitmap of set pixels in an image, used for fast collision checking
+            # https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask
+            self.mask = pg.mask.from_surface(self.ORIGINAL_IMAGE)
+            self.update_image_angle()
         else:
             # TODO: support actual images
             self.color = None
             raise ValueError("not yet implemented, don't include an image")
-    
-        # set sprite staple attributes: image, rect & mask
-        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
-        self.rect = self.ORIGINAL_IMAGE.get_rect(center=self.position).copy()
-
-        # a mask is a bitmap of set pixels in an image, used for fast collision checking
-        # https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask
-        self.mask = pg.mask.from_surface(self.ORIGINAL_IMAGE)
 
     def get_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''
@@ -204,31 +207,22 @@ class Controllable(Sprite):
         elif self.velocity.y > self.max_velocity.y:
             self.velocity.y = self.max_velocity.y
 
-    def key_event(self, key):
-        keys = pg.key.get_pressed()
-        if keys[pg.K_a]:
-            pass
-        elif keys[pg.K_d]:
-            pass
-        if keys[pg.K_SPACE]:
-            pass
-
     def get_angle(self):
         return round(self.angle, 2)
 
-    def rotate_clockwise(self, weight: float):
-        ''' rotate <weight> degrees counter-clockwise '''
-        self.angle -= weight
+    def rotate_clockwise(self):
+        ''' rotate <self.STEERING_FORCE> degrees counter-clockwise '''
+        self.angle -= self.STEERING_FORCE
         # handle overflow:
-        if ((self.angle - weight) < -180):
+        if ((self.angle - self.STEERING_FORCE) < -180):
             self.angle *= -1
         self.update_image_angle()
 
-    def rotate_c_clockwise(self, weight: float):
-        ''' rotate <weight> degrees counter-clockwise '''
-        self.angle += weight
+    def rotate_c_clockwise(self):
+        ''' rotate <self.STEERING_FORCE> degrees counter-clockwise '''
+        self.angle += self.STEERING_FORCE
         # handle overflow:
-        if ((self.angle + weight) > 180):
+        if ((self.angle + self.STEERING_FORCE) > 180):
             self.angle *= -1
         self.update_image_angle()
 
@@ -249,10 +243,17 @@ class Controllable(Sprite):
         #   https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask  
         self.mask = pg.mask.from_surface(self.image)
 
+    def update_angle(self):
+        self.direction.update(self.dir_x, self.dir_y)
+        normalized_pos = self.position.normalize()
+        self.target_angle = -normalized_pos.angle_to(self.direction)
+
     def update(self):
-        # self.velocity.y += self.get_gravity_factor()
+        self.velocity.y += self.get_gravity_factor()
         # self.velocity = self.velocity.rotate(self.angle)
-        self.rotate_c_clockwise(2.0)
+        self.velocity += self.direction.elementwise() * (self.acceleration + self.STEERING_FORCE)
+        # self.angle = self.target_angle
         self.limit_velocity()
+        self.update_image_angle()
         self.position += self.velocity
         self.rect.center = self.position

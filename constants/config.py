@@ -87,10 +87,10 @@ CONFIG = {
         # gravity:
         #   gravitational constant to avoid standstill of objects with mass and 0 velocity
         #   also prevents potential division by zero
-        'gravity': float(0.02),             # default: 0.02
+        'gravity': float(0.025),             # default: 0.02
         # gravity_multiplier:
         #   controls the relation multiplier between mass, max velocity and terminal velocity
-        'gravity_multiplier': float(0.01)   # default: 0.01
+        'gravity_multiplier': float(0.015)   # default: 0.01
     },
     'sprites': {
         'BLOCKS': {
@@ -147,8 +147,8 @@ CONFIG = {
                 'weights': {
                     'max_health':       int(150),       # maximum and initial health
                     'max_mana':         int(150),       # maximum and initial mana
-                    'steering_force':   float(2.0),     # how effective steering will be
-                    'mass':             float(0.1),     # default: 0.1, 0 < mass < 1
+                    'steering_force':   float(0.2),     # how effective steering will be
+                    'mass':             float(0.2),     # default: 0.1, 0 < mass < 1
                     'max_velocity_x':   float(2.5),     # default: 2.5
                     'max_velocity_y':   float(2.5),     # default: 2.5
                     # note: actual max velocity_y is also affected by mass/gravity
