@@ -1,163 +1,160 @@
 from typing import Callable     # type hint for function pointers
+from random import randint
+
 import pygame as pg
+from pygame import Color, Rect, Surface, draw
 from pygame.math import Vector2 as Vec2
+from pygame.sprite import Sprite
 
-from .exceptions import LogicError
 
+class Block(Sprite):
+    ''' Static object with none or a constant, set velocity/mass.
 
-class Static_Interactive(pg.sprite.Sprite):
-    ''' ### Static object with none or predetermined velocity/mass.
-        * Supports a custom or generic trigger.
-        * Position        = Vec2(x, y)
-        * Size            = Vec2(w, h)
+        Parameters
         ---
-        #### Optional parameters
-        * mass            = None | float ∈ [-1.0, 1.0]         : level of applied gravity
-        * velocity        = None | Vec2                        : change in position per frame
-        * max_velocity    = None | Vec2                        : change in position per frame
-        * trigger_func    = None | Callable                    : optional function to call on a trigger, ex. collision
-        * trigger_weight  = None | Vec2, x,y ∈ [-1.0, 1.0]     : parameter for the trigger
-        ---
-        #### Notes: 
-        * Float values should be set to None as opposed to 0.0 for performance
-        * if velocity == None, position may never be updated.
-        * x, y, w and h is stored in .rect
-        * may have a trigger_func without trigger_weight, but not vice-versa
+        config: dict with expected keys
+            see ['special_sprites']['UNIQUE_CONTROLLABLES'][...]
+        size: tuple[int, int]
+        position: Vec2
+            spawn position
+        angle: float
+        trigger_func: None | Callable
+            optional function pointer to be called on update
+            see trigger_func_param for an optional parameter
     '''
+
     def __init__(self,
-                 window: pg.Surface,
-                 color: tuple,
+                 config: dict,
+                 alt_color_pool: list[Color] | None,
+                 size: tuple[int, int],
                  position: Vec2,
-                 size: tuple,
-                 image: pg.Surface | None,
-                 mass: None | float,
-                 velocity: None | Vec2,
-                 max_velocity: None | Vec2,
-                 trigger_func: None | Callable,
-                 trigger_weight: None | float):
+                 trigger_func: None | Callable
+                 ):
 
-        # verify parameters
-        if (trigger_weight != None) and (trigger_func == None):
-            raise LogicError("trigger_weight should be None without a trigger_func")
-        if (max_velocity != None) and (velocity == None):
-            raise LogicError("max_velocity should be None without a velocity vector")
-        if (velocity != None) and (mass == None):
-            raise LogicError("objects with mass cannot have None velocity. Init with empty Vec2() instead")
-
-        # initalize as pygame sprite
-        pg.sprite.Sprite.__init__(self)
+        Sprite.__init__(self)
         
-        self.window = window
-        self.color = color
+        # store main attributes
+        self.mass = float(config['mass'])
+        self.texture: Surface | None = config['texture']
         self.position = position
         self.size = size
-        self.mass = mass
-        self.velocity = velocity
-        self.max_velocity = max_velocity
         self.trigger_func = trigger_func
-        self.trigger_weight = trigger_weight
-
+        ''' (optional) function to be called on update. 
+            * The function return value is never read
+            * Pass attributes to be modified as parameters instead.
+        '''
+        
+        # determine if a trigger func is passed
+        if (self.trigger_func != None):
+            self.trigger_func_param: any = None
+            ''' parameter to be passed for the trigger_func.
+                does nothing if trigger_func is not defined.
+                * defaults to None
+                * set manually through set_trigger_parameter
+            '''
+        
         # create surface, either as an image or color
-        if not image:
+        if (self.texture == None):
+            # no texture provided, create a simple colored surface
+            if (alt_color_pool):
+                # if a special pallette is passed, use it
+                self.color_pool = alt_color_pool
+            else:
+                # otherwise default to the config pallette
+                self.color_pool: list[Color] = config['color_pool']
+
+            # pick a random color from the color pool
+            self.color = Color(self.color_pool[randint(0, len(self.color_pool)-1)])
+
+            # create surface and fill using color
             IMG = pg.Surface(self.size).convert()
             IMG.fill(self.color)
             self.image = IMG
         else:
-            self.image = image
-            # self.image.set_colorkey()
-            # print(self.image.get_colorkey())
-            self.image = self.image.convert_alpha()
+            raise ValueError('not yet implemented. Set texture to none')
 
+        # create rect from the surface
         self.rect = self.image.get_rect()
         self.rect.topleft = self.position
         
         # create a mask for fast collision detection
         self.mask = pg.mask.from_surface(self.image)
     
-    def fill_image(self, alt_color: tuple | None):
-        ''' uses sprite self.color if alt color is set to None '''
-        if alt_color:
-            self.image.fill(alt_color)
-        else:
-            self.image.fill(self.color)
+    def set_trigger_parameter(self, param):
+        self.trigger_func_param = param
 
     def update(self):
-        pass
+        if (self.trigger_func != None):
+            self.trigger_func(self.trigger_func_param)
 
 
-class Controllable(pg.sprite.Sprite):
-    ''' ### Controllable object
-        * Supports a custom or generic trigger.
-        * position        = Vec2(x, y)
-        * size            = Vec2(w, h)
-        * velocity        = Vec2                               : initial velocity
-        * angle           = float                              : initial angle in radians
-        * mass            = None | float ∈ [0.0, 1.0]          : level of applied gravity
-        ---
-        #### Optional parameters
-        * max_velocity    = None | Vec2                        : change in position per frame
-        * trigger_func    = None | Callable                    : optional function to call on a trigger, ex. collision
-        * trigger_weight  = None | Vec2, x,y ∈ [-1.0, 1.0]     : parameter for the trigger
-        ---
-        #### Notes: 
-        * x, y, w and h is stored in .rect
-        * may have a trigger_func without trigger_weight, but not vice-versa
-    '''
+class Controllable(Sprite):
+    ''''''
     def __init__(self,
-                 window: pg.Surface,
-                 physics: dict, 
-                 color: tuple, 
-                 position: Vec2, 
-                 size: tuple,
-                 image: pg.Surface | None,
-                 mass: float,
-                 velocity: Vec2,
-                 max_velocity: None | Vec2,
-                 trigger_func: None | Callable,
-                 trigger_weight: None | float,
-                 angle: float,
-                 max_health: int,
-                 max_mana: int,
-                 health: int,
-                 mana: int):
-
-        # verify parameters
-        if (trigger_weight != None) and (trigger_func == None):
-            raise LogicError("trigger_weight should be None without a trigger_func")
+                 config: dict,
+                 global_physics: dict,
+                 initial_pos: Vec2,
+                 initial_angle: float,
+                 initial_velocity: Vec2,
+                 trigger_func):
 
         # initalize as pygame sprite
-        pg.sprite.Sprite.__init__(self)
+        Sprite.__init__(self)
         
-        # store attributes
-        self.window = window
-        self.color = color
+        # "constant" attributes:
+        self.trigger_func: Callable | None = trigger_func
+        ''' function to be called on update. 
+            * Should not return a value
+            * Pass attributes to be modified as parameters instead.
+        '''
+        self.max_health = int(config['weights']['max_health'])
+        self.max_mana = int(config['weights']['max_mana'])
+        self.size = (
+            int(config['surface']['width']),
+            int(config['surface']['height'])
+        )
+        self.max_velocity = Vec2(
+            float(config['weights']['max_velocity_x']),
+            float(config['weights']['max_velocity_y'])
+        )
+        self.mass = float(1 - config['weights']['mass'])
+        self.image_source: Surface | None = config['surface']['image']
+        self.G_CONST = float(global_physics['gravity'])
+        self.G_MULTI = float(global_physics['gravity'])
 
-        self.trigger_func = trigger_func
-        self.trigger_weight = trigger_weight
-
-        self.max_health = max_health
-        self.max_mana = max_mana
-        self.health = health
-        self.mana = mana
-
-        self.physics = physics
-        self.position = position
-        self.size = size
-        self.mass = float(1 - mass)
-        self.velocity = velocity
-        self.max_velocity = max_velocity
-        self.angle = angle
-
-        self.G_CONST = float(self.physics['gravity'])
-        self.G_MULTI = float(self.physics['gravity'])
-
-        # max positive y-velocity, taking mass into account
-        print(f'max_velocity.y: {self.max_velocity.y}')
+        # set up variable attributes
+        self.position = initial_pos
+        self.velocity = initial_velocity
+        self.angle = initial_angle
+        self.health = self.max_health
+        self.mana = self.max_mana
+        
+        # adjust max positive y-velocity, taking mass into account
+        # print(f'max_velocity.y: {self.max_velocity.y}')
         self.max_velocity.y += (self.mass / (1 + self.mass - (self.mass * self.G_CONST)))
-        print(f'max_velocity.y: {self.max_velocity.y}')
+        # print(f'max_velocity.y: {self.max_velocity.y}')
+
+        # # rate of change of velocity
+        # self.acceleration: Vec2 = Vec2(float(0), float(0))
+        # self.steering_force: float = float(config['weights']['steering_force'])
+        # # attributes for external queuing of velocity and angle. Read on update.
+        # self.pending_q_rotate: bool = False
+        # self.pending_q_rotate: bool = False
+        # ''' rotation to be applied on update '''
+        # self.q_rotate = float(0)
+        # ''' rotation to be applied on update '''
+        # self.q_thrust = float(0)
+
+        if self.trigger_func:
+            self.trigger_func_param: any = None
+            ''' parameter to be passed for the trigger_func.
+                does nothing if trigger_func is not defined.
+                * defaults to None
+            '''
 
         # set up surface, aka image
-        if not image:
+        if not self.image_source:
+            self.color = Color(config['surface']['color'])
             # it's crucial to store the original image and rect for transformation
             # otherwise, pygame will flood the memory in a matter of seconds
             # in short, ensures the original image is rotated, not the mutated one
@@ -170,24 +167,18 @@ class Controllable(pg.sprite.Sprite):
             p3 = Vec2(self.ORIGINAL_RECT.bottomleft)
             # draw the polygon to the original image surface
             pg.draw.polygon(self.ORIGINAL_IMAGE, self.color, (p1, p2, p3))
-
-            # set sprite staple attributes
-            self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
-            self.rect = self.ORIGINAL_IMAGE.get_rect(center=self.position).copy()
-            
-            # a mask is a bitmap of set pixels in an image, used for fast collision checking
-            # https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask
-            self.mask = pg.mask.from_surface(self.ORIGINAL_IMAGE)
         else:
             # TODO: support actual images
+            self.color = None
             raise ValueError("not yet implemented, don't include an image")
+    
+        # set sprite staple attributes: image, rect & mask
+        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+        self.rect = self.ORIGINAL_IMAGE.get_rect(center=self.position).copy()
 
-    def fill_image(self, alt_color: tuple | None):
-        ''' uses sprite self.color if alt color is set to None '''
-        if alt_color:
-            self.image.fill(alt_color)
-        else:
-            self.image.fill(self.color)
+        # a mask is a bitmap of set pixels in an image, used for fast collision checking
+        # https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask
+        self.mask = pg.mask.from_surface(self.ORIGINAL_IMAGE)
 
     def get_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''

@@ -10,3 +10,21 @@ length()
 returns the Euclidean length of the vector.
 length() -> float
 calculates the Euclidean length of the vector which follows from the Pythagorean theorem: vec.length() == math.sqrt(vec.x**2 + vec.y**2)
+
+
+    ''' ### Controllable object
+        * Supports a custom or generic trigger.
+        * position        = Vec2(x, y)
+        * size            = Vec2(w, h)
+        * velocity        = Vec2                               : initial velocity
+        * angle           = float                              : initial angle in radians
+        * mass            = None | float ∈ [0.0, 1.0]          : level of applied gravity
+        ---
+        #### Optional parameters
+        * max_velocity    = None | Vec2                        : change in position per frame
+        * trigger_func    = None | Callable                    : optional function to call on a trigger, ex. collision
+        * trigger_weight  = None | Vec2, x,y ∈ [-1.0, 1.0]     : parameter for the trigger
+        ---
+        #### Notes: 
+        * x, y, w and h is stored in .rect
+        * may have a trigger_func without trigger_weight, but not vice-versa

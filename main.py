@@ -5,10 +5,9 @@ from random import randint
 
 # installed library imports
 import pygame as pg
-from pygame import Color
-from pygame.sprite import Group
-from pygame.sprite import Sprite
-## import and simplify as Vec2 instead of writing 'pygame.math.Vector2(...)' every damn time:
+## simplify some imports for readability:
+from pygame import Color, Rect, Surface, draw
+from pygame.sprite import Sprite, Group
 from pygame.math import Vector2 as Vec2
 
 # local dir imports
@@ -21,7 +20,7 @@ from modules.PG_window import PG_Window
 from modules.PG_shapes import PG_Rect
 from modules.PG_timer import PG_Timer
 from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
-from modules.PG_sprites import Static_Interactive, Controllable
+from modules.PG_sprites import Block, Controllable
 
 
 class PG_App:
@@ -33,7 +32,7 @@ class PG_App:
 
         * Conventions defined for the scope of this class:
         * Methods that start with _ are helper methods, or only called once
-            E.g.; if the method spawns blocks, config should be a dict from ['environment']['BLOCKS'].
+            E.g.; if the method spawns blocks, config should be a dict from ['map']['BLOCKS'].
         * Methods that start with 'create_' will return the object. 'spawn_' functions are void
         * Methods that take in 'config' as a parameter will refer to the relevant subdict of self.cf.
             The expected config is listed in the method docstring.
@@ -43,15 +42,7 @@ class PG_App:
         self.cf = cf
         ''' reference to the 'CONFIG' dict from ./constants/config.py '''
 
-        self.window = PG_Window(
-            str(self.cf['window']['caption']),
-            int(self.cf['window']['width']),
-            int(self.cf['window']['height']),
-            self.cf['window']['bounds_padding'],
-            Color(self.cf['window']['fill_color']),
-            Color(self.cf['window']['bounds_fill_color']),
-            self.cf['window']['vsync']
-        )
+        self.window = PG_Window(cf['window'], cf['map'])
         ''' object containing main surface window and bounds '''
 
         self.timer = PG_Timer(
@@ -77,13 +68,9 @@ class PG_App:
         self.active_group = Group()
         ''' combined group group of misc. sprites, including the player(s) '''
 
-        # create the player sprite, then add to relevant groups
-        self.player = self.create_controllable_sprite(
-            self.cf['special_sprites']['UNIQUE_CONTROLLABLES']['player'],
-            None, None
-        )
-        self.active_group.add(self.player)
-        self.update_group.add(self.player)
+        self.main_player_cf = self.cf['special_sprites']['UNIQUE_CONTROLLABLES']['player']
+        self.player: Controllable
+        self.spawn_player(self.main_player_cf)
 
         # create the terrain:
         self.set_up_map()
@@ -93,9 +80,15 @@ class PG_App:
         self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
         ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
 
-    def get_rand_elem(self, list: list):
-        ''' generic function. get random elem from a given, non-empty list '''
-        return list[randint(1, len(list)-1)]
+    def spawn_player(self, config):
+        # create the player sprite, then add to relevant groups
+        velo = Vec2(float(0), float(0))
+        angle = 0
+        position = Vec2(float(400), float(400))
+
+        self.player = Controllable(config, self.global_physics, position, angle, velo, None)
+        self.active_group.add(self.player)
+        self.update_group.add(self.player)
 
     def create_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
         ''' set up UI constants: objects that will exist until the app is exited '''
@@ -129,25 +122,29 @@ class PG_App:
 
         # outline the entire game bounds with terrain_blocks:
         terrain_facing = -1
-        self.spawn_axis_outline(
-            self.cf['environment']['BLOCKS']['terrain'], None, None,
-            self.bounds_group, self.window.bounds_rect.re, terrain_facing, None
+        self.spawn_rect_outline(
+            self.cf['map']['BLOCKS']['terrain'], None, None,
+            self.bounds_group, self.window.map_bounds_rect.re, terrain_facing, None
         )
         self.map_group.add(self.bounds_group)
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
-            self.cf['environment']['BLOCKS']['obstacle'],
-            self.cf['environment']['n_obstacles'],
-            self.obstacle_group
+            self.cf['map']['BLOCKS']['obstacle'],
+            self.cf['map']['n_obstacles'],
+            self.obstacle_group, None, None
         )
 
         # outline the obstacles with smaller rects to create more jagged terrain
         terrain_facing = 0
         for BLOCK in self.obstacle_group:
-            self.spawn_axis_outline(
-                self.cf['environment']['BLOCKS']['obstacle_outline'], None, None,
-                self.obstacle_group, BLOCK.rect, terrain_facing, BLOCK.color
+            trigger_func = None
+            trigger_weight = None
+            color_pool = [BLOCK.color]
+            self.spawn_rect_outline(
+                self.cf['map']['BLOCKS']['obstacle_outline'],
+                trigger_func, trigger_weight,
+                self.obstacle_group, BLOCK.rect, terrain_facing, color_pool
             )
         self.map_group.add(self.obstacle_group)
 
@@ -198,48 +195,12 @@ class PG_App:
         )
         return TEXTBOX
 
-    def create_controllable_sprite(self, config: dict, trigger_func: Callable | None,
-                                   trigger_weight: float | None):
+    def spawn_rect_outline(self, config: dict, trigger_func: Callable | None,
+                              trigger_weight, group: Group, bounds: pg.Rect,
+                              facing: int, special_color_pool: None | list[Color]):
 
-        ''' create and return a controllable type sprite from the given config 
-            * Config: ['special_sprites']['UNIQUE_CONTROLLABLES'][...]
-        '''
-        
-        starting_pos = Vec2(400.0, 400.0)
-        size = (int(config['surface']['width']), int(config['surface']['height']))
-        max_velocity = Vec2(
-            float(config['weights']['max_velocity_x']),
-            float(config['weights']['max_velocity_y'])
-        )
-        starting_velocity = Vec2(0.0, 0.0)
-        starting_angle = float(0)
-
-        SPRITE = Controllable(
-            self.window,
-            self.global_physics,
-            Color(config['surface']['color']),
-            starting_pos,
-            size,
-            config['surface']['image'],
-            float(config['weights']['mass']),
-            starting_velocity,
-            max_velocity,
-            trigger_func,
-            trigger_weight,
-            starting_angle,
-            int(config['weights']['max_health']),
-            int(config['weights']['max_mana']),
-            int(config['weights']['max_health']),
-            int(config['weights']['max_mana'])
-        )
-        return SPRITE
-
-    def spawn_axis_outline(self, config: dict, trigger_func: Callable | None,
-                              trigger_weight: float | None, group: Group, bounds: pg.Rect,
-                              facing: int, override_color: None | Color):
-
-        ''' encapsulate the given bounds with smaller rect blocks
-            * config: ['environment']['BLOCKS'][...]
+        ''' encapsulate the given rects' bounds with blocks
+            * config: ['map']['BLOCKS'][...]
             * if iverride_color is None, uses the config color list at random
             * otherwise, choose the given color for all blocks
             * facing decides the alignment of the blocks relative to the bounds axis':
@@ -263,8 +224,7 @@ class PG_App:
         # (they are way too specific to create a working generalized loop function, however)
 
         # last_block is for storing the last block placed when swapping axis'
-        color = override_color
-        last_block: Static_Interactive | None = None
+        last_block: Block | None = None
 
         # 1) topleft --> topright
         curr_pos_x = MIN_X
@@ -273,23 +233,20 @@ class PG_App:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
 
+            # create a vector to contain the position of the block
+            position = Vec2(curr_pos_x, 0.0)
+
             # ensure no edge overlap by checking for the last block:
             if (curr_pos_x + width) > MAX_X:
                 # if the block will be last, adjust size before creating
                 width = (MAX_X - curr_pos_x)
 
-            # create a vector to contain the position of the block
-            position = Vec2(curr_pos_x, 0.0)
-
-            # get a random color from the config list if override_color is None
-            if not (override_color):
-                color = self.get_rand_elem(CF['color_pool'])
-
             # assemble the block
-            BLOCK = Static_Interactive(
-                self.window, color, position, (width, height), None,
-                None, None, None, trigger_func, trigger_weight
-            )
+            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            
+            # set trigger weight if applicable
+            if (trigger_weight and trigger_func):
+                BLOCK.set_trigger_parameter(trigger_weight)
 
             # adjust position according to facing
             match (facing):
@@ -312,15 +269,14 @@ class PG_App:
         while curr_pos_y < MAX_Y:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
+            position = Vec2(0.0, curr_pos_y)
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
-            if not (override_color):
-                color = self.get_rand_elem(CF['color_pool'])
-            position = Vec2(0.0, curr_pos_y)
-            BLOCK = Static_Interactive(
-                self.window, color, position, (width, height), None,
-                None, None, None, trigger_func, trigger_weight
-            )
+
+            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            if (trigger_weight and trigger_func):
+                BLOCK.set_trigger_parameter(trigger_weight)
+
             match (facing):
                 case (-1):
                     BLOCK.rect.right = MAX_X
@@ -337,16 +293,15 @@ class PG_App:
         while curr_pos_x > MIN_X:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
+            position = Vec2()
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
-            if not (override_color):
-                color = self.get_rand_elem(CF['color_pool'])
-            position = Vec2()
-            BLOCK = Static_Interactive(
-                self.window, color, position, (width, height), None,
-                None, None, None, trigger_func, trigger_weight
-            )
+
+            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            if (trigger_weight and trigger_func):
+                BLOCK.set_trigger_parameter(trigger_weight)
             BLOCK.rect.right = curr_pos_x
+
             match (facing):
                 case (-1):
                     BLOCK.rect.bottom = MAX_Y
@@ -363,16 +318,15 @@ class PG_App:
         while curr_pos_y > MIN_Y:
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
+            position = Vec2()
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
-            if not (override_color):
-                color = self.get_rand_elem(CF['color_pool'])
-            position = Vec2()
-            BLOCK = Static_Interactive(
-                self.window, color, position, (width, height), None,
-                None, None, None, trigger_func, trigger_weight
-            )
+
+            BLOCK = Block(CF, special_color_pool, (width, height), position, trigger_func)
+            if (trigger_weight and trigger_func):
+                BLOCK.set_trigger_parameter(trigger_weight)
             BLOCK.rect.bottom = curr_pos_y
+
             match (facing):
                 case (-1):
                     BLOCK.rect.left = MIN_X
@@ -384,10 +338,11 @@ class PG_App:
             group.add(BLOCK)
             curr_pos_y = BLOCK.rect.top - CF['padding']
 
-    def spawn_static_obstacles(self, config: dict, n_obstacles: int, group: Group):
+    def spawn_static_obstacles(self, config: dict, n_obstacles: int, group: Group,
+                               trigger_func: Callable | None, trigger_weight):
         
         ''' obstacle spawning algorithm
-            * config: ['environment']['BLOCKS'][...]
+            * config: ['map']['BLOCKS'][...]
             * checks for collision with the passed group and self.map_group before placing
         '''
 
@@ -404,17 +359,19 @@ class PG_App:
         failed_attempts = 0
         while placed_blocks < n_obstacles:
             # set random height/width from within the ranges
-            color = CF['color_pool'][randint(1, len(CF['color_pool'])-1)]
             width = randint(CF['min_width'], CF['max_width'])
             height = randint(CF['min_height'], CF['max_height'])
             position = Vec2(
                 self.window.get_rand_x_inbound(width),
                 self.window.get_rand_y_inbound(height)
             )
-            BLOCK = Static_Interactive(
-                self.window, color, position, (width, height), None,
-                None, None, None, None, None
-            )
+            # assemble the block
+            BLOCK = Block(CF, None, (width, height), position, trigger_func)
+
+            # set trigger weight if applicable
+            if (trigger_weight and trigger_func):
+                BLOCK.set_trigger_parameter(trigger_weight)
+
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
             # 2) we don't want to lock the player in by bad rng
@@ -477,7 +434,7 @@ class PG_App:
         while (running):
             # fill the main surface, then the game bounds
             self.window.fill_surface()
-            self.window.bounds_rect.draw_background()
+            self.window.map_bounds_rect.draw_background()
 
             # draw map constants
             self.map_group.draw(self.window.surface)

@@ -41,15 +41,7 @@ CONFIG = {
         'height': int(840),
         'width': int(1400),
         'fill_color': RGB['gray_soft_2'],
-        'bounds_fill_color': RGB['offblack'],
         'vsync': False,
-        # adjust the bounds of the active game board
-        'bounds_padding': {
-            'min_x': int(0),
-            'max_x': int(0),
-            'min_y': int(0),
-            'max_y': int(60),
-        }
     },
     'ui': {
         'container_padding': 6,
@@ -84,35 +76,58 @@ CONFIG = {
         #   controls the relation multiplier between mass, max velocity and terminal velocity
         'gravity_multiplier': float(0.01)   # default: 0.01
     },
-    'environment': {
-        # number of obstacles to spawn (center blocks)
+    'map': {
+        # adjust the fill color and rect bounds of the active game map
+        'fill_color': RGB['offblack'],
+        # padded_bounds:
+        #   size of the effective game surface
+        #   defined using positive padding values with reference to window width/height
+        #   e.g. all valyes set to 0 will create a map as large as the entire window surface
+        'padded_bounds': {
+            'min_x': int(0),
+            'max_x': int(0),
+            'min_y': int(0),
+            'max_y': int(60),
+        },
+        # number of obstacles to spawn (randomly positioned floating blocks)
         'n_obstacles': int(20),
-        # customize the obstacle / terrain blocks
-        # padding must be positive
+        # <BLOCK>:
+        #   texture: not yet implemented. Leave as None
+        #   color_pool: list of one ore more RGB color values
+        #   padding:
+        #       integer ∈ (0 <= padding < min(max_width, max_height))
+        #       sets pixels inbetween similar type blocks when placed
+        #   mass: how tough the blocks are. Used for collision responses
         'BLOCKS': {
             'obstacle': {
+                'texture': None,
                 'color_pool': PALLETTES['PASTEL_MIX'],
+                'mass': float(0),
+                'padding': int(50),
                 'min_height': int(10),
                 'max_height': int(80),
                 'min_width': int(8),
                 'max_width': int(90),
-                'padding': int(50),
             },
             'obstacle_outline': {
+                'texture': None,
                 'color_pool': PALLETTES['ORANGES'],
+                'mass': float(0),
+                'padding': int(0),
                 'min_height': int(10),
                 'max_height': int(16),
                 'min_width': int(8),
                 'max_width': int(20),
-                'padding': int(0),
             },
             'terrain': {
+                'texture': None,
                 'color_pool': PALLETTES['SHADES_OF_GRAY'],
+                'mass': float(0),
+                'padding': int(0),
                 'min_height': int(10),
                 'max_height': int(16),
                 'min_width': int(8),
                 'max_width': int(22),
-                'padding': int(0),
             },
         },
     },
@@ -132,7 +147,7 @@ CONFIG = {
                 'weights': {
                     'max_health': int(150),         # maximum amount of health
                     'max_mana': int(150),           # maximum amount of mana (resources)
-                    'steering': float(2.0),         # how effective steering will be
+                    'steering_force': float(2.0),   # how effective steering will be
                     'mass': float(0.1),             # default: 0.1, 0 < mass < 1
                     'max_velocity_x': float(2.5),   # default: 2.5
                     'max_velocity_y': float(2.5),   # default: 2.5
@@ -165,6 +180,7 @@ CONFIG = {
     should follow the pattern of:
     
     '<block_type>': {
+        'texture': <pg.Surface>,
         'color_pool': <list: containing minimum one RGB color tuple>,
         'min_height': <int>,
         'max_height': <int>,
@@ -172,7 +188,7 @@ CONFIG = {
         'max_width': <int>,
         'padding': <int>,
     },
-    
+
     This design allows functions to be generalized, reused and modified without
     core changes to the internal algorithm.
     
