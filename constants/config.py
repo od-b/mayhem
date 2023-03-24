@@ -73,12 +73,12 @@ CONFIG = {
         'TEXTBOXES': {
             'default': {
                 # default textbox style
-                'color':                RGB['offblack'],
+                'bg_color':             RGB['offblack'],
                 'border_color':         RGB['yellow'],
                 'border_width':         int(1),
                 'font_size':            int(24),
                 'font_path':            str("media/fonts/JetBrainsMono-SemiBold.ttf"),
-                'font_antialas':        True,
+                'font_antialias':       True,
                 'font_color':           RGB['bone'],
                 'internal_padding_w':   int(32),    # pixels added between the text and frame x-bounds
                 'internal_padding_h':   int(14),    # pixels added between the text and frame y-bounds

@@ -89,9 +89,13 @@ class PG_App:
         self.LOCK = int(PLAYER_CONTROLS['lock'])
         # pg.key.set_repeat(self.timer.fps_limit, self.timer.fps_limit)
         
-        self.set_up_ui(self.cf['ui']['CONTAINERS']['default'])
+        self.set_up_ui(
+            self.cf['ui']['CONTAINERS']['default'],
+            self.cf['ui']['TEXTBOXES']['default']
+        )
     
-    def set_up_ui(self, config: dict):
+    def set_up_ui(self, container_cf: dict, textbox_cf: dict):
+        ''' specialized, run-once function for creating the game ui '''
         # create bottom info panel container
         # set width to the size of the map
         # set size and pos to match the available padded bottom space
@@ -112,11 +116,29 @@ class PG_App:
             (pos_x, pos_y),
             "center",
             "center",
-            Color(config['color']),
-            Color(config['border_color']),
-            int(config['border_width']),
+            Color(container_cf['color']),
+            Color(container_cf['border_color']),
+            int(container_cf['border_width']),
         )
         self.container_group.add(BOTTOM_PANEL)
+        
+        FPS_FRAME = Text_Box(
+            BOTTOM_PANEL,
+            int(textbox_cf['internal_padding_w']),
+            int(textbox_cf['internal_padding_h']),
+            int(textbox_cf['border_width']),
+            Color(textbox_cf['border_color']),
+            Color(textbox_cf['bg_color']),
+            str('FPS: '),
+            False,
+            self.timer.get_fps_int,
+            str(textbox_cf['font_path']),
+            int(textbox_cf['font_size']),
+            Color(textbox_cf['font_color']),
+            textbox_cf['font_antialias']
+        )
+
+        BOTTOM_PANEL.children.add(FPS_FRAME)
 
     def set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''
@@ -472,6 +494,7 @@ class PG_App:
             self.player_group.draw(self.window.map_surface)
 
             # draw the ui
+            self.container_group.update()
 
             # for BLOCK in self.obstacle_group:
             #     self.debug__sprite_mask_outline(BLOCK)

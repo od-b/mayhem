@@ -1,8 +1,8 @@
-from typing import Callable     # type hint for function pointers
-import pygame as pg
-
-from pygame.sprite import Sprite, Group
+from typing import Callable
 from pygame import Surface, Rect, Color
+from pygame.sprite import Sprite, Group
+from pygame.draw import rect as draw_rect
+from pygame.font import Font
 
 
 class Container(Sprite):
@@ -37,6 +37,7 @@ class Container(Sprite):
         self.color = color
         self.border_width = border_width
         self.border_color = border_color
+
         self.children = Group()
         
         self.RECT_INFLATE_VAL = int(-2*self.border_width)
@@ -47,13 +48,13 @@ class Container(Sprite):
         # fill the original surface
 
         # create the border of the container as a rect
-        self.bg_image = Surface(self.size)
+        self.bg_image = Surface(self.size).convert()
         self.bg_rect = self.bg_image.get_rect()
         self.bg_image.fill(self.border_color, self.bg_rect)
 
         # draw the smaller main color rect onto the background
         rect_cpy = self.bg_rect.copy().inflate(self.RECT_INFLATE_VAL, self.RECT_INFLATE_VAL)
-        pg.draw.rect(self.bg_image, self.color, rect_cpy)
+        draw_rect(self.bg_image, self.color, rect_cpy)
 
         # store the background template
         self.image = self.bg_image
@@ -111,9 +112,17 @@ class Container(Sprite):
         
         return (align_x, align_y)
 
-    def update(self):
+    def position_children(self):
         pass
 
+    def update(self):
+        Surface.blit(self.bg_image, self.SURF, self.SURF_RECT)
+        self.children.update()
+        for child in self.children:
+            child_rect = child.get_updated_rect()
+            child_rect.centerx = self.rect.centerx
+            child_rect.centery = self.rect.centery
+        self.children.draw(self.SURF)
 
 class Text_Box(Sprite):
     ''' Sprite for rendering and displaying text
@@ -130,8 +139,8 @@ class Text_Box(Sprite):
 
     def __init__(self, 
             parent: Container,
-            internal_padding_x: int,
-            internal_padding_y: int,
+            internal_padding_w: int,
+            internal_padding_h: int,
             border_width: int,
             border_color: Color | None,
             bg_color: Color,
@@ -144,11 +153,11 @@ class Text_Box(Sprite):
             font_antialas: bool,
         ):
 
-        Sprite().__init__(self)
+        Sprite.__init__(self)
         
         self.parent = parent
-        self.internal_padding_x = internal_padding_x
-        self.internal_padding_x = internal_padding_y
+        self.internal_padding_w = internal_padding_w
+        self.internal_padding_h = internal_padding_h
         self.border_width = border_width
         self.border_color = border_color
         self.bg_color = bg_color
@@ -166,7 +175,7 @@ class Text_Box(Sprite):
         self.old_text = text
 
         # load the font, then render the text and create rect
-        self.font = pg.font.Font(font_path, font_size)
+        self.font = Font(font_path, font_size)
         self.image = self.font.render(
             self.text,
             self.font_antialas,
@@ -181,7 +190,7 @@ class Text_Box(Sprite):
         else:
             self._text_update_func = self.get_text
 
-    def update_text_render(self) -> pg.Surface:
+    def update_text_render(self):
         ''' replaces self.image with a text render of the self.content text '''
         self.image = self.font.render(
             self.text,
@@ -202,7 +211,7 @@ class Text_Box(Sprite):
         ''' returns self.text '''
         return self.text
 
-    def get_updated_rect(self):
+    def get_updated_rect(self) -> Rect:
         ''' update self.rect from image get_rect, then return the rect '''
         self.rect = self.image.get_rect()
         return self.rect
