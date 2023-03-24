@@ -60,23 +60,28 @@ CONFIG = {
         'n_obstacles': int(13),
     },
     'ui': {
-        'container_padding': 6,
         'CONTAINERS': {
-            # create the bottom 
+            'default': {
+                # default container style
+                'color':             RGB['offblack'],
+                'border_color':      RGB['yellow'],
+                'border_width':      int(2),
+                'padding':           int(8),     # pixels of padding added between the containers children
+                # note: all padding values should be even
+            },
         },
         'TEXTBOXES': {
-            # default textbox option
             'default': {
-                'font_path':            str("media/fonts/JetBrainsMono-SemiBold.ttf"),
-                'apply_aa':             True,
-                'font_color':           RGB['bone'],
+                # default textbox style
+                'color':                RGB['offblack'],
                 'border_color':         RGB['yellow'],
-                'bg_color':             RGB['offblack'],
                 'border_width':         int(1),
                 'font_size':            int(24),
+                'font_path':            str("media/fonts/JetBrainsMono-SemiBold.ttf"),
+                'font_antialas':        True,
+                'font_color':           RGB['bone'],
                 'internal_padding_w':   int(32),    # pixels added between the text and frame x-bounds
                 'internal_padding_h':   int(14),    # pixels added between the text and frame y-bounds
-                'parent_padding':       int(8),     # pixels of padding added between a child and its parent
                 # note: all padding values should be even
             },
         },

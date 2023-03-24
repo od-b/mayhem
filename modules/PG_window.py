@@ -22,6 +22,7 @@ class PG_Window:
         self.width = int(config['width'])
         self.height = int(config['height'])
         self.surface = display.set_mode((self.width, self.height), vsync=config['vsync'])
+        self.fill_surface()
 
         # set up map surface
         self.map_fill_color = Color(map_config['fill_color'])
@@ -33,18 +34,18 @@ class PG_Window:
         }
         ''' Dict containing the surface area used by active game area. '''
 
-        self.map_bounds_rect = Rect(
+        map_rect = Rect(
             int(self.map_bounds['min_x']),
             int(self.map_bounds['min_y']),
             int((self.map_bounds['max_x'] - self.map_bounds['min_x'])),
             int((self.map_bounds['max_y'] - self.map_bounds['min_y']))
         )
 
-        self.map_surface = self.surface.subsurface(self.map_bounds_rect)
+        self.map_surface = self.surface.subsurface(map_rect)
         ''' subsurface from map_bounds_rect, containing the map surface area '''
 
-        self.map_bounds_rect = self.map_surface.get_rect()
-        ''' like self.map_bounds, but as a pygame.Rect '''
+        self.map_rect = self.map_surface.get_rect()
+        ''' rect of the map surface '''
 
         self.set_caption(config['caption'])
 

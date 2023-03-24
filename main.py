@@ -19,7 +19,7 @@ from modules.exceptions import VersionError, ConfigError
 ## pygame specific classes
 from modules.PG_window import PG_Window
 from modules.PG_timer import PG_Timer
-# from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
+from modules.PG_ui import Container, Text_Box
 from modules.PG_sprites import Block, Controllable
 
 
@@ -45,8 +45,6 @@ class PG_App:
         # store some important config sections for readability purposes
         self.LOOP_LIM = self.cf['general']['loop_limit']
         ''' does not affect self.loop() See info @ config : ['general']['loop_limit'] '''
-        self.ui_container_padding = self.cf['ui']['container_padding']
-        ''' space between an ui container and other ui containers '''
         self.config_textbox_default = self.cf['ui']['TEXTBOXES']['default']
         ''' default configuration of the ui textboxes '''
         self.config_player = self.cf['sprites']['UNIQUE']['player']
@@ -61,6 +59,8 @@ class PG_App:
         # combined groups
         self.block_group = Group()
         ''' combined group of constant, map-anchored rectangular sprites '''
+        self.container_group = Group()
+        ''' group of ui containers. Contains their own groups of children '''
 
         # specific groups
         self.obstacle_group = Group()
@@ -88,6 +88,35 @@ class PG_App:
         self.HALT = int(PLAYER_CONTROLS['halt'])
         self.LOCK = int(PLAYER_CONTROLS['lock'])
         # pg.key.set_repeat(self.timer.fps_limit, self.timer.fps_limit)
+        
+        self.set_up_ui(self.cf['ui']['CONTAINERS']['default'])
+    
+    def set_up_ui(self, config: dict):
+        # create bottom info panel container
+        # set width to the size of the map
+        # set size and pos to match the available padded bottom space
+        width = int(self.window.map_rect.width)
+        height = int(self.window.height - self.window.map_rect.height - self.window.map_bounds['min_y'])
+
+        if (height < 40):
+            print("not enough vertical padding to fit the UI. Increase ['map']['padded_bounds'].")
+            return
+
+        pos_x = int(self.window.map_bounds['min_x'])
+        pos_y = int(self.window.map_rect.height + self.window.map_bounds['min_y'])
+        print(height)
+
+        BOTTOM_PANEL = Container(
+            self.window.surface,
+            (width, height),
+            (pos_x, pos_y),
+            "center",
+            "center",
+            Color(config['color']),
+            Color(config['border_color']),
+            int(config['border_width']),
+        )
+        self.container_group.add(BOTTOM_PANEL)
 
     def set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''
@@ -97,7 +126,7 @@ class PG_App:
         self.spawn_rect_outline(
             self.cf['sprites']['BLOCKS']['terrain'],
             None, None, self.map_edge_group,
-            self.window.map_bounds_rect, terrain_facing, None
+            self.window.map_rect, terrain_facing, None
         )
         # add map bounds outline blocks to the general map group
         self.block_group.add(self.map_edge_group)
@@ -339,8 +368,11 @@ class PG_App:
                 failed_attempts += 1
                 # check if attempt limit is reached
                 if (failed_attempts > self.LOOP_LIM):
-                    msg = f'Fail limit of {self.LOOP_LIM} attempts reached. Too many or too large obstacles.\n'
-                    msg += f'Current obstacle count: {placed_blocks} / {n_obstacles}'
+                    msg = f'\
+                        Fail limit of {self.LOOP_LIM} attempts reached.\
+                        Too many or too large obstacles.\n\
+                        block padding set too high can also be the cause.\
+                        Current obstacle count: {placed_blocks} / {n_obstacles}'
                     raise ConfigError(msg, config)
 
             # make sure the copied temp rect is not saved in memory
@@ -431,7 +463,6 @@ class PG_App:
 
         while (self.app_running):
             # fill the main surface, then the game bounds
-            self.window.fill_surface()
             self.window.fill_map_surface()
 
             # draw map blocks
