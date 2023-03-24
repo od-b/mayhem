@@ -114,20 +114,19 @@ class PG_App:
             self.window.surface,
             (width, height),
             (pos_x, pos_y),
-            "center",
-            "center",
             Color(container_cf['color']),
             Color(container_cf['border_color']),
             int(container_cf['border_width']),
+            "right",
+            "left_right",
+            int(container_cf['children_padding']),
+            int(container_cf['separator_width']),
+            Color(container_cf['separator_color'])
         )
+
         self.container_group.add(BOTTOM_PANEL)
         
         FPS_FRAME = Text_Box(
-            BOTTOM_PANEL,
-            int(textbox_cf['internal_padding_w']),
-            int(textbox_cf['internal_padding_h']),
-            int(textbox_cf['border_width']),
-            Color(textbox_cf['border_color']),
             Color(textbox_cf['bg_color']),
             str('FPS: '),
             False,
@@ -138,7 +137,18 @@ class PG_App:
             textbox_cf['font_antialias']
         )
 
-        BOTTOM_PANEL.children.add(FPS_FRAME)
+        FPS_FRAME_2 = Text_Box(
+            Color(textbox_cf['bg_color']),
+            str('FPS_TEST_2: '),
+            False,
+            self.timer.get_fps_int,
+            str(textbox_cf['font_path']),
+            int(textbox_cf['font_size']),
+            Color(textbox_cf['font_color']),
+            textbox_cf['font_antialias']
+        )
+
+        BOTTOM_PANEL.children.add([FPS_FRAME, FPS_FRAME_2])
 
     def set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''

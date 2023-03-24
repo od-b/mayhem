@@ -63,26 +63,23 @@ CONFIG = {
         'CONTAINERS': {
             'default': {
                 # default container style
-                'color':             RGB['offblack'],
-                'border_color':      RGB['yellow'],
-                'border_width':      int(2),
-                'padding':           int(8),     # pixels of padding added between the containers children
-                # note: all padding values should be even
+                'color':            RGB['offblack'],
+                'border_color':     RGB['yellow'],
+                'border_width':     int(2),
+                'children_padding': int(40),             # pixels of padding added between the containers children
+                'separator_width':  int(2),              # draw a separating line between children
+                'separator_color':  RGB['yellow'],       # draw border between children
+                # TODO: flex padding option, using available space instead of a constang value
             },
         },
         'TEXTBOXES': {
             'default': {
                 # default textbox style
-                'bg_color':             RGB['offblack'],
-                'border_color':         RGB['yellow'],
-                'border_width':         int(1),
-                'font_size':            int(24),
-                'font_path':            str("media/fonts/JetBrainsMono-SemiBold.ttf"),
-                'font_antialias':       True,
-                'font_color':           RGB['bone'],
-                'internal_padding_w':   int(32),    # pixels added between the text and frame x-bounds
-                'internal_padding_h':   int(14),    # pixels added between the text and frame y-bounds
-                # note: all padding values should be even
+                'bg_color':       RGB['offblack'],
+                'font_size':      int(24),
+                'font_path':      str("media/fonts/JetBrainsMono-SemiBold.ttf"),
+                'font_antialias': True,
+                'font_color':     RGB['bone'],
             },
         },
     },
