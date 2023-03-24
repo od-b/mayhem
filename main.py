@@ -86,8 +86,8 @@ class PG_App:
         self.STEER_LEFT = int(PLAYER_CONTROLS['steer_left'])
         self.STEER_DOWN = int(PLAYER_CONTROLS['steer_down'])
         self.STEER_RIGHT = int(PLAYER_CONTROLS['steer_right'])
-        self.ACCELERATE = int(PLAYER_CONTROLS['accelerate'])
-        self.REV_ACCELERATE = int(PLAYER_CONTROLS['rev_accelerate'])
+        self.ASCEND = int(PLAYER_CONTROLS['ascend'])
+        self.DESCEND = int(PLAYER_CONTROLS['descend'])
         # pg.key.set_repeat(self.timer.fps_limit, self.timer.fps_limit)
 
         # set up the UI
@@ -491,38 +491,42 @@ class PG_App:
                             case pg.K_ESCAPE:
                                 running = False
                             case self.STEER_UP:
-                                self.player.dir_y -= 1
-                                self.player.update_angle()
+                                self.player.dir_y -= 1.0
+                                self.player.update_direction()
                             case self.STEER_DOWN:
-                                self.player.dir_y += 1
-                                self.player.update_angle()
+                                self.player.dir_y += 1.0
+                                self.player.update_direction()
                             case self.STEER_LEFT:
-                                self.player.dir_x -= 1
-                                self.player.update_angle()
+                                self.player.dir_x -= 1.0
+                                self.player.update_direction()
                             case self.STEER_RIGHT:
-                                self.player.dir_x += 1
-                                self.player.update_angle()
-                            case self.ACCELERATE:
-                                self.player.acceleration = 1
+                                self.player.dir_x += 1.0
+                                self.player.update_direction()
+                            case self.ASCEND:
+                                self.player.ascent += 1.0
+                            case self.DESCEND:
+                                self.player.ascent -= 1.0
                             case _:
                                 pass
                     case pg.KEYUP:
                         # match keydown event to an action, or pass
                         match (event.key):
                             case self.STEER_UP:
-                                self.player.dir_y += 1
-                                self.player.update_angle()
+                                self.player.dir_y += 1.0
+                                self.player.update_direction()
                             case self.STEER_DOWN:
-                                self.player.dir_y -= 1
-                                self.player.update_angle()
+                                self.player.dir_y -= 1.0
+                                self.player.update_direction()
                             case self.STEER_LEFT:
-                                self.player.dir_x += 1
-                                self.player.update_angle()
+                                self.player.dir_x += 1.0
+                                self.player.update_direction()
                             case self.STEER_RIGHT:
-                                self.player.dir_x -= 1
-                                self.player.update_angle()
-                            case self.ACCELERATE:
-                                self.player.acceleration = 0
+                                self.player.dir_x -= 1.0
+                                self.player.update_direction()
+                            case self.ASCEND:
+                                self.player.ascent -= 1.0
+                            case self.DESCEND:
+                                self.player.ascent += 1.0
                             case _:
                                 pass
                     case _:

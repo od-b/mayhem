@@ -57,7 +57,7 @@ CONFIG = {
             'max_y': int(60),
         },
         # number of obstacles to spawn (randomly positioned floating blocks)
-        'n_obstacles': int(20),
+        'n_obstacles': int(13),
     },
     'ui': {
         'container_padding': 6,
@@ -84,13 +84,15 @@ CONFIG = {
     'physics': {
         ## global physics-related constants
         #   increment and reduce these extremely carefully. Change object weights such as mass instead
-        # gravity:
-        #   gravitational constant to avoid standstill of objects with mass and 0 velocity
+        # gravity, gravity_direct:
+        #   gravitational constants to avoid standstill of objects with mass and 0 velocity
         #   also prevents potential division by zero
-        'gravity': float(0.025),             # default: 0.02
+        #   gravity_direct literally just adds y-velocity on every frame
+        'gravity': float(0.015),             # default: 0.02
+        'gravity_direct': float(0.001),
         # gravity_multiplier:
         #   controls the relation multiplier between mass, max velocity and terminal velocity
-        'gravity_multiplier': float(0.015)   # default: 0.01
+        'gravity_multiplier': float(0.02)   # default: 0.01
     },
     'sprites': {
         'BLOCKS': {
@@ -105,7 +107,7 @@ CONFIG = {
                 'texture':      None,
                 'color_pool':   PALLETTES['PASTEL_MIX'],
                 'mass':         float(0),
-                'padding':      int(50),
+                'padding':      int(130),
                 'min_height':   int(10),
                 'max_height':   int(80),
                 'min_width':    int(8),
@@ -147,28 +149,21 @@ CONFIG = {
                 'weights': {
                     'max_health':       int(150),       # maximum and initial health
                     'max_mana':         int(150),       # maximum and initial mana
-                    'steering_force':   float(0.2),     # how effective steering will be
-                    'mass':             float(0.2),     # default: 0.1, 0 < mass < 1
+                    'steering_force':   float(0.07),     # how effective steering will be
+                    'mass':             float(0.1),     # default: 0.1, 0 < mass < 1
                     'max_velocity_x':   float(2.5),     # default: 2.5
                     'max_velocity_y':   float(2.5),     # default: 2.5
                     # note: actual max velocity_y is also affected by mass/gravity
                 },
                 # configure player keyboard controls
                 'controls': {
-                    'steer_up':         pg.K_w,
-                    'steer_left':       pg.K_a,
-                    'steer_down':       pg.K_s,
-                    'steer_right':      pg.K_d,
-                    'accelerate':       pg.K_SPACE,   # accelerate towards facing angle
-                    'rev_accelerate':   pg.K_c,       # accelerate away from facing angle
+                    'steer_up':     pg.K_w,
+                    'steer_left':   pg.K_a,
+                    'steer_down':   pg.K_s,
+                    'steer_right':  pg.K_d,
+                    'ascend':       pg.K_c,         # ascend without adjusting angle
+                    'descend':      pg.K_SPACE,     # descend without adjusting angle
                 },
-                # control draft #2
-                # 'controls': {
-                #     'rotate_c_clockwise': pg.K_a,       # rotate counter-clockwise // steer left
-                #     'rotate_clockwise':   pg.K_d,       # rotate clockwise // steer right
-                #     'accelerate_forward': pg.K_SPACE,   # accelerate towards facing angle
-                #     'accelerate_reverse': pg.K_c,       # accelerate away from facing angle
-                # }
             }
         }
     }
