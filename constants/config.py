@@ -86,13 +86,12 @@ CONFIG = {
         #   increment and reduce these extremely carefully. Change object weights such as mass instead
         # gravity, gravity_direct:
         #   gravitational constants to avoid standstill of objects with mass and 0 velocity
+        'gravity': float(0.015),
+        # gravity_direct:
+        #   literally just adds y-velocity on every frame
+        #   avoids complete standstills
         #   also prevents potential division by zero
-        #   gravity_direct literally just adds y-velocity on every frame
-        'gravity': float(0.015),             # default: 0.02
         'gravity_direct': float(0.001),
-        # gravity_multiplier:
-        #   controls the relation multiplier between mass, max velocity and terminal velocity
-        'gravity_multiplier': float(0.02)   # default: 0.01
     },
     'sprites': {
         'BLOCKS': {
@@ -149,11 +148,10 @@ CONFIG = {
                 'weights': {
                     'max_health':       int(150),       # maximum and initial health
                     'max_mana':         int(150),       # maximum and initial mana
-                    'steering_force':   float(0.07),     # how effective steering will be
-                    'mass':             float(0.1),     # default: 0.1, 0 < mass < 1
-                    'max_velocity_x':   float(2.5),     # default: 2.5
-                    'max_velocity_y':   float(2.5),     # default: 2.5
-                    # note: actual max velocity_y is also affected by mass/gravity
+                    'handling':         float(0.07),    # how effective steering will be
+                    'breaking':         float(0.07),    # how fast the player will come to a halt upon break
+                    'mass':             float(0.1),     # mass increases terminal velocity (mass * max_velo.y)
+                    'max_velocity':     float(1.5),     # default: 1.5
                 },
                 # configure player keyboard controls
                 'controls': {
@@ -161,8 +159,8 @@ CONFIG = {
                     'steer_left':   pg.K_a,
                     'steer_down':   pg.K_s,
                     'steer_right':  pg.K_d,
-                    'ascend':       pg.K_c,         # ascend without adjusting angle
-                    'descend':      pg.K_SPACE,     # descend without adjusting angle
+                    'halt':         pg.K_SPACE,     # slows rate of movement
+                    'lock':         pg.K_c,         # lock angle in place
                 },
             }
         }

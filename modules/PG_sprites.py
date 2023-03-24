@@ -34,19 +34,19 @@ class Block(Sprite):
         Sprite.__init__(self)
         
         # store main attributes
-        self.mass = float(config['mass'])
+        self.MASS = float(config['mass'])
         self.texture: Surface | None = config['texture']
         self.position = position
-        self.size = size
-        self.trigger_func = trigger_func
+        self.SIZE = size
+        self.TRIGGER_FUNC = trigger_func
         ''' (optional) function to be called on update. 
             * The function return value is never read
             * Pass attributes to be modified as parameters instead.
         '''
         
         # determine if a trigger func is passed
-        if (self.trigger_func != None):
-            self.trigger_func_param: any = None
+        if (self.TRIGGER_FUNC != None):
+            self.TRIGGER_FUNC_param: any = None
             ''' parameter to be passed for the trigger_func.
                 does nothing if trigger_func is not defined.
                 * defaults to None
@@ -67,7 +67,7 @@ class Block(Sprite):
             self.color = Color(self.color_pool[randint(0, len(self.color_pool)-1)])
 
             # create surface and fill using color
-            IMG = pg.Surface(self.size).convert()
+            IMG = pg.Surface(self.SIZE).convert()
             IMG.fill(self.color)
             # IMG.set_alpha(None, pg.RLEACCEL)
             ''' > The optional flags argument can be set to pygame.RLEACCEL to 
@@ -87,11 +87,11 @@ class Block(Sprite):
         self.mask = pg.mask.from_surface(self.image)
     
     def set_trigger_parameter(self, param):
-        self.trigger_func_param = param
+        self.TRIGGER_FUNC_param = param
 
     def update(self):
-        if (self.trigger_func != None):
-            self.trigger_func(self.trigger_func_param)
+        if (self.TRIGGER_FUNC != None):
+            self.TRIGGER_FUNC(self.TRIGGER_FUNC_param)
 
 
 class Controllable(Sprite):
@@ -100,73 +100,73 @@ class Controllable(Sprite):
                  config: dict,
                  global_physics: dict,
                  initial_pos: Vec2,
-                 initial_angle: float,
-                 initial_velocity: Vec2,
                  trigger_func):
 
         # initalize as pygame sprite
         Sprite.__init__(self)
         
-        # "constant" attributes:
-        self.trigger_func: Callable | None = trigger_func
+        # constant global physics
+        self.G_CONST = float(global_physics['gravity'])
+        self.G_DIRECT = float(global_physics['gravity_direct'])
+
+        # constant attributes:
+        self.TRIGGER_FUNC: Callable | None = trigger_func
         ''' function to be called on update. 
             * Should not return a value
             * Pass attributes to be modified as parameters instead.
         '''
-        self.max_health = int(config['weights']['max_health'])
-        self.max_mana = int(config['weights']['max_mana'])
-        self.size = (
+        self.MAX_HEALTH: int = int(config['weights']['max_health'])
+        self.MAX_MANA: int = int(config['weights']['max_mana'])
+        self.SIZE: tuple[int, int] = (
             int(config['surface']['width']),
             int(config['surface']['height'])
         )
-        self.max_velocity = Vec2(
-            float(config['weights']['max_velocity_x']),
-            float(config['weights']['max_velocity_y'])
-        )
-        self.mass = float(1 - config['weights']['mass'])
-        self.image_source: Surface | None = config['surface']['image']
-        self.G_CONST = float(global_physics['gravity'])
-        self.G_DIRECT = float(global_physics['gravity_direct'])
-        self.G_MULTI = float(global_physics['gravity'])
-
-        # set up variable attributes
-        self.position = initial_pos
-        self.velocity = initial_velocity
-        self.angle = 0.0
-        self.health = self.max_health
-        self.mana = self.max_mana
-
         # adjust max positive y-velocity, taking mass into account
-        self.max_velocity.y += (self.mass / (1 + self.mass - (self.mass * self.G_CONST)))
-        print((self.mass / (1 + self.mass - (self.mass * self.G_CONST))))
+        self.MASS: float = float(config['weights']['mass'])
+        self.IMG_SRC: Surface | None = config['surface']['image']
+        self.MAX_VELOCITY: Vec2 = Vec2(
+            float(config['weights']['max_velocity']),
+            float(
+                config['weights']['max_velocity']\
+                + (self.MASS * config['weights']['max_velocity'])
+            )
+        )
 
         # rate of change of velocity
-        self.STEERING_FORCE: float = float(config['weights']['steering_force'])
+        self.HANDLING: float = float(config['weights']['handling'])
+
+        # set up variable attributes
+        self.position: Vec2 = initial_pos
+        self.velocity: Vec2 = Vec2(0.0, 0.0)
+        self.angle: float = 0.0
+        self.health: int = self.MAX_HEALTH
+        self.mana: int = self.MAX_MANA
+
 
         # attributes for adjusting movement through keys
         self.dir_x: int = int(0)
         self.dir_y: int = int(0)
-        self.ascent: int = int(0)
+        self.halt: int = int(0)
 
         # internal direction vectors
         self.direction = Vec2(0.0, 0.0)
         ''' normalized directional movement vector '''
         self.target_angle = float(0)
 
-        if self.trigger_func:
-            self.trigger_func_param: any = None
+        if self.TRIGGER_FUNC:
+            self.TRIGGER_FUNC_param: any = None
             ''' parameter to be passed for the trigger_func.
                 does nothing if trigger_func is not defined.
                 * defaults to None
             '''
 
         # set up surface, aka image
-        if not self.image_source:
+        if not self.IMG_SRC:
             self.color = Color(config['surface']['color'])
             # it's crucial to store the original image and rect for transformation
             # otherwise, pygame will flood the memory in a matter of seconds
             # in short, ensures the original image is rotated, not the mutated one
-            self.ORIGINAL_IMAGE = pg.Surface(self.size).convert_alpha()
+            self.ORIGINAL_IMAGE = pg.Surface(self.SIZE).convert_alpha()
             self.ORIGINAL_RECT = self.ORIGINAL_IMAGE.get_rect()
 
             # create a polygon using the rect bounds as reference points
@@ -189,20 +189,20 @@ class Controllable(Sprite):
 
     def get_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''
-        return self.G_MULTI * (abs(self.velocity.y) + self.G_CONST)
+        return self.G_CONST * (abs(self.velocity.y) + self.G_CONST)
 
     def limit_velocity(self):
         ''' check velocity, if needed clamps the velocity between min/max '''
-        if (abs(self.velocity.x) > self.max_velocity.x):
+        if (abs(self.velocity.x) > self.MAX_VELOCITY.x):
             if self.velocity.x > 0:
-                self.velocity.x = self.max_velocity.x
+                self.velocity.x = self.MAX_VELOCITY.x
             else:
-                self.velocity.x = -self.max_velocity.x
+                self.velocity.x = -self.MAX_VELOCITY.x
 
-        if (self.velocity.y < 0) and (abs(self.velocity.y) > self.max_velocity.y):
-            self.velocity.y = -self.max_velocity.y
-        elif self.velocity.y > self.max_velocity.y:
-            self.velocity.y = self.max_velocity.y
+        if (self.velocity.y < 0) and (abs(self.velocity.y) > self.MAX_VELOCITY.y):
+            self.velocity.y = -self.MAX_VELOCITY.y
+        elif self.velocity.y > self.MAX_VELOCITY.y:
+            self.velocity.y = self.MAX_VELOCITY.y
 
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
@@ -232,13 +232,13 @@ class Controllable(Sprite):
 
     def update(self):
         self.direction.y += self.G_DIRECT
-        if (self.ascent == -1):
-            self.velocity -= self.velocity * self.G_MULTI
-            self.velocity += self.direction.elementwise() * (self.STEERING_FORCE / 3)
+        if (self.halt == 1):
+            self.velocity -= self.velocity * self.G_CONST
+            self.velocity += self.direction.elementwise() * (self.HANDLING / 3)
         else:
             if (self.direction.y != 1.0):
                 self.velocity.y += self.get_gravity_factor()
-            self.velocity += self.direction.elementwise() * self.STEERING_FORCE
+            self.velocity += (self.direction.elementwise() * self.HANDLING)
 
         # increment velocity by a fraction of direction
         self.limit_velocity()

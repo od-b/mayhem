@@ -1,6 +1,4 @@
-import pygame as pg
-from pygame import display, Color, Surface, Rect
-from modules.PG_shapes import PG_Rect
+from pygame import display, Color, Rect
 from random import randint
 
 # class PG_Map:

@@ -6,8 +6,8 @@ from random import randint
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
-from pygame import Color, Rect, Surface, draw
-from pygame.sprite import Sprite, Group
+from pygame import Color
+from pygame.sprite import Sprite, Group, GroupSingle
 from pygame.math import Vector2 as Vec2
 from pygame.mask import Mask
 
@@ -18,9 +18,8 @@ from constants.config import CONFIG as GLOBAL_CF
 from modules.exceptions import VersionError, ConfigError
 ## pygame specific classes
 from modules.PG_window import PG_Window
-from modules.PG_shapes import PG_Rect
 from modules.PG_timer import PG_Timer
-from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
+# from modules.PG_ui import PG_Text_Box, PG_Text_Box_Child
 from modules.PG_sprites import Block, Controllable
 
 
@@ -45,40 +44,40 @@ class PG_App:
         
         # store some important config sections for readability purposes
         self.LOOP_LIM = self.cf['general']['loop_limit']
+        ''' does not affect self.loop() See info @ config : ['general']['loop_limit'] '''
         self.ui_container_padding = self.cf['ui']['container_padding']
-        self.config_player = self.cf['sprites']['UNIQUE']['player']
+        ''' space between an ui container and other ui containers '''
         self.config_textbox_default = self.cf['ui']['TEXTBOXES']['default']
-
+        ''' default configuration of the ui textboxes '''
+        self.config_player = self.cf['sprites']['UNIQUE']['player']
+        ''' the player sprite config. Needed several places to ensure game functions properly. '''
         self.window = PG_Window(cf['window'], cf['map'])
         ''' object containing main surface window and bounds '''
-
         self.timer = PG_Timer(self.cf['timer']['fps_limit'], self.cf['timer']['accurate_timing'])
         ''' pygame specific timer object '''
-
         self.global_physics: dict[str, float] = self.cf['physics']
         ''' global physics weights '''
 
+        # combined groups
+        self.block_group = Group()
+        ''' combined group of constant, map-anchored rectangular sprites '''
+
         # specific groups
         self.obstacle_group = Group()
-        ''' group specifically containing the obstacles '''
-        self.bounds_group = Group()
-        ''' group specifically containing the map outline sprites '''
-
-        # combined groups
-        self.update_group = Group()
-        ''' combined group group of sprites that are to be updated '''
-        self.block_group = Group()
-        ''' combined group of constant, anchored sprites '''
-        self.active_group = Group()
-        ''' combined group group of misc. sprites, including the player(s) '''
+        ''' group specifically containing the randomly placed obstacle core blocks '''
+        self.map_edge_group = Group()
+        ''' group specifically containing the map surface outline blocks '''
+        self.player_group = GroupSingle()
+        ''' player sprite group. If a new sprite is added, the old is removed. '''
 
         # set up the map
-        self.set_up_map()
+        self.set_up_map()   # populates obstacle_group, map_edge_group and block_group
 
-        # spawn the player
+        # spawn the player sprite
         self.player: Controllable
-        self.spawn_player(self.config_player)
-        
+        ''' holds a direct pointer to the Controllable player sprite '''
+        self.spawn_player((0, 0), None)
+
         # not sure if this is needed, but i want to be on the safe side:
         # define movement key constants to ensure dict access doesn't impact performance
         PLAYER_CONTROLS = self.cf['sprites']['UNIQUE']['player']['controls']
@@ -86,56 +85,9 @@ class PG_App:
         self.STEER_LEFT = int(PLAYER_CONTROLS['steer_left'])
         self.STEER_DOWN = int(PLAYER_CONTROLS['steer_down'])
         self.STEER_RIGHT = int(PLAYER_CONTROLS['steer_right'])
-        self.ASCEND = int(PLAYER_CONTROLS['ascend'])
-        self.DESCEND = int(PLAYER_CONTROLS['descend'])
+        self.HALT = int(PLAYER_CONTROLS['halt'])
+        self.LOCK = int(PLAYER_CONTROLS['lock'])
         # pg.key.set_repeat(self.timer.fps_limit, self.timer.fps_limit)
-
-        # set up the UI
-        self.UI = self.create_ui_constants()
-        ''' constant tuple of ui objects to be updated in the order of addition '''
-
-        self.UI_temp: list[PG_Text_Box | PG_Text_Box_Child] = []
-        ''' list of ui objects with a temporary lifespan, eg; popups, info messages '''
-
-    def spawn_player(self, config: dict):
-        # create the player sprite, then add to relevant groups
-        velo = Vec2(float(0), float(0))
-        angle = 0
-        position = Vec2(float(400), float(400))
-
-        self.player = Controllable(config, self.global_physics, position, angle, velo, None)
-        self.active_group.add(self.player)
-        self.update_group.add(self.player)
-
-    def create_ui_constants(self) -> tuple[PG_Text_Box | PG_Text_Box_Child, ...]:
-        ''' set up UI constants: objects that will exist until the app is exited
-            * config: ['ui']['TEXTBOXES'][...]
-        '''
-
-        # create a list to allow appending
-        config = self.config_textbox_default
-        textboxes = []
-
-        # create the 'root' UI element. Pass (0, 0) as top left pos, seeing as
-        # we don't know it's pixel size before rendering and want to place it bottom left
-        UI_TIME = self.create_tbox_core(config, "Time: ", 0, 0, False, self.timer.get_duration)
-
-        # after its rendered, set the position to bottom left (adjusted for default padding)
-        UI_TIME.re.bottomleft = (
-            self.ui_container_padding,
-            (self.window.height - self.ui_container_padding)
-        )
-        textboxes.append(UI_TIME)
-
-        # create the fps frame anchored to the right of UI_TIME
-        UI_FPS = self.create_tbox_child(config, "FPS: ", UI_TIME, 'right', self.timer.get_fps_int)
-        textboxes.append(UI_FPS)
-
-        PLAYER_ANGLE = self.create_tbox_child(config, "Angle: ", UI_FPS, 'right', self.player.get_angle)
-        textboxes.append(PLAYER_ANGLE)
-
-        # return the list as a tuple
-        return tuple(textboxes)
 
     def set_up_map(self):
         ''' spawn various static sprites around the map. Add to the given group '''
@@ -144,11 +96,11 @@ class PG_App:
         terrain_facing = -1
         self.spawn_rect_outline(
             self.cf['sprites']['BLOCKS']['terrain'],
-            None, None, self.bounds_group,
+            None, None, self.map_edge_group,
             self.window.map_bounds_rect, terrain_facing, None
         )
         # add map bounds outline blocks to the general map group
-        self.block_group.add(self.bounds_group)
+        self.block_group.add(self.map_edge_group)
 
         # place obstacle_blocks within the game area
         self.spawn_static_obstacles(
@@ -171,52 +123,24 @@ class PG_App:
         # add obstacle blocks and their outline blocks to the general map group
         self.block_group.add(self.obstacle_group)
 
-    def create_tbox_core(self, config: dict, content: str, x: int, y: int,
-                         is_static: bool, getter_func: Callable | None):
+    def get_current_player_angle(self):
+        return self.player.get_angle()
 
-        ''' return textbox set up using the given config settings 
-            * Config: ['ui']['TEXTBOXES'][...]
+    def spawn_player(self, pos: tuple, trigger_func: Callable | None):
+        ''' create and spawn a player sprite
+            * if a player already exists, replaces and removes it
+            * updates the self.player reference
         '''
+        # remove any references to the old player, if it exists
+        if (self.player_group.sprite):
+            self.player_group.sprite.kill()
+            del self.player_group.sprite
 
-        # converting every setting to its correct type to avoid any python magic
-        TEXTBOX =  PG_Text_Box(
-            self.window, content, 
-            str(config['font_path']),
-            int(config['font_size']),
-            pg.Color(config['font_color']), 
-            config['apply_aa'],
-            pg.Color(config['bg_color']),
-            pg.Color(config['border_color']),
-            int(config['border_width']),
-            int(config['internal_padding_w']),
-            int(config['internal_padding_h']),
-            getter_func, x, y, is_static
-        )
-        return TEXTBOX
-
-    def create_tbox_child(self, config: dict, content: str, parent: PG_Text_Box | PG_Rect,
-                          parent_alignment: str, getter_func: Callable | None):
-
-        ''' return textbox child set up using the given config settings 
-            * Config: ['ui']['TEXTBOXES'][...]
-        '''
-
-        # converting every setting to its correct type to avoid any python magic
-        TEXTBOX = PG_Text_Box_Child(
-            self.window, content, 
-            str(config['font_path']),
-            int(config['font_size']),
-            pg.Color(config['font_color']), 
-            config['apply_aa'],
-            pg.Color(config['bg_color']),
-            pg.Color(config['border_color']),
-            int(config['border_width']),
-            int(config['internal_padding_w']),
-            int(config['internal_padding_h']),
-            getter_func, parent, parent_alignment,
-            int(config['parent_padding']),
-        )
-        return TEXTBOX
+        # convert the position tuple to a vector
+        pos = Vec2(pos)
+        # create the player sprite, then update player_group
+        self.player = Controllable(self.config_player, self.global_physics, pos, trigger_func)
+        self.player_group.add(self.player)
 
     def spawn_rect_outline(self, config: dict, trigger_func: Callable | None,
                               trigger_weight, group: Group, bounds: pg.Rect,
@@ -438,20 +362,74 @@ class PG_App:
 
     def debug__mask_outline(self, mask: Mask):
         ''' visualize mask outline by drawing lines along the set pixel points '''
-    
+
         # get a list of cooordinates from the mask outline
         p_list = mask.outline()
         color = self.cf['general']['debug_color']
         pg.draw.lines(self.window.surface, color, 1, p_list)
+
+    def loop_events(self):
+        # loop through events
+        for event in pg.event.get():
+            # check if event type matches any triggers
+            match (event.type):
+                case pg.QUIT:
+                    self.app_running = False
+                case pg.MOUSEBUTTONDOWN:
+                    print(pg.mouse.get_pos())
+                case pg.KEYDOWN:
+                    # match keydown event to an action, or pass
+                    match (event.key):
+                        case self.STEER_UP:
+                            self.player.dir_y -= 1.0
+                            self.player.update_direction()
+                        case self.STEER_DOWN:
+                            self.player.dir_y += 1.0
+                            self.player.update_direction()
+                        case self.STEER_LEFT:
+                            self.player.dir_x -= 1.0
+                            self.player.update_direction()
+                        case self.STEER_RIGHT:
+                            self.player.dir_x += 1.0
+                            self.player.update_direction()
+                        case self.HALT:
+                            self.player.ascent += 1.0
+                        case self.LOCK:
+                            self.player.ascent -= 1.0
+                        case _:
+                            pass
+                case pg.KEYUP:
+                    # match keydown event to an action, or pass
+                    match (event.key):
+                        case self.STEER_UP:
+                            self.player.dir_y += 1.0
+                            self.player.update_direction()
+                        case self.STEER_DOWN:
+                            self.player.dir_y -= 1.0
+                            self.player.update_direction()
+                        case self.STEER_LEFT:
+                            self.player.dir_x += 1.0
+                            self.player.update_direction()
+                        case self.STEER_RIGHT:
+                            self.player.dir_x -= 1.0
+                            self.player.update_direction()
+                        case self.HALT:
+                            self.player.ascent -= 1.0
+                        case self.LOCK:
+                            self.player.ascent += 1.0
+                        case _:
+                            pass
+                case _:
+                    pass
 
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
 
         # init the timer as the loop is about to start
         self.timer.start_first_segment(None)
+        self.app_running = True
 
-        running = True
-        while (running):
+        while (self.app_running):
             # fill the main surface, then the game bounds
             self.window.fill_surface()
             self.window.fill_map_surface()
@@ -459,14 +437,10 @@ class PG_App:
             # draw map blocks
             self.block_group.draw(self.window.map_surface)
 
-            # draw other sprites
-            self.active_group.draw(self.window.map_surface)
+            # draw the player
+            self.player_group.draw(self.window.map_surface)
 
             # draw the ui
-            for obj in self.UI:
-                obj.draw()
-            for obj in self.UI_temp:
-                obj.draw()
 
             # for BLOCK in self.obstacle_group:
             #     self.debug__sprite_mask_outline(BLOCK)
@@ -478,72 +452,13 @@ class PG_App:
             pg.display.update()
 
             # loop through events
-            for event in pg.event.get():
-                # check if event type matches any triggers
-                match (event.type):
-                    case pg.QUIT:
-                        running = False  # exit the app
-                    case pg.MOUSEBUTTONDOWN:
-                        self.player.rotate_c_clockwise()
-                    case pg.KEYDOWN:
-                        # match keydown event to an action, or pass
-                        match (event.key):
-                            case pg.K_ESCAPE:
-                                running = False
-                            case self.STEER_UP:
-                                self.player.dir_y -= 1.0
-                                self.player.update_direction()
-                            case self.STEER_DOWN:
-                                self.player.dir_y += 1.0
-                                self.player.update_direction()
-                            case self.STEER_LEFT:
-                                self.player.dir_x -= 1.0
-                                self.player.update_direction()
-                            case self.STEER_RIGHT:
-                                self.player.dir_x += 1.0
-                                self.player.update_direction()
-                            case self.ASCEND:
-                                self.player.ascent += 1.0
-                            case self.DESCEND:
-                                self.player.ascent -= 1.0
-                            case _:
-                                pass
-                    case pg.KEYUP:
-                        # match keydown event to an action, or pass
-                        match (event.key):
-                            case self.STEER_UP:
-                                self.player.dir_y += 1.0
-                                self.player.update_direction()
-                            case self.STEER_DOWN:
-                                self.player.dir_y -= 1.0
-                                self.player.update_direction()
-                            case self.STEER_LEFT:
-                                self.player.dir_x += 1.0
-                                self.player.update_direction()
-                            case self.STEER_RIGHT:
-                                self.player.dir_x -= 1.0
-                                self.player.update_direction()
-                            case self.ASCEND:
-                                self.player.ascent -= 1.0
-                            case self.DESCEND:
-                                self.player.ascent += 1.0
-                            case _:
-                                pass
-                    case _:
-                        pass
+            self.loop_events()
 
             # now that events are read, update sprites before next frame
-            self.update_group.update()
+            self.player_group.update()
 
             # update the timer. Also limits the framerate if set
             self.timer.update()
-
-            # update the dynamic objects in core UI, and then temp UI
-            for obj in self.UI:
-                obj.update()
-
-            for obj in self.UI_temp:
-                obj.update()
 
 
 if __name__ == '__main__':
@@ -556,5 +471,5 @@ if __name__ == '__main__':
         )
 
     # load the game
-    APP = PG_App(GLOBAL_CF)
-    APP.loop()
+    GAME = PG_App(GLOBAL_CF)
+    GAME.loop()
