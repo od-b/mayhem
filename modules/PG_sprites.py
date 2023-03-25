@@ -5,6 +5,7 @@ import pygame as pg
 from pygame import Color, Rect, Surface, draw
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Sprite
+from math import sqrt
 
 
 class Block(Sprite):
@@ -134,6 +135,8 @@ class Controllable(Sprite):
 
         # rate of change of velocity
         self.HANDLING: float = float(config['weights']['handling'])
+        self.HALT_HANDLING = self.HANDLING * self.HANDLING
+        print(self.HALT_HANDLING)
 
         # set up variable attributes
         self.position: Vec2 = initial_pos
@@ -142,16 +145,12 @@ class Controllable(Sprite):
         self.health: int = self.MAX_HEALTH
         self.mana: int = self.MAX_MANA
 
-
         # attributes for adjusting movement through keys
-        self.dir_x: int = int(0)
-        self.dir_y: int = int(0)
+        self.dir_x: float = float(0)
+        self.dir_y: float = float(0)
         self.halt: int = int(0)
-
-        # internal direction vectors
         self.direction = Vec2(0.0, 0.0)
         ''' normalized directional movement vector '''
-        self.target_angle = float(0)
 
         if self.TRIGGER_FUNC:
             self.TRIGGER_FUNC_param: any = None
@@ -166,7 +165,9 @@ class Controllable(Sprite):
             # it's crucial to store the original image and rect for transformation
             # otherwise, pygame will flood the memory in a matter of seconds
             # in short, ensures the original image is rotated, not the mutated one
-            self.ORIGINAL_IMAGE = pg.Surface(self.SIZE).convert_alpha()
+            IMG = pg.Surface(self.SIZE).convert_alpha()
+            # IMG = pg.transform.flip(IMG, False, True)
+            self.ORIGINAL_IMAGE = IMG
             self.ORIGINAL_RECT = self.ORIGINAL_IMAGE.get_rect()
 
             # create a polygon using the rect bounds as reference points
@@ -185,7 +186,8 @@ class Controllable(Sprite):
             raise ValueError("not yet implemented, don't include an image")
 
     def get_angle(self):
-        return round(self.angle, 2)
+        # return "negative" as actual surface is flipped
+        return round(self.angle)
 
     def get_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''
@@ -209,11 +211,10 @@ class Controllable(Sprite):
 
         # get a new image by rotating the original image
         # not referring to the original image will result in catastrophic memory flooding
-        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
-
-        # set rect to the new images rect bounds
-        # get_rect(**kwargs: Any) accepts a position value as parameter
-        self.rect = self.image.get_rect(center=self.ORIGINAL_RECT.center)
+        # the constant of -45 is to correct for the fact that image is a triangle
+        NEW_IMG = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+        # flip y-axis of image
+        self.image = pg.transform.flip(NEW_IMG, False, True)
 
         # get new mask for collision checking
         # > Note A new mask needs to be recreated each time a sprite's image is changed  
@@ -221,29 +222,39 @@ class Controllable(Sprite):
         #   https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask  
         self.mask = pg.mask.from_surface(self.image)
 
-    def update_direction(self):
-        ''' update direction, and target angle based on direction '''
-        # update direction
-        self.direction.update(self.dir_x, self.dir_y)
-        # normalize position
-        normalized_pos = self.position.normalize()
-        # calculate target angled from the normalized position / direction
-        self.target_angle = -normalized_pos.angle_to(self.direction)
+        # set rect to the new images rect bounds
+        # get_rect(**kwargs: Any) accepts a position value as parameter
+        # RE = self.image.get_rect(center=self.ORIGINAL_RECT.center)
+        self.rect = self.mask.get_rect(center=self.ORIGINAL_RECT.center)
 
     def update(self):
-        self.direction.y += self.G_DIRECT
+        self.direction.update(self.dir_x, self.dir_y)
+
         if (self.halt == 1):
-            self.velocity -= self.velocity * self.G_CONST
-            self.velocity += self.direction.elementwise() * (self.HANDLING / 3)
+            self.velocity -= (self.velocity * self.G_CONST)
+            self.velocity += self.direction * (self.HALT_HANDLING)
         else:
-            if (self.direction.y != 1.0):
+            if (abs(self.direction.y) != 1.0):
+                self.velocity.y += self.G_DIRECT
                 self.velocity.y += self.get_gravity_factor()
-            self.velocity += (self.direction.elementwise() * self.HANDLING)
+            self.velocity += (self.direction * self.HANDLING)
 
         # increment velocity by a fraction of direction
         self.limit_velocity()
+        # reduce velocity by 1% per frame, after limiting
+        self.velocity *= 0.99
 
         # update image, position and rect position
-        self.update_image_angle()
         self.position += self.velocity
+
+        # calculate angle from the normalized position / velocity
+        # THE MAGIC NUMBER IS -35 DO NOT ASK BECAUSE I DO NOT
+        # probably because the model being rotated is actually a rectangle.
+        # self.velocity = self.velocity.rotate(0.02)
+        # if (self.direction.y == -1.0) and (abs(self.direction.x) == 0.0) and self.angle in range(-160,160):
+        #     self.angle = 180
+        # else:
+        self.angle = round(self.position.normalize().angle_to(self.velocity.normalize())) - 35.0
+
+        self.update_image_angle()
         self.rect.center = self.position

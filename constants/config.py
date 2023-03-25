@@ -93,7 +93,7 @@ CONFIG = {
         #   literally just adds y-velocity on every frame
         #   avoids complete standstills
         #   also prevents potential division by zero
-        'gravity_direct': float(0.001),
+        'gravity_direct': float(0.002),
     },
     'sprites': {
         'BLOCKS': {

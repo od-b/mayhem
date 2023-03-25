@@ -1,6 +1,5 @@
 from typing import Callable
 from pygame import Surface, Rect, Color
-import pygame as pg
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
 from pygame.draw import line as draw_line
@@ -210,15 +209,13 @@ class Container(Sprite):
 
 class Text_Box(Sprite):
     ''' Sprite for rendering and displaying text
-        * must have a container
-        * If border_width is set, a color must also be set.
         * text_is_const is whether or not the text will change after creation
         * font_antialias is whether to apply antialiasing when rendering
         * will auto get string if not text_is_const and provided a getter function
 
-        For objects with a text_getter_func, the initial string serves as a 'pre-text'
-        and will consist even when self.content is updated.
-        For no pre-text, simply pass content as an empty string -> ''
+        For objects with a text_getter_func, the initial text string serves as a 'pre-text'
+        and will consist even when self.text is updated.
+        For no pre-text, simply pass text as an empty string
     '''
 
     def __init__(self,

@@ -87,15 +87,18 @@ class PG_App:
         self.STEER_RIGHT = int(PLAYER_CONTROLS['steer_right'])
         self.HALT = int(PLAYER_CONTROLS['halt'])
         self.LOCK = int(PLAYER_CONTROLS['lock'])
-        # pg.key.set_repeat(self.timer.fps_limit, self.timer.fps_limit)
-        
+
         self.set_up_ui(
             self.cf['ui']['CONTAINERS']['default'],
             self.cf['ui']['TEXTBOXES']['default']
         )
-    
+
+    def get_current_player_angle(self):
+        return self.player.get_angle()
+
     def set_up_ui(self, container_cf: dict, textbox_cf: dict):
         ''' specialized, run-once function for creating the game ui '''
+
         # create bottom info panel container
         # set width to the size of the map
         # set size and pos to match the available padded bottom space
@@ -137,21 +140,32 @@ class PG_App:
             textbox_cf['font_antialias']
         )
 
-        FPS_FRAME_2 = Text_Box(
+        DURATION_FRAME = Text_Box(
             Color(textbox_cf['bg_color']),
-            str('FPS_TEST_2: '),
+            str('Time: '),
             False,
-            self.timer.get_fps_int,
+            self.timer.get_duration,
             str(textbox_cf['font_path']),
             int(textbox_cf['font_size']),
             Color(textbox_cf['font_color']),
             textbox_cf['font_antialias']
         )
 
-        BOTTOM_PANEL.children.add([FPS_FRAME, FPS_FRAME_2])
+        ANGLE_FRAME = Text_Box(
+            Color(textbox_cf['bg_color']),
+            str('Angle: '),
+            False,
+            self.get_current_player_angle,
+            str(textbox_cf['font_path']),
+            int(textbox_cf['font_size']),
+            Color(textbox_cf['font_color']),
+            textbox_cf['font_antialias']
+        )
+
+        BOTTOM_PANEL.children.add([FPS_FRAME, DURATION_FRAME, ANGLE_FRAME])
 
     def set_up_map(self):
-        ''' spawn various static sprites around the map. Add to the given group '''
+        ''' specialized, run-once function for the creating the map. '''
 
         # outline the entire game bounds with terrain_blocks:
         terrain_facing = -1
@@ -183,9 +197,6 @@ class PG_App:
         
         # add obstacle blocks and their outline blocks to the general map group
         self.block_group.add(self.obstacle_group)
-
-    def get_current_player_angle(self):
-        return self.player.get_angle()
 
     def spawn_player(self, pos: tuple, trigger_func: Callable | None):
         ''' create and spawn a player sprite
@@ -411,29 +422,20 @@ class PG_App:
             del inflated_rect
 
     def debug__print_player_velocity(self):
-        if (self.player.velocity.y == self.player.max_velocity.y):
+        if (self.player.velocity.y == self.player.MAX_VELOCITY.y):
             print("terminal velocity reached @ \n")
             print(f'ms: {self.timer.total_time}')
             print(f'secs: {self.timer.active_segment.get_duration_formatted()}')
 
     def debug__sprite_mask_outline(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
-    
-        # get a list of cooordinates from the mask outline
-        p_list = sprite.mask.outline()
+        p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
         color = self.cf['general']['debug_color']
         pg.draw.lines(sprite.image, color, 1, p_list)
 
-    def debug__mask_outline(self, mask: Mask):
-        ''' visualize mask outline by drawing lines along the set pixel points '''
-
-        # get a list of cooordinates from the mask outline
-        p_list = mask.outline()
-        color = self.cf['general']['debug_color']
-        pg.draw.lines(self.window.surface, color, 1, p_list)
-
     def loop_events(self):
-        # loop through events
+        ''' loop all events and check for trigger matches '''
+
         for event in pg.event.get():
             # check if event type matches any triggers
             match (event.type):
@@ -446,20 +448,16 @@ class PG_App:
                     match (event.key):
                         case self.STEER_UP:
                             self.player.dir_y -= 1.0
-                            self.player.update_direction()
                         case self.STEER_DOWN:
                             self.player.dir_y += 1.0
-                            self.player.update_direction()
                         case self.STEER_LEFT:
                             self.player.dir_x -= 1.0
-                            self.player.update_direction()
                         case self.STEER_RIGHT:
                             self.player.dir_x += 1.0
-                            self.player.update_direction()
                         case self.HALT:
-                            self.player.ascent += 1.0
+                            self.player.halt += 1.0
                         case self.LOCK:
-                            self.player.ascent -= 1.0
+                            pass
                         case _:
                             pass
                 case pg.KEYUP:
@@ -467,20 +465,16 @@ class PG_App:
                     match (event.key):
                         case self.STEER_UP:
                             self.player.dir_y += 1.0
-                            self.player.update_direction()
                         case self.STEER_DOWN:
                             self.player.dir_y -= 1.0
-                            self.player.update_direction()
                         case self.STEER_LEFT:
                             self.player.dir_x += 1.0
-                            self.player.update_direction()
                         case self.STEER_RIGHT:
                             self.player.dir_x -= 1.0
-                            self.player.update_direction()
                         case self.HALT:
-                            self.player.ascent -= 1.0
+                            self.player.halt -= 1.0
                         case self.LOCK:
-                            self.player.ascent += 1.0
+                            pass
                         case _:
                             pass
                 case _:
@@ -510,7 +504,7 @@ class PG_App:
             #     self.debug__sprite_mask_outline(BLOCK)
             # for BLOCK in self.block_group:
             #     self.debug__sprite_mask_outline(BLOCK)
-            # self.debug__sprite_mask_outline(self.player)
+            self.debug__sprite_mask_outline(self.player)
 
             # refresh the display, applying drawing etc.
             pg.display.update()
