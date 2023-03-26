@@ -11,24 +11,27 @@ from pygame.sprite import Sprite, Group, GroupSingle
 from pygame.math import Vector2 as Vec2
 from pygame.mask import Mask
 
-# local dir imports
-## config dict
-from constants.config import CONFIG as GLOBAL_CF
-## general classes
+### local dir imports
+# general classes
 from modules.exceptions import VersionError, ConfigError
-## pygame specific classes
+# pygame specific classes
 from modules.PG_window import PG_Window
 from modules.PG_timer import PG_Timer
 from modules.PG_ui import Container, Text_Box
-from modules.PG_sprites import Block, Controllable
+# import config dicts
+from config._global import GLOBAL as CF_GLOBAL
+from config.window import WINDOW as CF_WINDOW
+from config.maps import MAPS as CF_MAPS
+from config.ui_sprites import UI_SPRITES as CF_UI_SPRITES
 
 
 class PG_App:
     ''' Singleton app class.
-        Takes in a config dict specifying various predefined constants / weights
+        Takes in config dicts specifying various predefined constants / weights
         * Contains most objects relevant to the app
         * Initializes and sets up pygame objects from the given config
         * Handles game loop and specialized setup-functions
+        * attributes that start with cf_ are imported config dicts
 
         * Conventions defined for the scope of this class:
         * Methods that start with _ are helper methods, or only called once
@@ -38,388 +41,152 @@ class PG_App:
             The expected config is listed in the method docstring.
     '''
 
-    def __init__(self, cf: dict[str, any]):
-        self.cf = cf
-        ''' reference to the 'CONFIG' dict from ./constants/config.py '''
-        
-        # store some important config sections for readability purposes
-        self.LOOP_LIM = self.cf['general']['loop_limit']
-        ''' does not affect self.loop() See info @ config : ['general']['loop_limit'] '''
-        self.config_textbox_default = self.cf['ui']['TEXTBOXES']['default']
-        ''' default configuration of the ui textboxes '''
-        self.config_player = self.cf['sprites']['UNIQUE']['player']
-        ''' the player sprite config. Needed several places to ensure game functions properly. '''
-        self.window = PG_Window(cf['window'], cf['map'])
-        ''' object containing main surface window and bounds '''
-        self.timer = PG_Timer(self.cf['timer']['fps_limit'], self.cf['timer']['accurate_timing'])
-        ''' pygame specific timer object '''
-        self.global_physics: dict[str, float] = self.cf['physics']
-        ''' global physics weights '''
+    def __init__(self, 
+            config_global: dict,
+            config_window: dict,
+            config_maps: dict,
+            config_UI: dict
+        ):
 
-        # combined groups
-        self.block_group = Group()
-        ''' combined group of constant, map-anchored rectangular sprites '''
+        self.cf_global = config_global
+        self.cf_window = config_window
+        self.cf_maps = config_maps
+        self.cf_UI = config_UI
+        
+        self.MAP_KEYS = []
+        for key, _ in self.cf_maps.items():
+            self.MAP_KEYS.append(str(key))
+        print(f'loaded map config keys: {self.MAP_KEYS}')
+
+        # store chosen ui style dicts
+        self.cf_container_style: dict = self.cf_UI['CONTAINERS'][str(self.cf_global['container_style'])]
+        self.cf_textbox_style: dict = self.cf_UI['TEXTBOXES'][str(self.cf_global['textbox_style'])]
+
+        # store global constants
+        self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
+        self.FPS_LIMIT = int(self.cf_global['fps_limit'])
+
+        # create the window
+        self.window = PG_Window(self.cf_global, self.cf_window)
+        ''' object containing main surface window and bounds '''
+
+        # create the timer
+        self.timer = PG_Timer(self.cf_global['fps_limit'], self.cf_global['accurate_timing'])
+        ''' pygame specific timer object '''
+
+        # 
         self.container_group = Group()
         ''' group of ui containers. Contains their own groups of children '''
 
-        # specific groups
-        self.obstacle_group = Group()
-        ''' group specifically containing the randomly placed obstacle core blocks '''
-        self.map_edge_group = Group()
-        ''' group specifically containing the map surface outline blocks '''
-        self.player_group = GroupSingle()
-        ''' player sprite group. If a new sprite is added, the old is removed. '''
+        self.set_up_ui()
+        self.fetch_menu_controls()
+        self.ban_events()
+        self.app_is_running = True
+        self.map_is_active = False
 
-        # set up the map
-        self.set_up_map()   # populates obstacle_group, map_edge_group and block_group
+    def set_up_map(self, map_name: str, player_pos: tuple[int, int]):
+        ''' bundle of function calls to initialize the map, player and controls '''
 
-        # spawn the player sprite
-        self.player: Controllable
-        ''' holds a direct pointer to the Controllable player sprite '''
-        self.spawn_player((0, 0), None)
+        if not str(map_name) in self.MAP_KEYS:
+            raise ValueError(f'map "{map_name}" not found')
 
-        # not sure if this is needed, but i want to be on the safe side:
-        # define movement key constants to ensure dict access doesn't impact performance
-        PLAYER_CONTROLS = self.cf['sprites']['UNIQUE']['player']['controls']
-        self.STEER_UP = int(PLAYER_CONTROLS['steer_up'])
-        self.STEER_LEFT = int(PLAYER_CONTROLS['steer_left'])
-        self.STEER_DOWN = int(PLAYER_CONTROLS['steer_down'])
-        self.STEER_RIGHT = int(PLAYER_CONTROLS['steer_right'])
-        self.HALT = int(PLAYER_CONTROLS['halt'])
-        self.LOCK = int(PLAYER_CONTROLS['lock'])
+        self.window.create_map(self.cf_maps['map_1'])
+        self.window.map.set_up_terrain()
+        self.window.map.spawn_player(player_pos)
+        self.fetch_player_controls()
 
-        self.set_up_ui(
-            self.cf['ui']['CONTAINERS']['default'],
-            self.cf['ui']['TEXTBOXES']['default']
-        )
+        if not (self.timer.first_init_done):
+            self.timer.start_first_segment(self.window.map.name)
+        else:
+            self.timer.new_segment(self.window.map.name, True)
+
+        self.map_is_active = True
+
+    def fetch_menu_controls(self):
+        ''' fetch and store player controls from the global config '''
+        cf_controls = self.cf_global['menu_controls']
+        self.MENU_UP =      int(cf_controls['up'])
+        self.MENU_LEFT =    int(cf_controls['left'])
+        self.MENU_DOWN =    int(cf_controls['down'])
+        self.MENU_RIGHT =   int(cf_controls['right'])
+        self.MENU_CONFIRM = int(cf_controls['confirm'])
+        self.MENU_BACK =    int(cf_controls['back'])
+
+    def fetch_player_controls(self):
+        ''' fetch and store player controls from the map '''
+        cf_controls = self.window.map.get_player_controls()
+        self.STEER_UP =     int(cf_controls['steer_up'])
+        self.STEER_LEFT =   int(cf_controls['steer_left'])
+        self.STEER_DOWN =   int(cf_controls['steer_down'])
+        self.STEER_RIGHT =  int(cf_controls['steer_right'])
+        self.HALT =         int(cf_controls['halt'])
+        self.LOCK =         int(cf_controls['lock'])
 
     def get_current_player_angle(self):
-        return self.player.get_angle()
+        return self.window.map.player.get_angle()
 
-    def set_up_ui(self, container_cf: dict, textbox_cf: dict):
+    def set_up_ui(self):
         ''' specialized, run-once function for creating the game ui '''
 
         # create bottom info panel container
         # set width to the size of the map
         # set size and pos to match the available padded bottom space
-        width = int(self.window.map_rect.width)
-        height = int(self.window.height - self.window.map_rect.height - self.window.map_bounds['min_y'])
+        position = self.window.map_rect.bottomleft
+        width = self.window.map_rect.w
+        height = (self.window.height - self.window.map_rect.h - self.window.map_rect.top)
 
         if (height < 40):
             print("not enough vertical padding to fit the UI. Increase ['map']['padded_bounds'].")
             return
 
-        pos_x = int(self.window.map_bounds['min_x'])
-        pos_y = int(self.window.map_rect.height + self.window.map_bounds['min_y'])
-        print(height)
-
         BOTTOM_PANEL = Container(
             self.window.surface,
             (width, height),
-            (pos_x, pos_y),
-            Color(container_cf['color']),
-            Color(container_cf['border_color']),
-            int(container_cf['border_width']),
+            position,
+            Color(self.cf_container_style['color']),
+            Color(self.cf_container_style['border_color']),
+            int(self.cf_container_style['border_width']),
             "right",
             "left_right",
-            int(container_cf['children_padding']),
-            int(container_cf['separator_width']),
-            Color(container_cf['separator_color'])
+            int(self.cf_container_style['children_padding']),
+            int(self.cf_container_style['separator_width']),
+            Color(self.cf_container_style['separator_color'])
         )
 
         self.container_group.add(BOTTOM_PANEL)
         
         FPS_FRAME = Text_Box(
-            Color(textbox_cf['bg_color']),
+            Color(self.cf_textbox_style['text_bg_color']),
             str('FPS: '),
-            False,
             self.timer.get_fps_int,
-            str(textbox_cf['font_path']),
-            int(textbox_cf['font_size']),
-            Color(textbox_cf['font_color']),
-            textbox_cf['font_antialias']
+            str(self.cf_textbox_style['font_path']),
+            int(self.cf_textbox_style['font_size']),
+            Color(self.cf_textbox_style['font_color']),
+            self.cf_textbox_style['font_antialias']
         )
 
         DURATION_FRAME = Text_Box(
-            Color(textbox_cf['bg_color']),
+            Color(self.cf_textbox_style['text_bg_color']),
             str('Time: '),
-            False,
             self.timer.get_duration,
-            str(textbox_cf['font_path']),
-            int(textbox_cf['font_size']),
-            Color(textbox_cf['font_color']),
-            textbox_cf['font_antialias']
+            str(self.cf_textbox_style['font_path']),
+            int(self.cf_textbox_style['font_size']),
+            Color(self.cf_textbox_style['font_color']),
+            self.cf_textbox_style['font_antialias']
         )
 
         ANGLE_FRAME = Text_Box(
-            Color(textbox_cf['bg_color']),
+            Color(self.cf_textbox_style['text_bg_color']),
             str('Angle: '),
-            False,
             self.get_current_player_angle,
-            str(textbox_cf['font_path']),
-            int(textbox_cf['font_size']),
-            Color(textbox_cf['font_color']),
-            textbox_cf['font_antialias']
+            str(self.cf_textbox_style['font_path']),
+            int(self.cf_textbox_style['font_size']),
+            Color(self.cf_textbox_style['font_color']),
+            self.cf_textbox_style['font_antialias']
         )
 
         BOTTOM_PANEL.children.add([FPS_FRAME, DURATION_FRAME, ANGLE_FRAME])
-
-    def set_up_map(self):
-        ''' specialized, run-once function for the creating the map. '''
-
-        # outline the entire game bounds with terrain_blocks:
-        terrain_facing = -1
-        self.spawn_rect_outline(
-            self.cf['sprites']['BLOCKS']['terrain'],
-            None, None, self.map_edge_group,
-            self.window.map_rect, terrain_facing, None
-        )
-        # add map bounds outline blocks to the general map group
-        self.block_group.add(self.map_edge_group)
-
-        # place obstacle_blocks within the game area
-        self.spawn_static_obstacles(
-            self.cf['sprites']['BLOCKS']['obstacle'],
-            None, None, self.obstacle_group,
-            self.cf['map']['n_obstacles'],
-        )
-
-        # outline the obstacles with smaller rects to create more jagged terrain
-        terrain_facing = 0
-        for BLOCK in self.obstacle_group:
-            # for each block in obstacle_group, outline the block rect
-            color_pool = [BLOCK.color]
-            self.spawn_rect_outline(
-                self.cf['sprites']['BLOCKS']['obstacle_outline'],
-                None, None, self.obstacle_group, 
-                BLOCK.rect, terrain_facing, color_pool
-            )
-        
-        # add obstacle blocks and their outline blocks to the general map group
-        self.block_group.add(self.obstacle_group)
-
-    def spawn_player(self, pos: tuple, trigger_func: Callable | None):
-        ''' create and spawn a player sprite
-            * if a player already exists, replaces and removes it
-            * updates the self.player reference
-        '''
-        # remove any references to the old player, if it exists
-        if (self.player_group.sprite):
-            self.player_group.sprite.kill()
-            del self.player_group.sprite
-
-        # convert the position tuple to a vector
-        pos = Vec2(pos)
-        # create the player sprite, then update player_group
-        self.player = Controllable(self.config_player, self.global_physics, pos, trigger_func)
-        self.player_group.add(self.player)
-
-    def spawn_rect_outline(self, config: dict, trigger_func: Callable | None,
-                              trigger_weight, group: Group, bounds: pg.Rect,
-                              facing: int, special_color_pool: None | list[Color]):
-
-        ''' encapsulate the given rects' bounds with blocks
-            * config: ['sprites']['BLOCKS'][...]
-            * if iverride_color is None, uses the config color list at random
-            * otherwise, choose the given color for all blocks
-            * facing decides the alignment of the blocks relative to the bounds axis':
-            * -1 => inwards
-            * 0  => center
-            * 1  => outwards
-        '''
-
-        # constant declarations for readability
-        MIN_X = bounds.left
-        MAX_X = bounds.right
-        MIN_Y = bounds.top
-        MAX_Y = bounds.bottom
-
-        # below are four loops that together will outline the entire bounds
-        # the loop places blocks in a clockwise path, following each axis
-        # until a new bound is encountered, then swapping axis' and continuing
-        # the first loop is explicit and commented, while the last three
-        # are not, and are also slightly condensed. The logic is allround similar.
-        # (they are way too specific to create a working generalized loop function, however)
-
-        # last_block is for storing the last block placed when swapping axis'
-        last_block: Block | None = None
-
-        # 1) topleft --> topright
-        curr_pos_x = MIN_X
-        while curr_pos_x < MAX_X:
-            # set random height/width from within the ranges
-            width = randint(config['min_width'], config['max_width'])
-            height = randint(config['min_height'], config['max_height'])
-
-            # create a vector to contain the position of the block
-            position = Vec2(curr_pos_x, 0.0)
-
-            # ensure no edge overlap by checking for the last block:
-            if (curr_pos_x + width) > MAX_X:
-                # if the block will be last, adjust size before creating
-                width = (MAX_X - curr_pos_x)
-
-            # assemble the block
-            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
-            
-            # set trigger weight if applicable
-            if (trigger_weight and trigger_func):
-                BLOCK.set_trigger_parameter(trigger_weight)
-
-            # adjust position according to facing
-            match (facing):
-                case (-1):
-                    BLOCK.rect.top = MIN_Y
-                case (0):
-                    BLOCK.rect.centery = MIN_Y
-                case (1):
-                    BLOCK.rect.bottom = MIN_Y
-
-            # add to the given group and update last block
-            group.add(BLOCK)
-            last_block = BLOCK
-
-            # increment position for placing the next block
-            curr_pos_x = BLOCK.rect.right + config['padding']
-
-        # 2) topright --> bottomright
-        curr_pos_y = last_block.rect.bottom
-        while curr_pos_y < MAX_Y:
-            width = randint(config['min_width'], config['max_width'])
-            height = randint(config['min_height'], config['max_height'])
-            position = Vec2(0.0, curr_pos_y)
-            if (curr_pos_y + height) > MAX_Y:
-                height = MAX_Y - curr_pos_y
-
-            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
-            if (trigger_weight and trigger_func):
-                BLOCK.set_trigger_parameter(trigger_weight)
-
-            match (facing):
-                case (-1):
-                    BLOCK.rect.right = MAX_X
-                case (0):
-                    BLOCK.rect.centerx = MAX_X
-                case (1):
-                    BLOCK.rect.left = MAX_X
-            last_block = BLOCK
-            group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.bottom + config['padding']
-
-        # 3) bottomright --> bottomleft
-        curr_pos_x = last_block.rect.left
-        while curr_pos_x > MIN_X:
-            width = randint(config['min_width'], config['max_width'])
-            height = randint(config['min_height'], config['max_height'])
-            position = Vec2()
-            if (curr_pos_x - width) < MIN_X:
-                width = abs(MIN_X - curr_pos_x)
-
-            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
-            if (trigger_weight and trigger_func):
-                BLOCK.set_trigger_parameter(trigger_weight)
-            BLOCK.rect.right = curr_pos_x
-
-            match (facing):
-                case (-1):
-                    BLOCK.rect.bottom = MAX_Y
-                case (0):
-                    BLOCK.rect.centery = MAX_Y
-                case (1):
-                    BLOCK.rect.top = MAX_Y
-            last_block = BLOCK
-            group.add(BLOCK)
-            curr_pos_x = BLOCK.rect.left - config['padding']
-
-        # 4) bottomleft --> topright
-        curr_pos_y = last_block.rect.top
-        while curr_pos_y > MIN_Y:
-            width = randint(config['min_width'], config['max_width'])
-            height = randint(config['min_height'], config['max_height'])
-            position = Vec2()
-            if (curr_pos_y - height) < MIN_Y:
-                height = abs(MIN_Y - curr_pos_y)
-
-            BLOCK = Block(config, special_color_pool, (width, height), position, trigger_func)
-            if (trigger_weight and trigger_func):
-                BLOCK.set_trigger_parameter(trigger_weight)
-            BLOCK.rect.bottom = curr_pos_y
-
-            match (facing):
-                case (-1):
-                    BLOCK.rect.left = MIN_X
-                case (0):
-                    BLOCK.rect.centerx = MIN_X
-                case (1):
-                    BLOCK.rect.right = MIN_X
-            last_block = BLOCK
-            group.add(BLOCK)
-            curr_pos_y = BLOCK.rect.top - config['padding']
-
-    def spawn_static_obstacles(self, config: dict, trigger_func: Callable | None, trigger_weight,
-                               group: Group, n_obstacles: int):
-
-        ''' obstacle spawning algorithm
-            * config: ['sprites']['BLOCKS'][...]
-            * checks for collision with the passed group and self.block_group before placing
-        '''
-
-        # padding, taking into account the player size to not completely block paths:
-        H_PADDING = int(self.config_player['surface']['height'] + config['padding'])
-        W_PADDING = int(self.config_player['surface']['width'] + config['padding'])
-
-        # initiate the loop
-        placed_blocks = 0
-        failed_attempts = 0
-        while placed_blocks < n_obstacles:
-            # set random height/width from within the ranges
-            width = randint(config['min_width'], config['max_width'])
-            height = randint(config['min_height'], config['max_height'])
-            position = Vec2(
-                self.window.get_rand_x_inbound(width),
-                self.window.get_rand_y_inbound(height)
-            )
-            # assemble the block
-            BLOCK = Block(config, None, (width, height), position, trigger_func)
-
-            # set trigger weight if applicable
-            if (trigger_weight and trigger_func):
-                BLOCK.set_trigger_parameter(trigger_weight)
-
-            # the block is now created, but there's 2 potential problems:
-            # 1) the block might overlap other blocks
-            # 2) we don't want to lock the player in by bad rng
-
-            # solution: create a copy of the rect and inflate it using the player size + set padding
-            inflated_rect = BLOCK.rect.copy().inflate(W_PADDING, H_PADDING)
-
-            # temporarily swap the rect with the one of the block, while saving the original
-            # this is to allow for easy and fast spritecollide checking
-            original_rect = BLOCK.rect.copy()
-            BLOCK.rect = inflated_rect
-
-            # if the block + player rect doesn't collide with any terrain, add it to the group
-            if ((pg.sprite.spritecollideany(BLOCK, self.block_group) == None)
-                     and (pg.sprite.spritecollideany(BLOCK, group) == None)):
-                # block doesn't collide with anything, swap rect back and add block
-                BLOCK.rect = original_rect
-                group.add(BLOCK)
-                placed_blocks += 1
-            else:
-                # otherwise, free (delete) the sprite and try again
-                del BLOCK
-                failed_attempts += 1
-                # check if attempt limit is reached
-                if (failed_attempts > self.LOOP_LIM):
-                    msg = f'\
-                        Fail limit of {self.LOOP_LIM} attempts reached.\
-                        Too many or too large obstacles.\n\
-                        block padding set too high can also be the cause.\
-                        Current obstacle count: {placed_blocks} / {n_obstacles}'
-                    raise ConfigError(msg, config)
-
-            # make sure the copied temp rect is not saved in memory
-            del inflated_rect
+        # BOTTOM_PANEL.verify_children()
 
     def debug__print_player_velocity(self):
         if (self.player.velocity.y == self.player.MAX_VELOCITY.y):
@@ -430,32 +197,73 @@ class PG_App:
     def debug__sprite_mask_outline(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
         p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
-        color = self.cf['general']['debug_color']
-        pg.draw.lines(sprite.image, color, 1, p_list)
+        pg.draw.lines(sprite.image, self.debug_color, 1, p_list)
+
+    def debug__draw_poking_stick(self, sprite, len: float, width: int):
+        p1 = Vec2(sprite.position)
+        p2 = Vec2(sprite.position + len*sprite.velocity)
+        # p2.scale_to_length(len)
+        # print(p1, p2)
+        pg.draw.line(self.window.map_surface, self.debug_color, p1, p2, width)
+
+    def ban_events(self):
+        ''' blocks some unused events from entering the event queue
+            * saves some time when iterating over pg.event.get()
+        '''
+        pg.event.set_blocked(pg.MOUSEMOTION)
+        pg.event.set_blocked(pg.MOUSEBUTTONUP)
+        pg.event.set_blocked(pg.MOUSEBUTTONDOWN)
+        pg.event.set_blocked(pg.TEXTINPUT)
+
+    def menu_loop_events(self):
+        for event in pg.event.get():
+            match (event.type):
+                case pg.QUIT:
+                   self.app_is_running = False
+                case pg.MOUSEBUTTONDOWN:
+                    print(pg.mouse.get_pos())
+                case pg.KEYDOWN:
+                    # match keydown event to an action, or pass
+                    match (event.key):
+                        case self.MENU_UP:
+                            pass
+                        case self.MENU_DOWN:
+                            pass
+                        case self.MENU_LEFT:
+                            pass
+                        case self.MENU_RIGHT:
+                            pass
+                        case self.MENU_CONFIRM:
+                            self.set_up_map('map_1', (400, 400))
+                        case self.MENU_BACK:
+                            pass
+                        case _:
+                            pass
 
     def loop_events(self):
-        ''' loop all events and check for trigger matches '''
+        ''' loop all queued events and check for any trigger matches '''
 
         for event in pg.event.get():
             # check if event type matches any triggers
             match (event.type):
                 case pg.QUIT:
-                    self.app_running = False
+                    self.app_is_running = False
+                    self.map_is_active = False
                 case pg.MOUSEBUTTONDOWN:
                     print(pg.mouse.get_pos())
                 case pg.KEYDOWN:
                     # match keydown event to an action, or pass
                     match (event.key):
                         case self.STEER_UP:
-                            self.player.dir_y -= 1.0
+                            self.window.map.player.direction.y -= self.window.map.player.handling
                         case self.STEER_DOWN:
-                            self.player.dir_y += 1.0
+                            self.window.map.player.direction.y += self.window.map.player.handling
                         case self.STEER_LEFT:
-                            self.player.dir_x -= 1.0
+                            self.window.map.player.direction.x -= self.window.map.player.handling
                         case self.STEER_RIGHT:
-                            self.player.dir_x += 1.0
+                            self.window.map.player.direction.x += self.window.map.player.handling
                         case self.HALT:
-                            self.player.halt += 1.0
+                            self.window.map.player.halt += 1.0
                         case self.LOCK:
                             pass
                         case _:
@@ -464,70 +272,74 @@ class PG_App:
                     # match keydown event to an action, or pass
                     match (event.key):
                         case self.STEER_UP:
-                            self.player.dir_y += 1.0
+                            self.window.map.player.direction.y += self.window.map.player.handling
                         case self.STEER_DOWN:
-                            self.player.dir_y -= 1.0
+                            self.window.map.player.direction.y -= self.window.map.player.handling
                         case self.STEER_LEFT:
-                            self.player.dir_x += 1.0
+                            self.window.map.player.direction.x += self.window.map.player.handling
                         case self.STEER_RIGHT:
-                            self.player.dir_x -= 1.0
+                            self.window.map.player.direction.x -= self.window.map.player.handling
                         case self.HALT:
-                            self.player.halt -= 1.0
+                            self.window.map.player.halt -= 1.0
                         case self.LOCK:
                             pass
                         case _:
                             pass
                 case _:
+                    # print(event.type)
+                    # print(event)
                     pass
 
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
-
-        # init the timer as the loop is about to start
-        self.timer.start_first_segment(None)
-        self.app_running = True
-
-        while (self.app_running):
-            # fill the main surface, then the game bounds
-            self.window.fill_map_surface()
-
-            # draw map blocks
-            self.block_group.draw(self.window.map_surface)
-
-            # draw the player
-            self.player_group.draw(self.window.map_surface)
-
-            # draw the ui
-            self.container_group.update()
-
-            # for BLOCK in self.obstacle_group:
-            #     self.debug__sprite_mask_outline(BLOCK)
-            # for BLOCK in self.block_group:
-            #     self.debug__sprite_mask_outline(BLOCK)
-            self.debug__sprite_mask_outline(self.player)
-
-            # refresh the display, applying drawing etc.
+        
+        while (self.app_is_running):
+            # the map not be active. this keeps the program active until exited
+            self.window.fill_surface()
             pg.display.update()
 
-            # loop through events
-            self.loop_events()
+            # loop through menu events
+            self.menu_loop_events()
 
-            # now that events are read, update sprites before next frame
-            self.player_group.update()
+            # if a map was initiated by the menu, launch the main loop
+            while (self.map_is_active):
+                # fill the main surface, then the game bounds
+                self.window.map.fill_surface()
 
-            # update the timer. Also limits the framerate if set
-            self.timer.update()
+                # draw map blocks
+                self.window.map.block_group.draw(self.window.map_surface)
+
+                # draw the player
+                self.window.map.player_group.draw(self.window.map_surface)
+
+                # update + draw the ui (both are done through update)
+                self.container_group.update()
+
+                # refresh the display, applying drawing etc.
+                pg.display.update()
+
+                # loop through events
+                self.loop_events()
+
+                # now that events are read, update sprites before next frame
+                self.window.map.player_group.update()
+
+                # update the timer. Also limits the framerate if set
+                self.timer.update()
 
 
 if __name__ == '__main__':
+
     # initialize pygame and verify the version before anything else
     pg.init()
 
-    if (pg.__version__ != GLOBAL_CF['general']['req_pygame_version']):
+    if (pg.__version__ != CF_GLOBAL['req_pg_version']):
+        msg = 'run "pip install pygame --upgrade" to upgrade, '
+        msg += 'or change the config to your current version to try anyway.'
         raise VersionError("Pygame", pg.__version__,
-            GLOBAL_CF['general']['req_pygame_version']
+            CF_GLOBAL['req_pg_version'], msg
         )
 
     # load the game
-    GAME = PG_App(GLOBAL_CF)
+    GAME = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_UI_SPRITES)
     GAME.loop()

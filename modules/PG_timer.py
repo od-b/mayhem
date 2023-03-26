@@ -12,15 +12,25 @@ class PG_Timer(Timer):
 
     def __init__(self, fps_limit: int, busy_loop: bool):
         super().__init__()
-        self.fps_limit = fps_limit
+        self.fps_limit = int(fps_limit)
         self.busy_loop = busy_loop
         self.clock = time.Clock()
+        self.first_init_done: bool = False
 
         # create a function pointer instead of checking conditions every frame
         if (self.busy_loop):
             self.tick_func: Callable = self.clock_tick_busy
         else:
             self.tick_func: Callable = self.clock_tick
+
+    def start_first_segment(self, ref: int | None):
+        ''' overwrites parent method.
+            * since this subclass has an internal clock, handles time parameters
+        '''
+        self.first_init_done = True
+        self.tick_func()
+        curr_time = time.get_ticks()
+        super().start_first_segment(curr_time, ref)
 
     def activate_busy_tick(self):
         ''' sets tick function to busy loop. Consumes more CPU, but more accurate '''
@@ -47,14 +57,6 @@ class PG_Timer(Timer):
             More accurate than clock_tick, but consumes more resources
         '''
         self.clock.tick_busy_loop(self.fps_limit)
-
-    def start_first_segment(self, ref: int | None):
-        ''' overwrites parent method.
-            * since this subclass has an internal clock, handles time parameters
-        '''
-        self.tick_func()
-        curr_time = time.get_ticks()
-        super().start_first_segment(curr_time, ref)
 
     def update(self):
         ''' overwrites parent method. 

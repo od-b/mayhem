@@ -1,0 +1,109 @@
+''' debugging notes
+debugging code:
+
+    def debug__session_prints(self):
+        print(f'player min_angle = {self.player.recorded_min_angle}')
+        print(f'player max_angle = {self.player.recorded_max_angle}')
+        print(f'angle abs sum = {(abs(self.player.recorded_max_angle) + abs(self.player.recorded_min_angle))}')
+        print(f'angle max-min = {(self.player.recorded_max_angle + self.player.recorded_min_angle)}')
+
+    update(self): +
+        # self.recorded_max_angle = 0.0
+        # self.recorded_min_angle = 0.0
+
+        # norm_pos = self.position.normalize()
+        # norm_velo = self.velocity.normalize()
+        # print(f'norm_pos: {norm_pos}')
+        # print(f'norm_velo: {norm_velo}')
+        #
+        # if (new_angle > self.recorded_max_angle):
+        #     self.recorded_max_angle = new_angle
+        # elif (new_angle < self.recorded_min_angle):
+        #     self.recorded_min_angle = new_angle
+
+1) calculating new angle by performing:
+        # norm_velo = self.velocity.normalize()
+        # norm_pos = self.position.normalize()
+        # new_angle = norm_pos.angle_to(norm_velo)
+    data:
+        player min_angle = -236.40287390401454
+        player max_angle = 136.15678140865901
+        angle abs sum = 372.55965531267356
+    notes: 
+        angle sum seems off
+        facing angle seems incorrect at all times
+
+2) adding self.position = self.rect.center in update_image_angle:
+    data:
+        player min_angle = -235.80997398151797
+        player max_angle = 123.09555958837569
+        angle abs sum = 358.9055335698937
+    notes: 
+        angle sum seems better. 
+        player is not moving at all
+
+3) instead of using normalized position, calculate angle from normalized rect center
+    data:
+        player min_angle = -239.9253597279107
+        player max_angle = 157.75951115237015
+        angle abs sum = 397.68487088028087
+    notes:
+        not a great result, but response seemed good.
+        not facing the correct direction, but seems to be by a constant amount
+
+4) change "self.rect = self.image.get_rect(center=self.ORIGINAL_RECT.center)" to
+       => "self.rect = self.image.get_rect(center=self.position)"
+    data:
+        player min_angle = -248.98678876624382
+        player max_angle = 154.81887608795256
+        angle abs sum = 403.8056648541964
+    notes:
+        data seems way worse than it appears ingame.
+        seemed borderline functional.
+        seems to be off by a constant margin at nearly all angles.
+        
+5) keeping change from 4, testing various padding constants
+    a) new_angle - 35.0
+        player min_angle = -284.99908778467704
+        player max_angle = 98.03059674069422
+        angle abs sum = 383.0296845253713
+            notes:
+                not bad, not great
+    b) new_angle - 45.0
+        player min_angle = -277.87474190952673
+        player max_angle = 105.57768042247892
+        angle abs sum = 383.45242233200565
+            notes:
+                might be the best ingame contender yet, ignoring data
+    c) new_angle - 28.0
+        player min_angle = -279.83109448296824
+        player max_angle = 134.11370878446357
+        angle abs sum = 413.9448032674318
+            notes: 
+                (created more prints)
+                player min_angle = -282.397811506577
+                player max_angle = 117.17325572451173
+                angle abs sum = 399.5710672310887
+                angle max-min = -165.22455578206527
+
+6) calculate new angle from:
+    new_pos = self.position + self.velocity
+    new_angle = self.position.angle_to(new_pos)
+    data:
+        player min_angle = -0.4091778000097943
+        player max_angle = 0.4655189865942677
+        angle abs sum = 0.874696786604062
+        angle max-min = 0.0563411865844734
+    notes:
+        terrible.
+
+7) back to using velocity:
+        # norm_velo = self.velocity.normalize()
+        # norm_pos = self.position.normalize()
+        # new_angle = norm_pos.angle_to(norm_velo) - 28.0
+    data:
+        player min_angle = -289.10369196846017
+        player max_angle = 136.8655682113039
+        angle abs sum = 425.9692601797641
+        angle max-min = -152.23812375715627
+'''

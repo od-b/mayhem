@@ -5,7 +5,7 @@ class Segment:
         * ref can be None if separating segment types is not needed
     '''
 
-    def __init__(self, start: int, ref: int | None):
+    def __init__(self, start: int, ref):
         self.ref = ref
         self.start = start
         self.duration = int()
@@ -49,7 +49,7 @@ class Timer:
         self.start_time = curr_time
         self.active_segment = Segment(curr_time, ref)
 
-    def new_segment(self, ref: int | None, archive_active_segment: bool):
+    def new_segment(self, ref, archive_active_segment: bool):
         ''' start a new segment with the given ref
             * choose whether to archive or delete current active segment
         '''
@@ -59,13 +59,13 @@ class Timer:
             del self.active_segment
         self.active_segment = Segment(self.total_time, ref)
 
-    def get_fastest_archived_segment(self, ref: int | None):
+    def get_fastest_archived_segment(self, ref):
         ''' get fastest segment with a specific ref.
             * if ref is None, returns fastest segment with any ref
             * returns None if there are no matching segments
         '''
         fastest_time: int | None = None
-        if not ref:
+        if (ref == None):
             for seg in self.segments:
                 if (not fastest_time) or (seg.duration < fastest_time):
                     fastest_time = seg.duration

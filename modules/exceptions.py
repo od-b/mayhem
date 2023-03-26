@@ -1,8 +1,9 @@
 class VersionError(Exception):
     ''' Exception raised for various version errors. '''
 
-    def __init__(self, modulename: str, v_found: str, v_req: str):
-        self.msg = f'\n< {modulename} version "{v_found}" initialized. Expected: "{v_req}" >'
+    def __init__(self, modulename: str, v_found: str, v_req: str, end_msg: str):
+        self.msg = f'\n< {modulename} version "{v_found}" initialized. Expected: "{v_req}".'
+        self.msg += f'\n  {end_msg} >'
         super().__init__(self.msg)
 
 
