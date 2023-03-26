@@ -128,6 +128,8 @@ class Controllable(Sprite):
             # otherwise, pygame will flood the memory in a matter of seconds
             # put short; ensures the original image is rotated, not the rotated one
             self.ORIGINAL_IMAGE = IMG
+            self.height = IMG_RECT.h
+            self.width = IMG_RECT.w
 
             # set sprite staple attributes through update_image_angle(); image, rect & mask
             self.update_image_angle()
@@ -152,9 +154,10 @@ class Controllable(Sprite):
         # get a new image by rotating the original image
         # not referring to the original image will result in catastrophic memory flooding
         # the constant of -45 is to correct for the fact that image is a triangle
-        NEW_IMG = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+        # NEW_IMG = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
         # flip y-axis of image
-        self.image = pg.transform.flip(NEW_IMG, False, True)
+        # self.image = pg.transform.flip(NEW_IMG, False, True)
+        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
 
         # get new mask for collision checking
         # > Note A new mask needs to be recreated each time a sprite's image is changed  
@@ -178,5 +181,6 @@ class Controllable(Sprite):
             self.velocity.clamp_magnitude_ip(self.max_velocity)
 
             self.position = self.position + self.velocity
-            self.angle = self.position.normalize().angle_to(self.velocity) - 28.0
+            self.angle = -self.position.normalize().angle_to(-self.velocity) + 28.0
+            # self.angle = self.position.normalize().angle_to(self.velocity) - 28.0
             self.update_image_angle()

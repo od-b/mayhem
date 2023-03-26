@@ -294,12 +294,7 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
         
         while (self.app_is_running):
-            # the map not be active. this keeps the program active until exited
-            self.window.fill_surface()
-            pg.display.update()
-
-            # loop through menu events
-            self.menu_loop_events()
+            self.set_up_map('map_1', (400, 400))
 
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
@@ -326,6 +321,15 @@ class PG_App:
 
                 # update the timer. Also limits the framerate if set
                 self.timer.update()
+
+            # check if app was exited or just the map
+            if (self.app_is_running):
+                # the map is not active, but the app is. this keeps the program active until exited
+                self.window.fill_surface()
+                pg.display.update()
+
+                # loop through menu events
+                self.menu_loop_events()
 
 
 if __name__ == '__main__':
