@@ -108,6 +108,9 @@ class PG_Map:
         self.LOOP_LIMIT = cf_global['loop_limit']
         self.window = window
 
+        # reference window subsurface as self.surface
+        self.surface = self.window.map_surface
+
         # store dict settings
         self.cf_map = cf_map
         self.name = str(cf_map['name'])

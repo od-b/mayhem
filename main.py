@@ -94,6 +94,9 @@ class PG_App:
         self.window.map.set_up_terrain()
         self.window.map.spawn_player(player_pos)
         self.fetch_player_controls()
+        
+        # create references for easy access
+        self.map = self.window.map
 
         if not (self.timer.first_init_done):
             self.timer.start_first_segment(self.window.map.name)
@@ -123,7 +126,7 @@ class PG_App:
         self.LOCK =         int(cf_controls['lock'])
 
     def get_current_player_angle(self):
-        return self.window.map.player.get_angle()
+        return self.map.player.get_angle()
 
     def set_up_ui(self):
         ''' specialized, run-once function for creating the game ui '''
@@ -197,14 +200,14 @@ class PG_App:
     def debug__sprite_mask_outline(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
         p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
-        pg.draw.lines(sprite.image, self.debug_color, 1, p_list)
+        pg.draw.lines(self.window.map_surface, self.DEBUG_COLOR, 1, p_list)
 
     def debug__draw_poking_stick(self, sprite, len: float, width: int):
         p1 = Vec2(sprite.position)
         p2 = Vec2(sprite.position + len*sprite.velocity)
         # p2.scale_to_length(len)
         # print(p1, p2)
-        pg.draw.line(self.window.map_surface, self.debug_color, p1, p2, width)
+        pg.draw.line(self.window.map_surface, self.DEBUG_COLOR, p1, p2, width)
 
     def ban_events(self):
         ''' blocks some unused events from entering the event queue
@@ -223,7 +226,7 @@ class PG_App:
                 case pg.MOUSEBUTTONDOWN:
                     print(pg.mouse.get_pos())
                 case pg.KEYDOWN:
-                    # match keydown event to an action, or pass
+                    # match keydown event to an action
                     match (event.key):
                         case self.MENU_UP:
                             pass
@@ -252,18 +255,18 @@ class PG_App:
                 case pg.MOUSEBUTTONDOWN:
                     print(pg.mouse.get_pos())
                 case pg.KEYDOWN:
-                    # match keydown event to an action, or pass
+                    # check if key matches any actions
                     match (event.key):
                         case self.STEER_UP:
-                            self.window.map.player.direction.y -= self.window.map.player.handling
+                            self.map.player.direction.y -= self.map.player.handling
                         case self.STEER_DOWN:
-                            self.window.map.player.direction.y += self.window.map.player.handling
+                            self.map.player.direction.y += self.map.player.handling
                         case self.STEER_LEFT:
-                            self.window.map.player.direction.x -= self.window.map.player.handling
+                            self.map.player.direction.x -= self.map.player.handling
                         case self.STEER_RIGHT:
-                            self.window.map.player.direction.x += self.window.map.player.handling
+                            self.map.player.direction.x += self.map.player.handling
                         case self.HALT:
-                            self.window.map.player.halt += 1.0
+                            self.map.player.halt += 1.0
                         case self.LOCK:
                             pass
                         case _:
@@ -272,15 +275,15 @@ class PG_App:
                     # match keydown event to an action, or pass
                     match (event.key):
                         case self.STEER_UP:
-                            self.window.map.player.direction.y += self.window.map.player.handling
+                            self.map.player.direction.y += self.map.player.handling
                         case self.STEER_DOWN:
-                            self.window.map.player.direction.y -= self.window.map.player.handling
+                            self.map.player.direction.y -= self.map.player.handling
                         case self.STEER_LEFT:
-                            self.window.map.player.direction.x += self.window.map.player.handling
+                            self.map.player.direction.x += self.map.player.handling
                         case self.STEER_RIGHT:
-                            self.window.map.player.direction.x -= self.window.map.player.handling
+                            self.map.player.direction.x -= self.map.player.handling
                         case self.HALT:
-                            self.window.map.player.halt -= 1.0
+                            self.map.player.halt -= 1.0
                         case self.LOCK:
                             pass
                         case _:
@@ -299,16 +302,19 @@ class PG_App:
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
                 # fill the main surface, then the game bounds
-                self.window.map.fill_surface()
+                self.map.fill_surface()
 
                 # draw map blocks
-                self.window.map.block_group.draw(self.window.map_surface)
+                self.map.block_group.draw(self.map.surface)
 
                 # draw the player
-                self.window.map.player_group.draw(self.window.map_surface)
+                self.map.player_group.draw(self.map.surface)
 
                 # update + draw the ui (both are done through update)
                 self.container_group.update()
+                
+                self.debug__sprite_mask_outline(self.map.player)
+                self.debug__draw_poking_stick(self.map.player, 100.0, 1)
 
                 # refresh the display, applying drawing etc.
                 pg.display.update()
@@ -317,7 +323,7 @@ class PG_App:
                 self.loop_events()
 
                 # now that events are read, update sprites before next frame
-                self.window.map.player_group.update()
+                self.map.player_group.update()
 
                 # update the timer. Also limits the framerate if set
                 self.timer.update()
@@ -338,8 +344,8 @@ if __name__ == '__main__':
     pg.init()
 
     if (pg.__version__ != CF_GLOBAL['req_pg_version']):
-        msg = 'run "pip install pygame --upgrade" to upgrade, '
-        msg += 'or change the config to your current version to try anyway.'
+        msg = 'run "pip install pygame --upgrade" to upgrade, or change the  '
+        msg += 'config (_global.py) to your installed version to try anyway.'
         raise VersionError("Pygame", pg.__version__,
             CF_GLOBAL['req_pg_version'], msg
         )

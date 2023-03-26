@@ -99,7 +99,7 @@ class Controllable(Sprite):
         self.img_src: Surface | None = cf_player['surface']['image']
 
         # set up vectors
-        self.position: Vec2 = initial_pos
+        self.position = Vec2(initial_pos)
         self.velocity: Vec2 = Vec2(0.0, 0.0)
         self.direction = Vec2(0.0, 0.0)
 
@@ -154,10 +154,11 @@ class Controllable(Sprite):
         # get a new image by rotating the original image
         # not referring to the original image will result in catastrophic memory flooding
         # the constant of -45 is to correct for the fact that image is a triangle
-        # NEW_IMG = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+        NEW_IMG = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
         # flip y-axis of image
         # self.image = pg.transform.flip(NEW_IMG, False, True)
-        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+        self.image = NEW_IMG
+        # self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
 
         # get new mask for collision checking
         # > Note A new mask needs to be recreated each time a sprite's image is changed  
@@ -169,18 +170,23 @@ class Controllable(Sprite):
         # get_rect(**kwargs: Any) accepts a position value as parameter
         self.rect = self.mask.get_rect(center=self.position)
 
+    # def update(self):
+    #     # self.position = self.position + self.velocity
+    #     self.angle = -self.position.normalize().angle_to(-self.velocity) - 225
+    #     # self.update_image_angle()
+
     def update(self):
         # # update y-velocity by gravity
         self.velocity.y += self.calc_gravity_factor()
         # update velocity based on steering and falloff
         self.velocity = (self.velocity * self.velo_falloff) + self.direction
-
+    
         # update image, position and rect position
         if (self.velocity.x != 0) or (self.velocity.y != 0):
             # make sure velocity is within limits
             self.velocity.clamp_magnitude_ip(self.max_velocity)
-
             self.position = self.position + self.velocity
-            self.angle = -self.position.normalize().angle_to(-self.velocity) + 28.0
+
+            self.angle = 28.0 - self.position.normalize().angle_to(-self.velocity)
             # self.angle = self.position.normalize().angle_to(self.velocity) - 28.0
             self.update_image_angle()
