@@ -1,6 +1,6 @@
+from typing import Callable
 from pygame import time
 from .timing import Timer
-from typing import Callable
 
 class PG_Timer(Timer):
     ''' Segment based time tracking. Extends Timer.

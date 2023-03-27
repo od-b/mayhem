@@ -1,6 +1,5 @@
 from typing import Callable     # allows type hinting 'function pointers'
 
-from .exceptions import ConfigError
 ## import needed pygame modules
 from pygame import Surface, Rect, Color
 from pygame.sprite import Sprite, Group
