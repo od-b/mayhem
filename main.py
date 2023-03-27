@@ -76,10 +76,57 @@ class PG_App:
 
         # init core app
         self.set_up_ui()
-        self.fetch_menu_controls()
         self.block_events(self.BLOCKED_EVENTS)
+        self.fetch_menu_controls()
         self.app_is_running = True
         self.map_is_active = False
+
+    def set_up_ui(self):
+        ''' specialized, run-once function for creating the game ui '''
+
+        # create bottom info panel container
+        # set width to the size of the map
+        # set size and pos to match the available padded bottom space
+        width = self.window.map_rect.w
+        height = (self.window.height - self.window.map_rect.h - self.window.map_rect.top)
+        if (height < 40):
+            print("not enough vertical padding to fit the BOTTOM_PANEL.\
+                Increase ['map']['padded_bounds'] to display the UI.")
+            return
+
+        BOTTOM_PANEL = Container(
+            self.cf_container_style,
+            self.window.surface,
+            self.window.map_rect.bottomleft,
+            (width, height),
+            "right",
+            "left_right"
+        )
+        self.container_group.add(BOTTOM_PANEL)
+
+        # create FPS_TEXT
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "FPS_TEXT",
+            "FPS: ",
+            self.timer.get_fps_int,
+        )
+
+        # create TIME_TEXT (duration text)
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "TIME_TEXT",
+            "Time: ",
+            self.timer.get_segment_duration_formatted,
+        )
+
+        # create ANGLE_TEXT
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "ANGLE_TEXT",
+            "Angle: ",
+            self.get_current_player_angle,
+        )
 
     def block_events(self, events: list):
         ''' blocks some unused events from entering the event queue
@@ -132,53 +179,6 @@ class PG_App:
     def get_current_player_angle(self):
         return self.map.player.get_angle()
 
-    def set_up_ui(self):
-        ''' specialized, run-once function for creating the game ui '''
-
-        # create bottom info panel container
-        # set width to the size of the map
-        # set size and pos to match the available padded bottom space
-        width = self.window.map_rect.w
-        height = (self.window.height - self.window.map_rect.h - self.window.map_rect.top)
-        if (height < 40):
-            print("not enough vertical padding to fit the BOTTOM_PANEL.\
-                Increase ['map']['padded_bounds'] to display the UI.")
-            return
-
-        BOTTOM_PANEL = Container(
-            self.cf_container_style,
-            self.window.surface,
-            self.window.map_rect.bottomleft,
-            (width, height),
-            "right",
-            "left_right"
-        )
-        self.container_group.add(BOTTOM_PANEL)
-
-        # create FPS_TEXT
-        BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
-            "FPS_TEXT",
-            "FPS: ",
-            self.timer.get_fps_int,
-        )
-
-        # create TIME_TEXT (duration text)
-        BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
-            "TIME_TEXT",
-            "Time: ",
-            self.timer.get_segment_duration_formatted,
-        )
-
-        # create ANGLE_TEXT
-        BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
-            "ANGLE_TEXT",
-            "Angle: ",
-            self.get_current_player_angle,
-        )
-
     def debug__draw_mask(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
         p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
@@ -194,7 +194,7 @@ class PG_App:
         ''' draw a border around the sprite bounding rect '''
         pg.draw.rect(self.map.surface, self.DEBUG_COLOR, sprite.rect, width=1)
 
-    def menu_loop_events(self):
+    def menu_check_events(self):
         for event in pg.event.get():
             match (event.type):
                 case pg.QUIT:
@@ -219,7 +219,7 @@ class PG_App:
                         case _:
                             pass
 
-    def loop_events(self):
+    def check_events(self):
         ''' loop all queued events and check for any trigger matches '''
 
         for event in pg.event.get():
@@ -297,7 +297,7 @@ class PG_App:
                 pg.display.update()
 
                 # loop through events
-                self.loop_events()
+                self.check_events()
 
                 # now that events are read, update sprites before next frame
                 self.map.player_group.update()
@@ -312,7 +312,7 @@ class PG_App:
                 pg.display.update()
 
                 # loop through menu events
-                self.menu_loop_events()
+                self.menu_check_events()
 
 
 if __name__ == '__main__':
