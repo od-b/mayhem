@@ -42,5 +42,11 @@ GLOBAL = {
         'confirm':  pg.K_SPACE,
         'back':     pg.K_ESCAPE,
     },
+    'blocked_events': [    # these events will not be put in the event queue
+        pg.MOUSEMOTION,
+        pg.MOUSEBUTTONUP,
+        pg.MOUSEBUTTONDOWN,
+        pg.TEXTINPUT
+    ]
 }
 ''' various settings that didnt fit in anywhere else '''

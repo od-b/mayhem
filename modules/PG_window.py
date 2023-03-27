@@ -1,5 +1,3 @@
-# python default library imports
-## Callable allows type hinting 'function pointers':
 from random import randint
 
 # installed library imports

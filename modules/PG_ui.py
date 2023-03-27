@@ -1,4 +1,7 @@
-from typing import Callable
+from typing import Callable     # allows type hinting 'function pointers'
+
+from .exceptions import ConfigError
+## import needed pygame modules
 from pygame import Surface, Rect, Color
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
@@ -23,31 +26,27 @@ class Container(Sprite):
     '''
 
     def __init__(self,
+            cf_container: dict,
             surface: Surface,
-            size: tuple[int, int],
             position: tuple[int, int],
-            color: Color,
-            border_color: Color,
-            border_width: int,
+            size: tuple[int, int],
             child_align: str,
             child_flow: str,
-            child_padding: int,
-            separator_width: int,
-            separator_color: int
         ):
-
         Sprite.__init__(self)
 
         self.size = size
         self.position = position
-        self.color = color
-        self.border_width = border_width
-        self.border_color = border_color
-        self.child_padding = child_padding
-        self.separator_width = separator_width
-        self.separator_color = separator_color
         self.child_flow = child_flow
         self.child_align = child_align
+        
+        # store dict settings
+        self.color = Color(cf_container['color'])
+        self.border_width = int(cf_container['border_width'])
+        self.border_color = Color(cf_container['border_color'])
+        self.child_padding = int(cf_container['children_padding'])
+        self.separator_width = int(cf_container['separator_width'])
+        self.separator_color = Color(cf_container['separator_color'])
         
         # calculate the correct padding for separator
         self.separator_padding = int((self.child_padding/2) + self.separator_width/2)
@@ -55,7 +54,6 @@ class Container(Sprite):
         self.children = Group()
         ''' group of sprites that depend on the container for updates/positioning '''
 
-        print(self.position, self.size)
         # create surface of the container
         self.SURF_RECT = Rect((self.position), (self.size))
         self.SURF = surface.subsurface(self.SURF_RECT)
@@ -88,8 +86,66 @@ class Container(Sprite):
             self.image.fill(self.color, self.rect)
 
         # find fitting functions instead of performing tests every frame:
-        self.ALIGN_FUNC = self._get_align_func(self.child_align)
-        self._set_pos_funcs(self.child_flow)
+        self._set_internal_references()
+
+    def _set_internal_references(self):
+        ''' sets internally used references based on configuration
+            * self.ALIGN_FUNC refers to one of the internal 'self.align_to_<...>' methods
+            * self.DRAW_FUNC is one of the different '_draw_<...>_separator' methods
+            * self.POSITION_FUNC is one of the different '_position...' methods
+            * also sets self.ALIGN_PARENT, a rect used by the first child for each positioning
+
+            by using references we only have to perform checks once, 
+            as opposed to on __every single__ update. This amounts to a huge performance gain,
+            considering the update function is called <FPS> times per second, on every single child
+            
+            E.g., if we have 6 textboxes at 125 frames per sec, that would amount to a combined
+            125*6*3 = 2250 checks per SECOND, or 135000 checks every minute.
+        '''
+
+        match (self.child_align):
+            case 'left':
+                self.ALIGN_FUNC = self._align_to_left_of
+            case 'right':
+                self.ALIGN_FUNC = self._align_to_right_of
+            case 'top':
+                self.ALIGN_FUNC = self._align_to_top_of
+            case 'bottom':
+                self.ALIGN_FUNC = self._align_to_bottom_of
+            case 'bottomleft':
+                self.ALIGN_FUNC = self._align_to_topleft_of
+            case 'topleft':
+                self.ALIGN_FUNC = self._align_to_bottomleft_of
+            case _:
+                raise ValueError(f'\
+                    children_align expected: "top", "bottom",\
+                    "left", "right", "bottomleft" or "topleft".\n\
+                    Found "{self.child_align}"')
+
+        match (self.child_flow):
+            case 'top_bottom':
+                # align-parent for positioning the first child
+                # the next children will have the previous child as reference
+                self.ALIGN_PARENT = self.rect.copy()
+                self.ALIGN_PARENT.height = 0
+                self.ALIGN_PARENT.top -= self.separator_padding
+                self.DRAW_FUNC = self._draw_horizontal_bottom_separator
+            case 'left_right':
+                self.ALIGN_PARENT = self.rect.copy()
+                self.ALIGN_PARENT.width = 0
+                self.ALIGN_PARENT.left -= self.separator_padding
+                self.DRAW_FUNC = self._draw_vertical_right_separator
+            case _:
+                raise ValueError(f'\
+                    child_flow expected: "horizontal" or "vertical"\n\
+                    Found: {self.child_flow}')
+
+        # set position func to either just position, or position and draw a line
+        if (self.separator_width > 0):
+            self.POSITION_FUNC = self._position_children_and_draw
+            self.child_padding += self.separator_width
+        else:
+            self.POSITION_FUNC = self._position_children
 
     def _align_to_left_of(self, child: Rect, parent: Rect):
         child.right = parent.left - self.child_padding
@@ -125,7 +181,37 @@ class Container(Sprite):
         p2 = ((RE.bottomright[0] + self.separator_padding), RE.bottomright[1])
         draw_line(self.SURF, self.separator_color, p1, p2, self.separator_width)
 
-    def _position_and_separate_children(self):
+    def _set_align_func(self, child_align: str) -> Callable[[Rect, Rect], None]:
+        ''' get the correct alignment function for positioning children '''
+        # additional positioning functions can easily be added
+        match (child_align):
+            case 'left':
+                self.ALIGN_FUNC = self._align_to_left_of
+            case 'right':
+                self.ALIGN_FUNC = self._align_to_right_of
+            case 'top':
+                self.ALIGN_FUNC = self._align_to_top_of
+            case 'bottom':
+                self.ALIGN_FUNC = self._align_to_bottom_of
+            case 'bottomleft':
+                self.ALIGN_FUNC = self._align_to_topleft_of
+            case 'topleft':
+                self.ALIGN_FUNC = self._align_to_bottomleft_of
+            case _:
+                raise ValueError(f'\
+                    children_align expected: "top", "bottom",\
+                    "left", "right", "bottomleft" or "topleft".\n\
+                    Found "{child_align}"')
+
+    def _position_children(self):
+        ''' positions children according to the align_func '''
+        parent = self.ALIGN_PARENT
+        for child in self.children:
+            RE = child.rect
+            self.ALIGN_FUNC(RE, parent)
+            parent = RE
+
+    def _position_children_and_draw(self):
         ''' positions children according to the align_func
             and draws a separator using SEPARATE_FUNC 
         '''
@@ -137,80 +223,39 @@ class Container(Sprite):
             # draw separating line vertically
             self.DRAW_FUNC(RE)
 
-    def _position_children(self):
-        ''' positions children according to the align_func '''
-        parent = self.ALIGN_PARENT
-        for child in self.children:
-            RE = child.rect
-            self.ALIGN_FUNC(RE, parent)
-            parent = RE
-
-    def _get_align_func(self, child_align: str) -> Callable[[Rect, Rect], None]:
-        ''' get the correct alignment function for positioning children '''
-        # additional positioning functions can easily be added
-        match (child_align):
-            case 'left':
-                return self._align_to_left_of
-            case 'right':
-                return self._align_to_right_of
-            case 'top':
-                return self._align_to_top_of
-            case 'bottom':
-                return self._align_to_bottom_of
-            case 'bottomleft':
-                return self._align_to_topleft_of
-            case 'topleft':
-                return self._align_to_bottomleft_of
-            case _:
-                raise ValueError(f'\
-                    children_align expected: "top", "bottom",\
-                    "left", "right", "bottomleft" or "topleft".\n\
-                    Found "{child_align}"')
-
-    def _set_pos_funcs(self, child_flow):
-        ''' set self.POSITION_FUNC, self.DRAW_FUNC and self.ALIGN_PARENT 
-            * self.ALIGN_PARENT is a parent rect used by the first child for each positioning
-            * self.DRAW_FUNC is one of the different '_draw_<...>_separator' methods
-            * self.POSITION_FUNC is one of the different '_position...' methods
-
-            by using references we only have to perform checks once, as opposed to every single frame.
-        '''
-        match (child_flow):
-            case 'top_bottom':
-                self.ALIGN_PARENT = self.rect.copy()
-                self.ALIGN_PARENT.height = 0
-                self.ALIGN_PARENT.top -= self.separator_padding
-                self.DRAW_FUNC = self._draw_horizontal_bottom_separator
-            case 'left_right':
-                self.ALIGN_PARENT = self.rect.copy()
-                self.ALIGN_PARENT.width = 0
-                self.ALIGN_PARENT.left -= self.separator_padding
-                self.DRAW_FUNC = self._draw_vertical_right_separator
-            case _:
-                raise ValueError(f'\
-                    child_flow expected: "horizontal" or "vertical"\n\
-                    Found: {child_flow}')
-        
-        # set position func to either just position, or position and draw a line
-        if (self.separator_width == 0):
-            self.POSITION_FUNC = self._position_children
-        else:
-            self.POSITION_FUNC = self._position_and_separate_children
-            self.child_padding += self.separator_width
-
-    def verify_children_size(self):
-        problem_children = []
-
-        for child in self.children:
-            child = f'{child}\n'
-            if (child.rect.h > self.rect.h) or (child.rect.w > self.rect.w):
-                problem_children.append(child)
-
-        if (len(problem_children) > 0):
-            msg = f'WARNING: children too wide or tall to fit.\n{self}. \nProblem children:\n'
-            for child in problem_children:
-                msg += str(child)
+    def check_child_rect_fits(self, child):
+        ''' simple check for verifying that child can fit inside this container '''
+        if ((child.rect.h > self.rect.h) or (child.rect.w > self.rect.w)):
+            msg = "[Container][check_child_rect_fits][WARNING]"
+            msg += f':Child does not fit: {child}'
+            msg += f'[Container]: {self}\n'
+            msg += "to make child fit, perform one or several of the following actions:\n"
+            msg += " -> reduce the font size in the set textbox config\n"
+            msg += " -> reduce the length of the text given to the text box\n"
+            msg += " -> increase the size of the container\n"
+            msg += " -> change the font type used by the textbox\n"
             print(msg)
+
+    def create_textbox_child(self, cf_textbox: dict, ref_id, text: str, text_getter_func: Callable | None):
+        ''' creates a new child. ref_id may be any reference, or None
+            * children may share references
+            * adds the child to self.children
+            * returns the child
+        '''
+        NEW_CHILD = Child_Text_Box(cf_textbox, ref_id, text, text_getter_func)
+        self.check_child_rect_fits(NEW_CHILD)
+        self.children.add(NEW_CHILD)
+        return NEW_CHILD
+
+    def get_children_by_ref(self, ref_id):
+        ''' get child by its ref_id. Accepts ref_id = None.
+            * returns a list of children with the given ref_id
+        '''
+        matching_children = []
+        for child in self.children:
+            if (child.ref_id == ref_id):
+                matching_children.append(child)
+        return matching_children
 
     def get_children(self) -> list[Sprite]:
         ''' returns a list containing the children sprites '''
@@ -225,22 +270,25 @@ class Container(Sprite):
         self.children.empty()
 
     def update(self):
+        # re-blit the background surface to clear any past blits
         self.SURF.blit(self.image, self.rect)
-        # update children
+
+        # call update on all children
         self.children.update()
-        # position and align children. draw separater if set.
+
+        # call the set position function for children
         self.POSITION_FUNC()
-        # blit the background surface to clear any past blits
+
         # draw children
         self.children.draw(self.SURF)
 
     def __str__(self):
-        msg = f'< Container with {self.get_num_children()} children.\n'
-        msg += f'  position(x,y)={self.position}, height={self.rect.h}, width={self.rect.h},\n'
-        msg += f'  child_flow="{self.child_flow}", child_align="{self.child_align}", '
+        msg = f'[Container with n={self.get_num_children()} children.\n'
+        msg += f'position(x,y)={self.position}, height={self.rect.h}, width={self.rect.w},\n'
+        msg += f'child_flow="{self.child_flow}", child_align="{self.child_align}"]'
 
 
-class Text_Box(Sprite):
+class Child_Text_Box(Sprite):
     ''' Sprite for rendering and displaying text
 
         Parameters
@@ -260,41 +308,27 @@ class Text_Box(Sprite):
     '''
 
     def __init__(self,
-            bg_color: Color | None,
+            cf_textbox: dict,
+            ref_id,
             text: str,
             text_getter_func: Callable | None,
-            font_path: str,
-            font_size: int,
-            font_color: Color,
-            font_antialas: bool,
         ):
 
         Sprite.__init__(self)
-
-        self.bg_color = bg_color
+        self.ref_id = ref_id
         self.text = text
         self.text_getter_func = text_getter_func
-        self.font_path = font_path
-        self.font_size = font_size
-        self.font_color = font_color
-        self.font_antialas = font_antialas
 
-        self.font = Font(font_path, font_size)
+        # store config settings
+        self.bg_color = Color(cf_textbox['text_bg_color'])
+        self.font_path = str(cf_textbox['font_path'])
+        self.font_size = int(cf_textbox['font_size'])
+        self.font_color = Color(cf_textbox['font_color'])
+        self.font_antialas: bool = cf_textbox['font_antialias']
+
+        # load font
+        self.font = Font(self.font_path, self.font_size)
         self.old_text = text
-        self.text_is_const: bool = True
-        ''' whether the text will be re-rendered on update '''
-
-        # allows for for a simple, generalized update func
-        if (self.text_getter_func):
-            self.text_is_const = False
-            self.pre_text = self.text
-            if (self.pre_text == ''):
-                self._text_update_func = self._get_text_from_getter_func
-            else:
-                self._text_update_func = self._get_text_from_getter_func_with_pre_text
-        else:
-            self.pre_text = str('')
-            self._text_update_func = self.get_text
 
         # load the font, then render the text and create rect
         self.image = self.font.render(
@@ -304,6 +338,23 @@ class Text_Box(Sprite):
             self.bg_color
         )
         self.rect = self.image.get_rect()
+
+        self._set_internal_update_func()
+
+    def _set_internal_update_func(self):
+        ''' all textboxes have a update func, regardless of text_getter_func/not '''
+        # allows for for a simple, generalized update func
+        if (self.text_getter_func):
+            self.render_on_update = True
+            if (self.text == ''):
+                self.text_update_func = self._get_text_from_getter_func
+            else:
+                self.pre_text = self.text
+                self.text_update_func = self._get_text_from_getter_func_with_pre_text
+        else:
+            self.render_on_update = False
+            # default to just returning own text
+            self.text_update_func = self.get_text
 
     def _get_text_from_getter_func(self):
         ''' internal function: returns a string through the given text_getter_func, no pre_text '''
@@ -320,26 +371,28 @@ class Text_Box(Sprite):
         return self.text
 
     def set_pre_text(self, text: str):
-        ''' for replacement of pretext. Does not call render if a getter exists. 
-            
-            if a getter does not exist, sets text to "self.pre_text + self.text".
-
-            if a getter does exist, update_text_render() does not need to be called.
-            
-            if manually updating a text without a getter func, that already has pre-text:
-                1) call set_text, 
-                2) call this function, 
-                3) call update_text_render() to update the rendering
+        ''' function to add or replace pre-text for textboxes with a getter_func.
+            * does nothing if textbox does not have a getter_func
         '''
         self.pre_text = text
         if not self.text_getter_func:
             self.text = f'{self.pre_text}{self.text}'
 
     def set_text(self, text: str):
-        ''' for manual replacement of text.
-            * call update_text_render() when ready to render
+        ''' for manual replacement of text. Re-renders image to the text.
+            * if this is called and a getter exists, it will prevent future updates from the getter
+            * call resume_text_getter to resume rendering through the getter
         '''
         self.text = text
+        self.update_text_render()
+        self.render_on_update = False
+
+    def resume_text_getter(self):
+        ''' if a textbox with a getter_func has been overwritten through set_text, call this to resume
+            updating through the getter instead
+        '''
+        if (self.text_getter_func):
+            self.render_on_update = True
 
     def update_text_render(self):
         ''' replaces self.image with a text render of the self.content text. Updates self.rect '''
@@ -351,27 +404,22 @@ class Text_Box(Sprite):
         )
         self.rect = self.image.get_rect()
 
-    def draw_line_on_right_edge(self, surface: Surface, offset: int, color: Color, width: int):
-        p1 = ((self.rect.topright[0] + offset), self.rect.topright[1])
-        p2 = ((self.rect.bottomright[0] + offset), self.rect.bottomright[1])
-        draw_line(surface, color, p1, p2, width)
-
     def update(self):
-        ''' update content if a getter exists. Does nothing if object is static '''
+        ''' update rendering if text has changed '''
 
-        # check if there's possible that theres something to update first
-        if not self.text_is_const:
+        if self.render_on_update:
             # get updated text from one of the internal methods
             # this will either be through a getter func, or if self.text has been
             # manually changed since the last frame
-            NEW_TEXT = self._text_update_func()
+            TEXT = self.text_update_func()
+
             # if new text is not the same as the last, replace and re-render
             # rendering is very expensive in pygame, so the strcmp is absolutely worth it
-            if (NEW_TEXT != self.text):
-                self.text = NEW_TEXT
+            if (TEXT != self.text):
+                self.text = TEXT
                 self.update_text_render()
 
     def __str__(self):
-        msg = f'< Text_Box with text="{self.pre_text}{self.text}"'
-        msg += f'  height={self.rect.h}, width={self.rect.w} >'
+        msg = f'[Child_Text_Box with text="{self.pre_text}{self.text}", '
+        msg += f'height={self.rect.h}, width={self.rect.w}]'
         return msg

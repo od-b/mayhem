@@ -1,4 +1,3 @@
-# from typing import Callable     # type hint for function pointers
 from random import randint
 
 import pygame as pg
@@ -168,12 +167,7 @@ class Controllable(Sprite):
 
         # set rect to the new images rect bounds
         # get_rect(**kwargs: Any) accepts a position value as parameter
-        self.rect = self.mask.get_rect(center=self.position)
-
-    # def update(self):
-    #     # self.position = self.position + self.velocity
-    #     self.angle = -self.position.normalize().angle_to(-self.velocity) - 225
-    #     # self.update_image_angle()
+        self.rect = self.image.get_rect(center=self.position)
 
     def update(self):
         # # update y-velocity by gravity
@@ -188,5 +182,4 @@ class Controllable(Sprite):
             self.position = self.position + self.velocity
 
             self.angle = 28.0 - self.position.normalize().angle_to(-self.velocity)
-            # self.angle = self.position.normalize().angle_to(self.velocity) - 28.0
             self.update_image_angle()

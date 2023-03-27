@@ -1,8 +1,3 @@
-# python default library imports
-## Callable allows type hinting 'function pointers':
-from typing import Callable
-from random import randint
-
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
@@ -17,7 +12,7 @@ from modules.exceptions import VersionError, ConfigError
 # pygame specific classes
 from modules.PG_window import PG_Window
 from modules.PG_timer import PG_Timer
-from modules.PG_ui import Container, Text_Box
+from modules.PG_ui import Container
 # import config dicts
 from config._global import GLOBAL as CF_GLOBAL
 from config.window import WINDOW as CF_WINDOW
@@ -53,18 +48,20 @@ class PG_App:
         self.cf_maps = config_maps
         self.cf_UI = config_UI
         
-        self.MAP_KEYS = []
-        for key, _ in self.cf_maps.items():
-            self.MAP_KEYS.append(str(key))
-        print(f'loaded map config keys: {self.MAP_KEYS}')
+        # store relevant global constants
+        self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
+        self.FPS_LIMIT = int(self.cf_global['fps_limit'])
+        self.BLOCKED_EVENTS: list = self.cf_global['blocked_events']
 
         # store chosen ui style dicts
         self.cf_container_style: dict = self.cf_UI['CONTAINERS'][str(self.cf_global['container_style'])]
         self.cf_textbox_style: dict = self.cf_UI['TEXTBOXES'][str(self.cf_global['textbox_style'])]
 
-        # store global constants
-        self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
-        self.FPS_LIMIT = int(self.cf_global['fps_limit'])
+        # create a list of available map keys
+        self.loaded_map_keys = []
+        for key, _ in self.cf_maps.items():
+            self.loaded_map_keys.append(str(key))
+        print(f'loaded maps (config map keys): {self.loaded_map_keys}')
 
         # create the window
         self.window = PG_Window(self.cf_global, self.cf_window)
@@ -74,36 +71,22 @@ class PG_App:
         self.timer = PG_Timer(self.cf_global['fps_limit'], self.cf_global['accurate_timing'])
         ''' pygame specific timer object '''
 
-        # 
         self.container_group = Group()
         ''' group of ui containers. Contains their own groups of children '''
 
+        # init core app
         self.set_up_ui()
         self.fetch_menu_controls()
-        self.ban_events()
+        self.block_events(self.BLOCKED_EVENTS)
         self.app_is_running = True
         self.map_is_active = False
 
-    def set_up_map(self, map_name: str, player_pos: tuple[int, int]):
-        ''' bundle of function calls to initialize the map, player and controls '''
-
-        if not str(map_name) in self.MAP_KEYS:
-            raise ValueError(f'map "{map_name}" not found')
-
-        self.window.create_map(self.cf_maps['map_1'])
-        self.window.map.set_up_terrain()
-        self.window.map.spawn_player(player_pos)
-        self.fetch_player_controls()
-        
-        # create references for easy access
-        self.map = self.window.map
-
-        if not (self.timer.first_init_done):
-            self.timer.start_first_segment(self.window.map.name)
-        else:
-            self.timer.new_segment(self.window.map.name, True)
-
-        self.map_is_active = True
+    def block_events(self, events: list):
+        ''' blocks some unused events from entering the event queue
+            * saves some time when iterating over pg.event.get()
+        '''
+        for EVENT in events:
+            pg.event.set_blocked(EVENT)
 
     def fetch_menu_controls(self):
         ''' fetch and store player controls from the global config '''
@@ -125,6 +108,27 @@ class PG_App:
         self.HALT =         int(cf_controls['halt'])
         self.LOCK =         int(cf_controls['lock'])
 
+    def set_up_map(self, map_name: str, player_pos: tuple[int, int]):
+        ''' bundle of function calls to initialize the map, player and controls '''
+
+        if not str(map_name) in self.loaded_map_keys:
+            raise ValueError(f'map "{map_name}" not found')
+
+        self.window.create_map(self.cf_maps['map_1'])
+        self.window.map.set_up_terrain()
+        self.window.map.spawn_player(player_pos)
+        self.fetch_player_controls()
+        
+        # create references for easy access
+        self.map = self.window.map
+
+        if not (self.timer.first_init_done):
+            self.timer.start_first_segment(self.window.map.name)
+        else:
+            self.timer.new_segment(self.window.map.name, True)
+
+        self.map_is_active = True
+
     def get_current_player_angle(self):
         return self.map.player.get_angle()
 
@@ -134,89 +138,61 @@ class PG_App:
         # create bottom info panel container
         # set width to the size of the map
         # set size and pos to match the available padded bottom space
-        position = self.window.map_rect.bottomleft
         width = self.window.map_rect.w
         height = (self.window.height - self.window.map_rect.h - self.window.map_rect.top)
-
         if (height < 40):
-            print("not enough vertical padding to fit the UI. Increase ['map']['padded_bounds'].")
+            print("not enough vertical padding to fit the BOTTOM_PANEL.\
+                Increase ['map']['padded_bounds'] to display the UI.")
             return
 
         BOTTOM_PANEL = Container(
+            self.cf_container_style,
             self.window.surface,
+            self.window.map_rect.bottomleft,
             (width, height),
-            position,
-            Color(self.cf_container_style['color']),
-            Color(self.cf_container_style['border_color']),
-            int(self.cf_container_style['border_width']),
             "right",
-            "left_right",
-            int(self.cf_container_style['children_padding']),
-            int(self.cf_container_style['separator_width']),
-            Color(self.cf_container_style['separator_color'])
+            "left_right"
         )
-
         self.container_group.add(BOTTOM_PANEL)
-        
-        FPS_FRAME = Text_Box(
-            Color(self.cf_textbox_style['text_bg_color']),
-            str('FPS: '),
+
+        # create FPS_TEXT
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "FPS_TEXT",
+            "FPS: ",
             self.timer.get_fps_int,
-            str(self.cf_textbox_style['font_path']),
-            int(self.cf_textbox_style['font_size']),
-            Color(self.cf_textbox_style['font_color']),
-            self.cf_textbox_style['font_antialias']
         )
 
-        DURATION_FRAME = Text_Box(
-            Color(self.cf_textbox_style['text_bg_color']),
-            str('Time: '),
-            self.timer.get_duration,
-            str(self.cf_textbox_style['font_path']),
-            int(self.cf_textbox_style['font_size']),
-            Color(self.cf_textbox_style['font_color']),
-            self.cf_textbox_style['font_antialias']
+        # create TIME_TEXT (duration text)
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "TIME_TEXT",
+            "Time: ",
+            self.timer.get_segment_duration_formatted,
         )
 
-        ANGLE_FRAME = Text_Box(
-            Color(self.cf_textbox_style['text_bg_color']),
-            str('Angle: '),
+        # create ANGLE_TEXT
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "ANGLE_TEXT",
+            "Angle: ",
             self.get_current_player_angle,
-            str(self.cf_textbox_style['font_path']),
-            int(self.cf_textbox_style['font_size']),
-            Color(self.cf_textbox_style['font_color']),
-            self.cf_textbox_style['font_antialias']
         )
 
-        BOTTOM_PANEL.children.add([FPS_FRAME, DURATION_FRAME, ANGLE_FRAME])
-        # BOTTOM_PANEL.verify_children()
-
-    def debug__print_player_velocity(self):
-        if (self.player.velocity.y == self.player.MAX_VELOCITY.y):
-            print("terminal velocity reached @ \n")
-            print(f'ms: {self.timer.total_time}')
-            print(f'secs: {self.timer.active_segment.get_duration_formatted()}')
-
-    def debug__sprite_mask_outline(self, sprite: Sprite):
+    def debug__draw_mask(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
         p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
-        pg.draw.lines(self.window.map_surface, self.DEBUG_COLOR, 1, p_list)
+        pg.draw.lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
 
-    def debug__draw_poking_stick(self, sprite, len: float, width: int):
+    def debug__draw_velocity(self, sprite, len: float, width: int):
+        ''' visualize sprite velocity '''
         p1 = Vec2(sprite.position)
         p2 = Vec2(sprite.position + len*sprite.velocity)
-        # p2.scale_to_length(len)
-        # print(p1, p2)
-        pg.draw.line(self.window.map_surface, self.DEBUG_COLOR, p1, p2, width)
+        pg.draw.line(self.map.surface, self.DEBUG_COLOR, p1, p2, width)
 
-    def ban_events(self):
-        ''' blocks some unused events from entering the event queue
-            * saves some time when iterating over pg.event.get()
-        '''
-        pg.event.set_blocked(pg.MOUSEMOTION)
-        pg.event.set_blocked(pg.MOUSEBUTTONUP)
-        pg.event.set_blocked(pg.MOUSEBUTTONDOWN)
-        pg.event.set_blocked(pg.TEXTINPUT)
+    def debug__draw_bounds_rect(self, sprite: Sprite):
+        ''' draw a border around the sprite bounding rect '''
+        pg.draw.rect(self.map.surface, self.DEBUG_COLOR, sprite.rect, width=1)
 
     def menu_loop_events(self):
         for event in pg.event.get():
@@ -313,8 +289,9 @@ class PG_App:
                 # update + draw the ui (both are done through update)
                 self.container_group.update()
                 
-                self.debug__sprite_mask_outline(self.map.player)
-                self.debug__draw_poking_stick(self.map.player, 100.0, 1)
+                self.debug__draw_mask(self.map.player)
+                self.debug__draw_velocity(self.map.player, 100.0, 1)
+                self.debug__draw_bounds_rect(self.map.player)
 
                 # refresh the display, applying drawing etc.
                 pg.display.update()

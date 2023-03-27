@@ -40,10 +40,6 @@ class PG_Timer(Timer):
         ''' sets tick function to regular '''
         self.tick_func = self.clock_tick
 
-    def get_duration(self):
-        ''' to allow referencing the function before first segment is initialized '''
-        return self.active_segment.get_duration_formatted()
-
     def get_fps_int(self):
         ''' get fps as an integer '''
         return int(self.clock.get_fps())

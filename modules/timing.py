@@ -13,18 +13,6 @@ class Segment:
     def get_duration_int(self):
         ''' returns milliseconds that have passed since segment started '''
         return self.duration
-    
-    def get_duration_formatted(self):
-        ''' Formats from milliseconds to a readable format
-            * returns <mm:ss>, or <hh:mm:ss> if hh > 0 
-        '''
-
-        secs = int(self.duration/1000) % 60
-        mins = int(self.duration/(1000*60)) % 60
-        hours = int(self.duration/(1000*60*60)) % 24
-        if hours == 0:
-            return f'{mins:02d}:{secs:02d}'
-        return f'{hours:02d}:{mins:02d}:{secs:02d}'
 
     def update_duration(self, curr_time: int):
         ''' increments duration of segment '''
@@ -76,6 +64,18 @@ class Timer:
                         fastest_time = seg.duration
         
         return fastest_time
+
+    def get_segment_duration_formatted(self):
+        ''' Formats from milliseconds to a readable format
+            * returns <mm:ss>, or <hh:mm:ss> if hh > 0 
+        '''
+        T = self.active_segment.duration
+        secs = int(T/1000) % 60
+        mins = int(T/(1000*60)) % 60
+        hours = int(T/(1000*60*60)) % 24
+        if hours == 0:
+            return f'{mins:02d}:{secs:02d}'
+        return f'{hours:02d}:{mins:02d}:{secs:02d}'
 
     def delete_archived_segments_by_ref(self, ref: int):
         ''' delete all segments with a given reference'''
