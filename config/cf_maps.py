@@ -1,5 +1,5 @@
-from .colors import RGB
-from .map_sprites import BLOCKS, PLAYERS
+from .cf_colors import RGB
+from .cf_map_sprites import BLOCKS, PLAYERS
 
 MAPS = {
     # a map is a setup config for the active part of the game surface

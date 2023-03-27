@@ -14,10 +14,10 @@ from modules.PG_window import PG_Window
 from modules.PG_timer import PG_Timer
 from modules.PG_ui import Container
 # import config dicts
-from config._global import GLOBAL as CF_GLOBAL
-from config.window import WINDOW as CF_WINDOW
-from config.maps import MAPS as CF_MAPS
-from config.ui_sprites import UI_SPRITES as CF_UI_SPRITES
+from config.cf_global import GLOBAL as CF_GLOBAL
+from config.cf_window import WINDOW as CF_WINDOW
+from config.cf_maps import MAPS as CF_MAPS
+from config.cf_ui_sprites import UI_SPRITES as CF_UI_SPRITES
 
 
 class PG_App:

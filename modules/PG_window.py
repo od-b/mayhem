@@ -4,9 +4,7 @@ from random import randint
 import pygame as pg
 ## simplify some imports for readability:
 from pygame import display, Color, Rect
-from pygame.sprite import Sprite, Group, GroupSingle
-from pygame.math import Vector2 as Vec2
-from pygame.mask import Mask
+from pygame.sprite import Group, GroupSingle
 
 ## general classes
 from modules.exceptions import ConfigError

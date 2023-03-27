@@ -1,4 +1,4 @@
-from .colors import RGB, PALLETTES
+from .cf_colors import RGB, PALLETTES
 import pygame as pg     # to access defined constants such as keyboard input keys
 
 # map-related 'static' type sprites, with no velocity or interactive features
