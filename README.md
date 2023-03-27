@@ -7,6 +7,7 @@ Recommended version: [Python 3.10.0 (v3.10.0:b494f5935c)](https://www.python.org
 #### Check python version by running one of the scripts below.
 **Mac**:  
 >python3 -c "exec(\"import sys\nprint('Python Version => '+sys.version)\")"  
+
 **Windows/Linux**:  
 >python -c "exec(\"import sys\nprint('Python Version => '+sys.version)\")"  
 
