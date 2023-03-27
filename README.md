@@ -17,5 +17,6 @@ I know for a fact any version prior to 2.1.3 will not work.
 
 # Installation
 Assuming pip as package manager, automatically install the required libraries by running  
->pip install -r requirements.txt
+>pip install -r requirements.txt  
+
 __or__ check the __requirements.txt__ file and manually install the modules.  
