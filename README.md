@@ -3,7 +3,7 @@
 # Python Version
 The code uses type hints extensively, and therefore requires a recent python version [3.5 or newer](https://docs.python.org/3/library/typing.html).  [(further info)](https://peps.python.org/topic/typing/)  
 
-Be aware **the latest python version may break pygame, stick to 3.5 to 3.10** (3.11 etc.)  
+Be aware **the latest python version may break pygame, stick to 3.5 through 3.10**
 Recommended version: [Python 3.10.0](https://www.python.org/downloads/release/python-3100/)  
 ### Check python version by running one of the scripts below.
 **Mac**:  
