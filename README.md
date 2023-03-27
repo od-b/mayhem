@@ -12,8 +12,8 @@ Recommended version: [Python 3.10.0 (v3.10.0:b494f5935c)](https://www.python.org
 >python -c "exec(\"import sys\nprint('Python Version=='+sys.version)\")"  
 
 # Pygame Version
-Written and tested using pygame 2.3.0  
-I know for a fact any version prior to 2.1.3 will not work.  
+Developed and tested using **pygame 2.3.0**  
+I know for a fact any version prior to **2.1.3** will not work.  
 
 # Installation
 Assuming pip as package manager, automatically install the required libraries by running  
