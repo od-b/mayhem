@@ -71,18 +71,23 @@ class PG_App:
         self.timer = PG_Timer(self.cf_global['fps_limit'], self.cf_global['accurate_timing'])
         ''' pygame specific timer object '''
 
-        self.container_group = Group()
-        ''' group of ui containers. Contains their own groups of children '''
+        self.map_UI = Group()
+        ''' group of ui sprites that may only be run during a map '''
+
+        self.app_UI = Group()
+        ''' group of ui sprites that may be run at any point '''
 
         # init core app
-        self.set_up_ui()
+        self.set_up_map_ui()
         self.block_events(self.BLOCKED_EVENTS)
         self.fetch_menu_controls()
         self.app_is_running = True
         self.map_is_active = False
 
-    def set_up_ui(self):
-        ''' specialized, run-once function for creating the game ui '''
+    def set_up_map_ui(self):
+        ''' specialized, run-once function for creating the map ui
+            * these do NOT need to be recreated on map change
+        '''
 
         # create bottom info panel container
         # set width to the size of the map
@@ -102,7 +107,7 @@ class PG_App:
             "right",
             "left_right"
         )
-        self.container_group.add(BOTTOM_PANEL)
+        self.map_UI.add(BOTTOM_PANEL)
 
         # create FPS_TEXT
         BOTTOM_PANEL.create_textbox_child(
@@ -194,7 +199,11 @@ class PG_App:
         ''' draw a border around the sprite bounding rect '''
         pg.draw.rect(self.map.surface, self.DEBUG_COLOR, sprite.rect, width=1)
 
-    def menu_check_events(self):
+    def check_app_events(self):
+        ''' events that are not dependand on a map 
+            * may share key constants with map_events
+        '''
+
         for event in pg.event.get():
             match (event.type):
                 case pg.QUIT:
@@ -219,8 +228,8 @@ class PG_App:
                         case _:
                             pass
 
-    def check_events(self):
-        ''' loop all queued events and check for any trigger matches '''
+    def check_map_events(self):
+        ''' events that require a map & player to function '''
 
         for event in pg.event.get():
             # check if event type matches any triggers
@@ -286,9 +295,10 @@ class PG_App:
                 # draw the player
                 self.map.player_group.draw(self.map.surface)
 
-                # update + draw the ui (both are done through update)
-                self.container_group.update()
-                
+                # update the ui
+                self.map_UI.update()
+                self.app_UI.update()
+
                 self.debug__draw_mask(self.map.player)
                 self.debug__draw_velocity(self.map.player, 100.0, 1)
                 self.debug__draw_bounds_rect(self.map.player)
@@ -297,7 +307,7 @@ class PG_App:
                 pg.display.update()
 
                 # loop through events
-                self.check_events()
+                self.check_map_events()
 
                 # now that events are read, update sprites before next frame
                 self.map.player_group.update()
@@ -309,10 +319,11 @@ class PG_App:
             if (self.app_is_running):
                 # the map is not active, but the app is. this keeps the program active until exited
                 self.window.fill_surface()
+                self.app_UI.update()
                 pg.display.update()
 
-                # loop through menu events
-                self.menu_check_events()
+                # loop through menu/app events
+                self.check_app_events()
 
 
 if __name__ == '__main__':
