@@ -11,6 +11,7 @@ from pygame.mask import Mask
 from modules.exceptions import VersionError, ConfigError
 # pygame specific classes
 from modules.PG_window import PG_Window
+from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
 from modules.PG_ui import Container
 # import config dicts
@@ -58,10 +59,10 @@ class PG_App:
         self.cf_textbox_style: dict = self.cf_UI['TEXTBOXES'][str(self.cf_global['textbox_style'])]
 
         # create a list of available map keys
-        self.loaded_map_keys = []
+        self.valid_cf_maps_keys = []
         for key, _ in self.cf_maps.items():
-            self.loaded_map_keys.append(str(key))
-        print(f'loaded maps (config map keys): {self.loaded_map_keys}')
+            self.valid_cf_maps_keys.append(str(key))
+        print(f'loaded maps (config map keys): {self.valid_cf_maps_keys}')
 
         # create the window
         self.window = PG_Window(self.cf_global, self.cf_window)
@@ -152,7 +153,7 @@ class PG_App:
 
     def fetch_player_controls(self):
         ''' fetch and store player controls from the map '''
-        cf_controls = self.window.map.get_player_controls()
+        cf_controls = self.map.get_player_controls()
         self.STEER_UP =     int(cf_controls['steer_up'])
         self.STEER_LEFT =   int(cf_controls['steer_left'])
         self.STEER_DOWN =   int(cf_controls['steer_down'])
@@ -160,24 +161,22 @@ class PG_App:
         self.HALT =         int(cf_controls['halt'])
         self.LOCK =         int(cf_controls['lock'])
 
-    def set_up_map(self, map_name: str, player_pos: tuple[int, int]):
+    def set_up_map(self, cf_maps_key: str, player_pos: tuple[int, int]):
         ''' bundle of function calls to initialize the map, player and controls '''
 
-        if not str(map_name) in self.loaded_map_keys:
-            raise ValueError(f'map "{map_name}" not found')
+        if not str(cf_maps_key) in self.valid_cf_maps_keys:
+            raise ValueError(f'map "{cf_maps_key}" not found')
 
-        self.window.create_map(self.cf_maps['map_1'])
-        self.window.map.set_up_terrain()
-        self.window.map.spawn_player(player_pos)
+        self.map = PG_Map(self.cf_global, self.cf_maps[cf_maps_key], self.window.map_surface)
+        self.map.set_up_terrain()
+        self.map.spawn_player(player_pos)
+        self.window.set_extended_caption(self.map.name)
         self.fetch_player_controls()
-        
-        # create references for easy access
-        self.map = self.window.map
 
         if not (self.timer.first_init_done):
-            self.timer.start_first_segment(self.window.map.name)
+            self.timer.start_first_segment(self.map.name)
         else:
-            self.timer.new_segment(self.window.map.name, True)
+            self.timer.new_segment(self.map.name, True)
 
         self.map_is_active = True
 
