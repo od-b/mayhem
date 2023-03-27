@@ -357,7 +357,7 @@ class Child_Text_Box(Sprite):
 
     def _get_text_from_getter_func(self):
         ''' internal function: returns a string through the given text_getter_func, no pre_text '''
-        return str(self.text_getter_func())
+        return self.text_getter_func()
 
     def _get_text_from_getter_func_with_pre_text(self):
         ''' internal function: returns a string through the given text_getter_func

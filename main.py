@@ -123,7 +123,7 @@ class PG_App:
             self.cf_textbox_style,
             "TIME_TEXT",
             "Time: ",
-            self.timer.get_segment_duration_formatted,
+            self.timer.get_segment_duration_formatted
         )
 
         # create ANGLE_TEXT
@@ -131,8 +131,24 @@ class PG_App:
             self.cf_textbox_style,
             "ANGLE_TEXT",
             "Angle: ",
-            self.get_current_player_angle,
+            self.get_player_angle
         )
+
+        # # create DIR_X_TEXT
+        # BOTTOM_PANEL.create_textbox_child(
+        #     self.cf_textbox_style,
+        #     "DIR_X_TEXT",
+        #     "Dir. x: ",
+        #     self.get_player_dir_x
+        # )
+
+        # # create DIR_Y_TEXT
+        # BOTTOM_PANEL.create_textbox_child(
+        #     self.cf_textbox_style,
+        #     "DIR_Y_TEXT",
+        #     "Dir. y: ",
+        #     self.get_player_dir_y
+        # )
 
     def block_events(self, events: list):
         ''' blocks some unused events from entering the event queue
@@ -144,22 +160,33 @@ class PG_App:
     def fetch_menu_controls(self):
         ''' fetch and store player controls from the global config '''
         cf_controls = self.cf_global['menu_controls']
-        self.MENU_UP =      int(cf_controls['up'])
-        self.MENU_LEFT =    int(cf_controls['left'])
-        self.MENU_DOWN =    int(cf_controls['down'])
-        self.MENU_RIGHT =   int(cf_controls['right'])
+        self.MENU_UP      = int(cf_controls['up'])
+        self.MENU_LEFT    = int(cf_controls['left'])
+        self.MENU_DOWN    = int(cf_controls['down'])
+        self.MENU_RIGHT   = int(cf_controls['right'])
         self.MENU_CONFIRM = int(cf_controls['confirm'])
-        self.MENU_BACK =    int(cf_controls['back'])
+        self.MENU_BACK    = int(cf_controls['back'])
 
     def fetch_player_controls(self):
         ''' fetch and store player controls from the map '''
         cf_controls = self.map.get_player_controls()
-        self.STEER_UP =     int(cf_controls['steer_up'])
-        self.STEER_LEFT =   int(cf_controls['steer_left'])
-        self.STEER_DOWN =   int(cf_controls['steer_down'])
-        self.STEER_RIGHT =  int(cf_controls['steer_right'])
-        self.HALT =         int(cf_controls['halt'])
-        self.LOCK =         int(cf_controls['lock'])
+        self.STEER_UP    = int(cf_controls['steer_up'])
+        self.STEER_LEFT  = int(cf_controls['steer_left'])
+        self.STEER_DOWN  = int(cf_controls['steer_down'])
+        self.STEER_RIGHT = int(cf_controls['steer_right'])
+        self.THRUST      = int(cf_controls['thrust'])
+
+    def get_player_dir_x(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_direction_x():.2f}'
+
+    def get_player_dir_y(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_direction_y():.2f}'
+
+    def get_player_angle(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_angle():.1f}'
 
     def set_up_map(self, cf_maps_key: str, player_pos: tuple[int, int]):
         ''' bundle of function calls to initialize the map, player and controls '''
@@ -179,9 +206,6 @@ class PG_App:
             self.timer.new_segment(self.map.name, True)
 
         self.map_is_active = True
-
-    def get_current_player_angle(self):
-        return self.map.player.get_angle()
 
     def debug__draw_mask(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
@@ -233,48 +257,38 @@ class PG_App:
         for event in pg.event.get():
             # check if event type matches any triggers
             match (event.type):
-                case pg.QUIT:
-                    self.app_is_running = False
-                    self.map_is_active = False
-                case pg.MOUSEBUTTONDOWN:
-                    print(pg.mouse.get_pos())
                 case pg.KEYDOWN:
-                    # check if key matches any actions
                     match (event.key):
                         case self.STEER_UP:
-                            self.map.player.direction.y -= self.map.player.handling
+                            self.map.player.direction.y -= 1.0
                         case self.STEER_DOWN:
-                            self.map.player.direction.y += self.map.player.handling
+                            self.map.player.direction.y += 1.0
                         case self.STEER_LEFT:
-                            self.map.player.direction.x -= self.map.player.handling
+                            self.map.player.direction.x -= 1.0
                         case self.STEER_RIGHT:
-                            self.map.player.direction.x += self.map.player.handling
-                        case self.HALT:
-                            self.map.player.halt += 1.0
-                        case self.LOCK:
-                            pass
+                            self.map.player.direction.x += 1.0
+                        case self.THRUST:
+                            self.map.player.thrust = True
                         case _:
                             pass
                 case pg.KEYUP:
-                    # match keydown event to an action, or pass
                     match (event.key):
                         case self.STEER_UP:
-                            self.map.player.direction.y += self.map.player.handling
+                            self.map.player.direction.y += 1.0
                         case self.STEER_DOWN:
-                            self.map.player.direction.y -= self.map.player.handling
+                            self.map.player.direction.y -= 1.0
                         case self.STEER_LEFT:
-                            self.map.player.direction.x += self.map.player.handling
+                            self.map.player.direction.x += 1.0
                         case self.STEER_RIGHT:
-                            self.map.player.direction.x -= self.map.player.handling
-                        case self.HALT:
-                            self.map.player.halt -= 1.0
-                        case self.LOCK:
-                            pass
+                            self.map.player.direction.x -= 1.0
+                        case self.THRUST:
+                            self.map.player.thrust = False
                         case _:
                             pass
+                case pg.QUIT:
+                    self.app_is_running = False
+                    self.map_is_active = False
                 case _:
-                    # print(event.type)
-                    # print(event)
                     pass
 
     def loop(self):

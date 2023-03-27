@@ -56,10 +56,10 @@ PLAYERS = {
         'weights': {
             'max_health':       int(150),       # maximum and initial health
             'max_mana':         int(150),       # maximum and initial mana
-            'velocity_falloff': float(0.001),    # general decrease in velocity per frame 1-val
-            'handling':         float(0.07),    # how effective steering will be
-            # 'breaking':         float(0.07),    # how fast the player will come to a halt upon break
             'mass':             float(0.1),     # mass increases terminal velocity (mass * max_velo.y)
+            'handling':         float(0.07),    # how effective rotation will be (percent)
+            'thrust_force':     float(0.50),
+            'velocity_falloff': float(0.001),   # general decrease in velocity per frame 1-val
             'max_velocity':     float(1.0),     # default: 1.5
         },
         # keyboard controls
@@ -68,8 +68,7 @@ PLAYERS = {
             'steer_left':   pg.K_a,
             'steer_down':   pg.K_s,
             'steer_right':  pg.K_d,
-            'halt':         pg.K_SPACE,     # slows rate of movement
-            'lock':         pg.K_c,         # lock angle in place
+            'thrust':       pg.K_SPACE,
         },
     },
 }

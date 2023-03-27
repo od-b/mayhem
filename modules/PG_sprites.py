@@ -4,6 +4,7 @@ import pygame as pg
 from pygame import Color, Surface
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Sprite
+from math import cos, sin, radians
 
 
 class Block(Sprite):
@@ -29,7 +30,7 @@ class Block(Sprite):
         Sprite.__init__(self)
 
         # store main attributes
-        self.mass = float(cf_block['mass'])
+        self.MASS = float(cf_block['mass'])
         self.position = position
         self.size = size
 
@@ -79,34 +80,39 @@ class Controllable(Sprite):
 
         self.initial_pos = initial_pos
 
-        self.gravity = float(cf_map['gravity'])
-        self.gravity_c = float(cf_map['gravity_c'])
+        self.GRAVITY   = float(cf_map['gravity'])
+        self.GRAVITY_C = float(cf_map['gravity_c'])
         # nested dicts
         cf_surface: dict = cf_player['surface']
         cf_weights: dict = cf_player['weights']
         
         # store dict settings
-        self.width = int(cf_surface['width'])
-        self.height = int(cf_surface['height'])
-        self.max_health = int(cf_weights['max_health'])
-        self.max_mana = int(cf_weights['max_mana'])
-        self.mass = float(cf_weights['mass'])
-        self.color = Color(cf_surface['color'])
-        self.max_velocity = float(cf_weights['max_velocity'])
-        self.handling = float(cf_weights['handling'])
-        self.velo_falloff = float(1.0 - cf_weights['velocity_falloff'])
         self.img_src: Surface | None = cf_player['surface']['image']
+        self.width         = int(cf_surface['width'])
+        self.height        = int(cf_surface['height'])
+        self.color         = Color(cf_surface['color'])
+
+        self.MAX_HEALTH    = int(cf_weights['max_health'])
+        self.MAX_MANA      = int(cf_weights['max_mana'])
+        self.MASS          = float(cf_weights['mass'])
+        self.MAX_VELOCITY  = float(cf_weights['max_velocity'])
+        self.HANDLING      = float(cf_weights['handling'])
+        self.THRUST_FORCE  = float(cf_weights['thrust_force'])
+        self.VELO_FALLOFF  = float(1.00 - cf_weights['velocity_falloff'])
 
         # set up vectors
-        self.position = Vec2(initial_pos)
-        self.velocity: Vec2 = Vec2(0.0, 0.0)
-        self.direction = Vec2(0.0, 0.0)
+        self.position      = Vec2(initial_pos)
+        self.velocity      = Vec2(0.0, 0.0)
+        self.direction     = Vec2(0.0, 0.0)
+        self.EMPTY_VECTOR  = Vec2(0.0, 0.0)
+        ''' used for angle calculation '''
 
         # set up variables
-        self.angle = float(0)
-        self.health = self.max_health
-        self.mana = self.max_mana
-        self.halt = int(0)
+        self.thrust: bool  = False
+        self.thrust_remaining = int(0)
+        self.angle: float  = float(0)
+        self.health: int   = self.MAX_HEALTH
+        self.mana: int     = self.MAX_MANA
 
         # set up surface, aka image
         if not self.img_src:
@@ -126,38 +132,41 @@ class Controllable(Sprite):
             # store the original image for transformation
             # otherwise, pygame will flood the memory in a matter of seconds
             # put short; ensures the original image is rotated, not the rotated one
-            self.ORIGINAL_IMAGE = IMG
+            # rotating to -90 means there's no need to flip later.
+            self.ORIGINAL_IMAGE = pg.transform.rotate(IMG, -90)
             self.height = IMG_RECT.h
             self.width = IMG_RECT.w
 
             # set sprite staple attributes through update_image_angle(); image, rect & mask
+            self.angle = self.EMPTY_VECTOR.angle_to(self.velocity)
             self.update_image_angle()
         else:
             # TODO: support actual images
             self.color = None
             raise ValueError("not yet implemented, don't include an image")
 
+    def get_direction_x(self):
+        return self.direction.x
+
+    def get_direction_y(self):
+        return self.direction.y
+
     def get_position(self):
-        return self.position
+        return self.rect.center
 
     def get_angle(self):
-        return round(self.angle)
+        return self.angle
 
     def calc_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''
-        return ((self.gravity * (abs(self.velocity.y) + self.gravity)) + self.gravity_c)
+        return (self.GRAVITY * (abs(self.velocity.y) + self.GRAVITY)) + self.GRAVITY_C
 
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
 
         # get a new image by rotating the original image
         # not referring to the original image will result in catastrophic memory flooding
-        # the constant of -45 is to correct for the fact that image is a triangle
-        NEW_IMG = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
-        # flip y-axis of image
-        # self.image = pg.transform.flip(NEW_IMG, False, True)
-        self.image = NEW_IMG
-        # self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, self.angle)
+        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, -self.angle)
 
         # get new mask for collision checking
         # > Note A new mask needs to be recreated each time a sprite's image is changed  
@@ -171,15 +180,20 @@ class Controllable(Sprite):
 
     def update(self):
         # # update y-velocity by gravity
-        self.velocity.y += self.calc_gravity_factor()
         # update velocity based on steering and falloff
-        self.velocity = (self.velocity * self.velo_falloff) + self.direction
-    
-        # update image, position and rect position
-        if (self.velocity.x != 0) or (self.velocity.y != 0):
-            # make sure velocity is within limits
-            self.velocity.clamp_magnitude_ip(self.max_velocity)
-            self.position = self.position + self.velocity
+        if (self.thrust):
+            self.velocity *= 1.01
+        else:
+            self.velocity.y += self.calc_gravity_factor()
+            self.velocity *= 0.99
 
-            self.angle = 28.0 - self.position.normalize().angle_to(-self.velocity)
-            self.update_image_angle()
+        # limit max velocity
+        self.velocity.x = pg.math.clamp(self.velocity.x, -self.MAX_VELOCITY, self.MAX_VELOCITY)
+        self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELOCITY, self.MAX_VELOCITY)
+
+        self.velocity += (self.direction * self.HANDLING)
+        self.position = self.position + self.velocity
+        self.angle = self.EMPTY_VECTOR.angle_to(self.velocity)
+
+        # update image, position and rect position
+        self.update_image_angle()
