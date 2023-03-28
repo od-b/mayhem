@@ -120,13 +120,17 @@ class Controllable(Sprite):
         self.angle: float  = float(0)
         ''' angle in degrees '''
 
-        # attributes related to thrust and the post-thrust transition phase
-        self.transition_frames          = int(0)
+        # attributes related the post-thrust transition phase
+        self.TRANSITION_TIME            = float(cf_weights['t_transition_time'])
+        ''' transition time, in seconds '''
+        self.TRANSITON_FRAMES           = int(self.TRANSITION_TIME * self.FPS_LIMIT)
+        ''' total number of frames used for the transition phase '''
+        self.TRANSITION_LERP_DECREASE   = (1.0 / self.TRANSITON_FRAMES)
+        ''' equal to to 1% of transition frames '''
+        self.transition_frames_left     = int(0)
         ''' num. frames left of transition phase '''
         self.transition_lerp_weight     = float(0)
         ''' weight for linear interpolation during transition '''
-        self.TRANSITION_VELO_DECREASE   = (1.0 / self.FPS_LIMIT)
-        ''' equal to to 1% of FPS limit '''
 
         # create main physics-related variables
         self.position      = Vec2(spawn_pos)
@@ -209,23 +213,24 @@ class Controllable(Sprite):
         ''' end thrust phase, starting transition to normal velocity limits '''
         self.thrusting = False
         # set transition frames and the lerp weight to their max
-        self.transition_frames = self.FPS_LIMIT
+        self.transition_frames_left = self.TRANSITON_FRAMES
         self.transition_lerp_weight = 1.0
 
     def update(self):
 
         if (self.thrusting):
-            self.grav_effect *= 0.97    # reduce gravity by 2%
+            self.grav_effect *= 0.97    # reduce gravity by 3%
             self.velocity += (self.direction * self.T_HANDLING)
             self.velocity.scale_to_length(self.T_VELO)
             self.position += self.velocity
         else:
             self.velocity += (self.direction * self.HANDLING)
 
-            if (self.transition_frames > 0):
-                self.grav_effect *= 0.98    # reduce gravity by 1%
-                # reduce max velocity gradually over a second. counter starts at fps
-                # print(f'frames left: {self.transition_frames}')
+            if (self.transition_frames_left > 0):
+                self.grav_effect *= 0.99    # reduce gravity by 1%
+                # reduce max velocity gradually over the set time period.
+                # print(f'frames left: {self.transition_frames_left}')
+
                 # use linear interpolation to find the right value for current max velocity
                 # finds the point which is a certain percent of fps closer to regular max velo
                 curr_max_velo = pg.math.lerp(self.MAX_VELO, self.T_VELO, (self.transition_lerp_weight))
@@ -233,9 +238,8 @@ class Controllable(Sprite):
                 # since player has velocity after thrusting, using clamp magnitude is safe without checks
                 self.velocity.clamp_magnitude_ip(self.MAX_VELO, curr_max_velo)
 
-                self.transition_frames -= 1
-                self.transition_lerp_weight -= self.TRANSITION_VELO_DECREASE
-                # reduce the weight by an amount equal to 1% of FPS
+                self.transition_frames_left -= 1
+                self.transition_lerp_weight -= self.TRANSITION_LERP_DECREASE
             else:
                 self.velocity *= self.VELO_FALLOFF
                 
@@ -248,7 +252,12 @@ class Controllable(Sprite):
                 if (self.grav_effect < self.TERM_VELO):
                     self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
 
-            self.position.y += (self.velocity.y + self.grav_effect)
+            if (self.direction.y == -1) and (self.grav_effect > 0):
+                self.position.y += ((self.velocity.y / 2) + (self.grav_effect / 2))
+                # use fuel call here
+            else:
+                self.position.y += (self.velocity.y + self.grav_effect)
+
             self.position.x += self.velocity.x
 
         self.angle = self.CENTER_VECTOR.angle_to(self.velocity)

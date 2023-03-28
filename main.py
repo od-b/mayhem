@@ -1,4 +1,4 @@
-import cProfile
+# import cProfile
 
 # installed library imports
 import pygame as pg
@@ -136,23 +136,7 @@ class PG_App:
             self.get_player_angle
         )
 
-        # # create DIR_X_TEXT
-        # BOTTOM_PANEL.create_textbox_child(
-        #     self.cf_textbox_style,
-        #     "DIR_X_TEXT",
-        #     "Dir. x: ",
-        #     self.get_player_dir_x
-        # )
-
-        # # create DIR_Y_TEXT
-        # BOTTOM_PANEL.create_textbox_child(
-        #     self.cf_textbox_style,
-        #     "DIR_Y_TEXT",
-        #     "Dir. y: ",
-        #     self.get_player_dir_y
-        # )
-
-        # create DIR_Y_TEXT
+        # create GRAV_TEXT
         BOTTOM_PANEL.create_textbox_child(
             self.cf_textbox_style,
             "GRAV_TEXT",
@@ -326,6 +310,9 @@ class PG_App:
                 self.map_UI.update()
                 self.app_UI.update()
 
+                for block in self.map.block_group:
+                    self.debug__draw_mask(block)
+
                 self.debug__draw_mask(self.map.player)
                 self.debug__draw_velocity(self.map.player, 40.0, 1)
                 self.debug__draw_bounds_rect(self.map.player)
@@ -366,4 +353,5 @@ if __name__ == '__main__':
 
     # load the game
     GAME = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_UI_SPRITES)
+    # cProfile.run('GAME.loop()')
     GAME.loop()

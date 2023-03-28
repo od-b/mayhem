@@ -67,7 +67,7 @@ PLAYERS = {
             'min_velocity':         float(0.001),   # the lowest value velocity can reach
             't_velo':               float(1.4),     # magnitude of velocity during thrust (pixels per frame)
             't_handling':           float(0.05),    # how effective rotation will be during thrust
-            't_transition_time':    float(0.2),     # how quickly the added velocity will fall off after thrusting
+            't_transition_time':    float(0.7),     # how quickly the added velocity will fall off after thrusting (seconds)
         },
         # keyboard controls
         'controls': {
