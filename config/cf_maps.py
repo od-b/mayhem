@@ -18,7 +18,7 @@ MAPS = {
         'blocks': {
             'edge_outline':         BLOCKS['small_gray_block'],
             'obstacle':             BLOCKS['pastel_block'],
-            'obstacle_outline':     BLOCKS['small_orange_block'],
+            'obstacle_outline':     BLOCKS['adaptive_block'],
         }
     }
 }

@@ -4,10 +4,13 @@ import pygame as pg
 from pygame import Color, Surface
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Sprite
+from pygame.draw import rect as draw_rect, polygon as draw_polygon
+from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
 
 
 class Block(Sprite):
     ''' Static object with none or a constant, set velocity/mass.
+        * for a pure alpha block, set color_pool to None and highlight_time to 0
 
         Parameters
         ---
@@ -22,6 +25,7 @@ class Block(Sprite):
 
     def __init__(self,
             cf_block: dict,
+            cf_global: dict,
             color_pool: list[Color] | None,
             size: tuple[int, int],
             position: tuple[int, int]
@@ -30,9 +34,18 @@ class Block(Sprite):
         Sprite.__init__(self)
 
         # store main attributes
-        self.MASS = float(cf_block['mass'])
-        self.position = position
-        self.size = size
+        self.MASS               = float(cf_block['mass'])
+        self.border_width       = int(cf_block['border_width'])
+        self.alt_color          = Color(cf_block['alt_color'])
+        self.border_color       = cf_block['border_color']      # may be None
+        self.alt_border_color   = cf_block['alt_border_color']  # may be None
+
+        self.HIGHLIGHT_TIME     = int(cf_block['highlight_time'] * cf_global['fps_limit'])
+        ''' frames to highlight the block for '''
+        self.highlight_timeleft = int(0)
+        ''' remaining duration of the highlight '''
+        self.position           = position
+        self.size               = size
 
         # create surface, either as an image or color
         if (cf_block['texture'] == None):
@@ -40,32 +53,54 @@ class Block(Sprite):
             # otherwise default to the config pallette
 
             # pick a random color from the color pool
-            self.color = Color(self.color_pool[randint(0, len(self.color_pool)-1)])
+            if (self.color_pool != None):
+                self.color = Color(self.color_pool[randint(0, len(self.color_pool)-1)])
 
-            # create surface and fill using color
-            IMG = pg.Surface(self.size).convert()
-            IMG.fill(self.color)
-            # IMG.set_alpha(None, pg.RLEACCEL)
-            ''' > The optional flags argument can be set to pygame.RLEACCEL to 
-                > provide better performance on non accelerated displays. 
-                > An RLEACCEL Surface will be slower to modify, but quicker to blit as a source.
-                https://www.pygame.org/docs/ref/surface.html#pygame.Surface.set_alpha
-            '''
-            self.image = IMG
+                # create main surface and fill using color
+                IMG = pg.Surface(self.size).convert()
+                IMG.fill(self.color)
+                IMG_RECT = IMG.get_rect()
+                if (self.border_width > 0) and (self.border_color != None):
+                    draw_rect(IMG, Color(self.border_color), IMG_RECT, width=self.border_width)
+
+                # create alternate surface, for highlighting the block
+                ALT_IMG = pg.Surface(self.size).convert()
+                ALT_IMG.fill(self.alt_color)
+                if (self.border_width > 0) and (self.alt_border_color != None):
+                    draw_rect(ALT_IMG, Color(self.alt_border_color), IMG_RECT, width=self.border_width)
+
+                self.ORIGINAL_RECT = IMG_RECT
+                self.ORIGINAL_IMAGE = IMG
+                self.ALT_IMAGE = ALT_IMG
+            else:
+                # create an alpha block
+                IMG = pg.Surface(self.size).convert_alpha()
+                IMG.fill((0, 0, 0, 0))
+                self.ORIGINAL_RECT = IMG.get_rect()
+                self.ORIGINAL_IMAGE = IMG
+
+            self.image = self.ORIGINAL_IMAGE
+            self.rect = self.ORIGINAL_RECT
+            self.rect.topleft = self.position
         else:
             # self.texture_src = cf_block['texture']
             # self.texture: ....
             raise ValueError('not yet implemented. Set texture to none')
 
-        # create rect from the surface
-        self.rect = self.image.get_rect()
-        self.rect.topleft = self.position
-
         # create a mask for fast collision detection
         self.mask = pg.mask.from_surface(self.image)
 
+    def init_highlight(self):
+        ''' swap to the ALT_IMAGE for a certain time '''
+        if (self.HIGHLIGHT_TIME):
+            self.highlight_timeleft = self.HIGHLIGHT_TIME
+            self.image = self.ALT_IMAGE
+
     def update(self):
-        pass
+        if (self.highlight_timeleft):
+            self.highlight_timeleft -= 1
+            if (self.highlight_timeleft == 0):
+                self.image = self.ORIGINAL_IMAGE
 
 
 class Controllable(Sprite):
@@ -157,7 +192,15 @@ class Controllable(Sprite):
             p3 = Vec2(IMG_RECT.bottomleft)
 
             # draw the polygon to the original image surface
-            pg.draw.polygon(IMG, self.color, (p1, p2, p3))
+            # gfxdraw_aatrigon(
+            #     IMG, 
+            #     int(p1.x), int(p1.y),
+            #     int(p2.x), int(p2.y),
+            #     int(p3.x), int(p3.y),
+            #     self.color
+            # )
+            # gfxdraw_aapolygon(IMG, (p1, p2, p3), self.color)
+            draw_polygon(IMG, self.color, (p1, p2, p3))
 
             # store the original image for transformation
             # otherwise, pygame will flood the memory in a matter of seconds
@@ -188,6 +231,17 @@ class Controllable(Sprite):
     def get_angle(self):
         return self.angle
 
+    def begin_thrust(self):
+        ''' begin thrust phase, increasing velocity and its limit '''
+        self.thrusting = True
+    
+    def end_thrust(self):
+        ''' end thrust phase, starting transition to normal velocity limits '''
+        self.thrusting = False
+        # set transition frames and the lerp weight to their max
+        self.transition_frames_left = self.TRANSITON_FRAMES
+        self.transition_lerp_weight = 1.0
+
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
 
@@ -204,17 +258,6 @@ class Controllable(Sprite):
         # set rect to the new images rect bounds
         # get_rect(**kwargs: Any) accepts a position value as parameter
         self.rect = self.image.get_rect(center=self.position)
-
-    def begin_thrust(self):
-        ''' begin thrust phase, increasing velocity and its limit '''
-        self.thrusting = True
-    
-    def end_thrust(self):
-        ''' end thrust phase, starting transition to normal velocity limits '''
-        self.thrusting = False
-        # set transition frames and the lerp weight to their max
-        self.transition_frames_left = self.TRANSITON_FRAMES
-        self.transition_lerp_weight = 1.0
 
     def update(self):
 

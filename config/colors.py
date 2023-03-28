@@ -5,6 +5,7 @@ RGB: dict[str, tuple[int, int, int]] = {
     'sage':             (200, 204, 146),
     'uranianblue':      (185, 230, 255),
     'dutchwhite':       (244, 228, 186),
+    'signal_red':       (252, 41, 71),
     'marygold':         (240, 162, 2),
     'orange':           (255, 123, 84),
     'orange_1':         (255, 111, 60),
@@ -19,7 +20,7 @@ RGB: dict[str, tuple[int, int, int]] = {
     'P_pink':           (255, 172, 172),
     'P_red':            (253, 138, 138),
     'P_red_dark':       (241, 103, 103),
-    'P_orange':         (255, 191, 169),
+    'P_orange':         (254, 98, 68),
     'P_green':          (158, 161, 212),
     'P_teal':           (134, 200, 188),
     'P_blue':           (158, 161, 212),
@@ -59,7 +60,6 @@ PALLETTES: dict[str, list[tuple[int, int, int]]]  = {
     'PASTEL_MIX': [
         RGB['P_orange'],
         RGB['P_peach'],
-        RGB['P_pink'],
         RGB['P_yellow'],
         RGB['P_red'],
         RGB['P_blue']

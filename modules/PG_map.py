@@ -4,7 +4,7 @@ from random import randint
 import pygame as pg
 ## simplify some imports for readability:
 from pygame import Color, Rect, Surface
-from pygame.sprite import Group, GroupSingle
+from pygame.sprite import Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 
 ## general classes
 from modules.exceptions import ConfigError
@@ -155,7 +155,7 @@ class PG_Map:
                 width = (MAX_X - curr_pos_x)
 
             # assemble the block
-            BLOCK = Block(cf_block, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
 
             # adjust position according to facing
             match (facing):
@@ -182,7 +182,7 @@ class PG_Map:
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
 
-            BLOCK = Block(cf_block, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
 
             match (facing):
                 case (-1):
@@ -204,7 +204,7 @@ class PG_Map:
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
 
-            BLOCK = Block(cf_block, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
             BLOCK.rect.right = curr_pos_x
 
             match (facing):
@@ -227,7 +227,7 @@ class PG_Map:
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
 
-            BLOCK = Block(cf_block, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
             BLOCK.rect.bottom = curr_pos_y
 
             match (facing):
@@ -263,7 +263,7 @@ class PG_Map:
             position = self.get_rand_pos(width, height)
 
             # assemble the block
-            BLOCK = Block(cf_block, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
 
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
@@ -278,8 +278,7 @@ class PG_Map:
             BLOCK.rect = inflated_rect
 
             # if the block + player rect doesn't collide with any terrain, add it to the group
-            if ((pg.sprite.spritecollideany(BLOCK, self.block_group) == None)
-                     and (pg.sprite.spritecollideany(BLOCK, group) == None)):
+            if not (spritecollideany(BLOCK, self.block_group) or (spritecollideany(BLOCK, group))):
                 # block doesn't collide with anything, swap rect back and add block
                 BLOCK.rect = original_rect
                 group.add(BLOCK)
@@ -299,6 +298,14 @@ class PG_Map:
 
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
+
+    def check_player_block_collide(self):
+        ''' get a list of sprites that collide with the player
+            * uses collide_mask()
+        '''
+        LIST = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+        for BLOCK in LIST:
+            BLOCK.init_highlight()
 
     def fill_surface(self):
         ''' fills/resets the map surface '''

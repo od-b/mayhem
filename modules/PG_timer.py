@@ -1,5 +1,6 @@
 from typing import Callable
-from pygame import time
+from pygame import time, event
+from pygame.event import Event
 from .timing import Timer
 
 class PG_Timer(Timer):
@@ -8,6 +9,7 @@ class PG_Timer(Timer):
         * update must be called every frame to yield the correct time values
         * Tracking activates when .start_first_segment() is called, not on __init__
         * >> start_first_segment MUST be called before ANY other methods are called.
+        * the timer also has methods to customize events
     '''
 
     def __init__(self, fps_limit: int, busy_loop: bool):
@@ -16,6 +18,8 @@ class PG_Timer(Timer):
         self.busy_loop = busy_loop
         self.clock = time.Clock()
         self.first_init_done: bool = False
+        self.custom_events = []
+        self.blocked_events = []
 
         # create a function pointer instead of checking conditions every frame
         if (self.busy_loop):
@@ -31,6 +35,39 @@ class PG_Timer(Timer):
         self.tick_func()
         curr_time = time.get_ticks()
         super().start_first_segment(curr_time, ref)
+
+    def get_custom_events(self):
+        return self.custom_events
+
+    def get_blocked_events(self):
+        return self.blocked_events
+
+    def allow_event(self, event_id):
+        event.set_allowed(event_id)
+        if (event_id) in self.blocked_events:
+            self.blocked_events.remove(event_id)
+
+    def block_events(self, events: list):
+        ''' blocks the given events from entering the event queue
+            * saves some time when iterating over pg.event.get()
+            * custom added events can be removed through this function
+            * blocked events are stored in self.blocked_events
+        '''
+        for EVENT_ID in events:
+            event.set_blocked(EVENT_ID)
+            self.blocked_events.append(EVENT_ID)
+
+    def create_event_timer(self, ms_interval: int, n_loops: int):
+        ''' creates a custom event+timer with an unique integer reference
+            * returns the assigned event id
+        '''
+        EVENT_ID = event.custom_type()
+        self.custom_events.append(EVENT_ID)
+        time.set_timer(EVENT_ID, ms_interval, loops=n_loops)
+        return EVENT_ID
+
+    def post_event(self, event_id):
+        event.post(Event(event_id))
 
     def activate_busy_tick(self):
         ''' sets tick function to busy loop. Consumes more CPU, but more accurate '''

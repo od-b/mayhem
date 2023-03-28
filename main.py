@@ -3,6 +3,7 @@
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
+from pygame.event import Event
 from pygame import Color
 from pygame.sprite import Sprite, Group, GroupSingle
 from pygame.math import Vector2 as Vec2
@@ -52,9 +53,8 @@ class PG_App:
         self.cf_UI = config_UI
         
         # store relevant global constants
-        self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
-        self.BLOCKED_EVENTS: list = self.cf_global['blocked_events']
+        self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
 
         # store chosen ui style dicts
         self.cf_container_style: dict = self.cf_UI['CONTAINERS'][str(self.cf_global['container_style'])]
@@ -74,15 +74,19 @@ class PG_App:
         self.timer = PG_Timer(self.cf_global['fps_limit'], self.cf_global['accurate_timing'])
         ''' pygame specific timer object '''
 
+        # set the UI to be updated 4 times per second, through the event queue
+        self.EVENT_UPDATE_UI = self.timer.create_event_timer(250, 0)
+        ''' custom defined pygame.event '''
+        self.timer.block_events(self.cf_global['blocked_events'])
+
         self.map_UI = Group()
         ''' group of ui sprites that may only be run during a map '''
 
         self.app_UI = Group()
         ''' group of ui sprites that may be run at any point '''
 
-        # init core app
+        # init core app features
         self.set_up_map_ui()
-        self.block_events(self.BLOCKED_EVENTS)
         self.fetch_menu_controls()
         self.app_is_running = True
         self.map_is_active = False
@@ -159,13 +163,6 @@ class PG_App:
     def get_player_gravity(self):
         ''' for async creation and string formatting for UI '''
         return f'{self.map.player.get_grav_effect():.3f}'
-
-    def block_events(self, events: list):
-        ''' blocks some unused events from entering the event queue
-            * saves some time when iterating over pg.event.get()
-        '''
-        for EVENT in events:
-            pg.event.set_blocked(EVENT)
 
     def fetch_menu_controls(self):
         ''' fetch and store player controls from the global config '''
@@ -248,6 +245,10 @@ class PG_App:
                             pass
                         case _:
                             pass
+                case self.EVENT_UPDATE_UI:
+                    self.app_UI.update()
+                case _:
+                    pass
 
     def check_map_events(self):
         ''' events that require a map & player to function '''
@@ -286,6 +287,9 @@ class PG_App:
                 case pg.QUIT:
                     self.app_is_running = False
                     self.map_is_active = False
+                case self.EVENT_UPDATE_UI:
+                    self.map_UI.update()
+                    # self.app_UI.update()
                 case _:
                     pass
 
@@ -293,10 +297,12 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
         
         while (self.app_is_running):
+            self.timer.post_event(self.EVENT_UPDATE_UI)
             self.set_up_map('map_1', (400, 400))
 
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
+
                 # fill the main surface, then the game bounds
                 self.map.fill_surface()
 
@@ -307,24 +313,25 @@ class PG_App:
                 self.map.player_group.draw(self.map.surface)
 
                 # update the ui
-                self.map_UI.update()
-                self.app_UI.update()
+                # loop through events before the display update 
+                self.check_map_events()
 
-                for block in self.map.block_group:
-                    self.debug__draw_mask(block)
 
-                self.debug__draw_mask(self.map.player)
-                self.debug__draw_velocity(self.map.player, 40.0, 1)
-                self.debug__draw_bounds_rect(self.map.player)
+                # for block in self.map.block_group:
+                #     self.debug__draw_mask(block)
+
+                # self.debug__draw_mask(self.map.player)
+                # self.debug__draw_velocity(self.map.player, 40.0, 1)
+                # self.debug__draw_bounds_rect(self.map.player)
 
                 # refresh the display, applying drawing etc.
                 pg.display.update()
 
-                # loop through events
-                self.check_map_events()
-
                 # now that events are read, update sprites before next frame
                 self.map.player_group.update()
+
+                self.map.block_group.update()
+                self.map.check_player_block_collide()
 
                 # update the timer. Also limits the framerate if set
                 self.timer.update()
