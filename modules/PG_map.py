@@ -16,6 +16,7 @@ class PG_Map:
     ''' current map setup used by the the app '''
     def __init__(self, cf_global: dict, cf_map: dict, surface: Surface):
 
+        self.cf_global = cf_global
         self.LOOP_LIMIT = cf_global['loop_limit']
         self.surface = surface
 
@@ -25,7 +26,7 @@ class PG_Map:
         self.available_time = int(cf_map['available_time'])
         self.fill_color = Color(cf_map['fill_color'])
         self.n_obstacles = int(cf_map['n_obstacles'])
-        self.gravity = float(cf_map['gravity'])
+        self.gravity_m = float(cf_map['gravity_m'])
         self.gravity_c = float(cf_map['gravity_c'])
 
         # store nested dict settings
@@ -67,7 +68,7 @@ class PG_Map:
 
         # outline the entire game bounds with terrain_blocks:
         terrain_facing = -1
-        self.spawn_rect_outline(
+        self.spawn_block_outline(
             self.cf_blocks['edge_outline'],
             self.map_edge_group,
             self.rect, terrain_facing, None
@@ -76,14 +77,14 @@ class PG_Map:
         self.block_group.add(self.map_edge_group)
 
         # place obstacle_blocks within the game area
-        self.spawn_static_obstacles(self.cf_blocks['obstacle'], self.obstacle_group)
+        self.spawn_obstacle_blocks(self.cf_blocks['obstacle'], self.obstacle_group)
 
         # outline the obstacles with smaller rects to create more jagged terrain
         terrain_facing = 0
         for BLOCK in self.obstacle_group:
             # for each block in obstacle_group, outline the block rect
             alt_pallette = [BLOCK.color]
-            self.spawn_rect_outline(
+            self.spawn_block_outline(
                 self.cf_blocks['obstacle_outline'],
                 self.obstacle_group, 
                 BLOCK.rect, 
@@ -94,20 +95,20 @@ class PG_Map:
         # add obstacle blocks and their outline blocks to the general map group
         self.block_group.add(self.obstacle_group)
 
-    def spawn_player(self, pos: tuple[int, int]):
+    def spawn_player(self, spawn_pos: tuple[int, int]):
         ''' create and spawn a player sprite
             * if a player already exists, replaces and removes it
             * updates the self.player reference
         '''
         # create the player sprite, then update player_group
-        self.player = Controllable(self.cf_player, self.cf_map, pos)
+        self.player = Controllable(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
         self.player_group.add(self.player)
 
-    def spawn_rect_outline(self, cf_block: dict, group: Group, bounds: pg.Rect,
+    def spawn_block_outline(self, cf_block: dict, group: Group, bounds: pg.Rect,
                               facing: int, alt_pallette: None | list[Color]):
 
         ''' encapsulate the given rects' bounds with blocks
-            * if alt_pallette is None, uses the cf_block color list at random
+            * if alt_pallette is None, the block will use the cf_block color list at random
             * otherwise, choose the given color pallette for all blocks
 
             * facing decides the alignment of the blocks relative to the bounds axis':
@@ -115,6 +116,11 @@ class PG_Map:
             * 0  => center
             * 1  => outwards
         '''
+        
+        if (alt_pallette):
+            color_pool = alt_pallette
+        else:
+            color_pool = cf_block['color_pool']
 
         # constant declarations for readability
         MIN_X = bounds.left
@@ -149,7 +155,7 @@ class PG_Map:
                 width = (MAX_X - curr_pos_x)
 
             # assemble the block
-            BLOCK = Block(cf_block, alt_pallette, (width, height), position)
+            BLOCK = Block(cf_block, color_pool, (width, height), position)
 
             # adjust position according to facing
             match (facing):
@@ -176,7 +182,7 @@ class PG_Map:
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
 
-            BLOCK = Block(cf_block, alt_pallette, (width, height), position)
+            BLOCK = Block(cf_block, color_pool, (width, height), position)
 
             match (facing):
                 case (-1):
@@ -198,7 +204,7 @@ class PG_Map:
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
 
-            BLOCK = Block(cf_block, alt_pallette, (width, height), position)
+            BLOCK = Block(cf_block, color_pool, (width, height), position)
             BLOCK.rect.right = curr_pos_x
 
             match (facing):
@@ -221,7 +227,7 @@ class PG_Map:
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
 
-            BLOCK = Block(cf_block, alt_pallette, (width, height), position)
+            BLOCK = Block(cf_block, color_pool, (width, height), position)
             BLOCK.rect.bottom = curr_pos_y
 
             match (facing):
@@ -235,14 +241,15 @@ class PG_Map:
             group.add(BLOCK)
             curr_pos_y = (BLOCK.rect.top - PADDING)
 
-    def spawn_static_obstacles(self, cf_block: dict, group: Group):
-        ''' obstacle spawning algorithm
+    def spawn_obstacle_blocks(self, cf_block: dict, group: Group):
+        ''' specialized obstacle spawning algorithm
             * checks for collision with the passed group and self.block_group before placing
         '''
 
         # padding, taking into account the player size to not completely block paths:
         H_PADDING = int(self.cf_player['surface']['height'] + cf_block['padding'])
         W_PADDING = int(self.cf_player['surface']['width'] + cf_block['padding'])
+        color_pool = cf_block['color_pool']
 
         # initiate the loop
         placed_blocks = 0
@@ -256,7 +263,7 @@ class PG_Map:
             position = self.get_rand_pos(width, height)
 
             # assemble the block
-            BLOCK = Block(cf_block, None, (width, height), position)
+            BLOCK = Block(cf_block, color_pool, (width, height), position)
 
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks

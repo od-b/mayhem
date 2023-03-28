@@ -1,10 +1,10 @@
-from .cf_colors import RGB
+from .colors import RGB
 
 WINDOW = {
     'caption':      str('< app >'),
     'height':       int(840),
     'width':        int(1400),
-    'fill_color':   RGB['gray_soft_2'],
+    'fill_color':   RGB['gray_100'],
     'vsync':        int(0), # bool, 0/1
     # map_bounds:
     #   size of the surface dedicated to the map

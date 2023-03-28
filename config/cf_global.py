@@ -1,4 +1,4 @@
-from .cf_colors import RGB
+from .colors import RGB, RGBA
 import pygame as pg
 
 GLOBAL = {
@@ -12,11 +12,11 @@ GLOBAL = {
     #   algorithms that have a chance to not being capable of success, depending on settings.
     #   Avoids program crash by breaking out of loops that would never finish,
     #   and can be useful to print how close an algorithm was to success.
-    'loop_limit':       int(10000),
+    'loop_limit': int(10000),
     # debug_color: high contrast color used for visualizing certain screen elements
-    #   should not occur anywhere else on the screen. 
-    #   Do not use black as screen defaults to black.
-    'debug_color':      RGB['uranianblue'],
+    'debug_color': RGB['uranianblue'],
+    # fully transparent color
+    'transparent_color': RGBA['alpha_0'],
     # fps_limit:
     #   due to how tick works with sync limitations, especially at higher values,
     #   fps should be set to one of the following values: [30, 62, 125, 200, 250]
@@ -24,16 +24,16 @@ GLOBAL = {
     #   this can be checked by setting accurate_timing to true
     #   for example, when trying to set an FPS of 220, it will automatically snap to 250 instead.
     #   (i'm not entirely sure why this happens, but it's not really an issue.)
-    #   setting FPS to 0 will leave it uncapped
-    'fps_limit':        int(125),      # default: 125
+    #   fps limit must be set to a value for sprites to behave properly
+    'fps_limit': int(125),      # default: 125
     # accurate_timing:
     #   how strict the time tick function should be.
     #   Uses more resources if set to true
     #   docref: https://www.pygame.org/docs/ref/time.html#pygame.time.Clock.tick_busy_loop
     'accurate_timing':  True,                # default: True
     # UI settings
-    'textbox_style':    str('default'),      # refer to a key string in ui_sprites
-    'container_style':  str('default'),      # refer to a key string in ui_sprites
+    'textbox_style': str('default'),      # refer to a key string in ui_sprites
+    'container_style': str('default'),      # refer to a key string in ui_sprites
     'menu_controls': {
         'up':       pg.K_w,
         'left':     pg.K_a,
@@ -42,7 +42,9 @@ GLOBAL = {
         'confirm':  pg.K_SPACE,
         'back':     pg.K_ESCAPE,
     },
-    'blocked_events': [    # these events will not be put in the event queue
+    # blocked_events are a list of pg.event.type that will be blocked from the event queue
+    # improves performance slightly by not needing to iterate over events that are unused
+    'blocked_events': [
         pg.MOUSEMOTION,
         pg.MOUSEBUTTONUP,
         pg.MOUSEBUTTONDOWN,

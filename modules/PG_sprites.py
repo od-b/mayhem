@@ -4,7 +4,6 @@ import pygame as pg
 from pygame import Color, Surface
 from pygame.math import Vector2 as Vec2
 from pygame.sprite import Sprite
-from math import cos, sin, radians
 
 
 class Block(Sprite):
@@ -16,16 +15,17 @@ class Block(Sprite):
             see ['special_sprites']['UNIQUE_CONTROLLABLES'][...]
         size: tuple[int, int]
         position: tuple[int, int]
-        alt_pallette: list[Color] | None
-            whether to use to pallette from cf_block or another list
+        color_pool: list[Color] | None
+            color pool to pick a random color from
+            if None, a texture must exist
     '''
 
     def __init__(self,
-                 cf_block: dict,
-                 alt_pallette: list[Color] | None,
-                 size: tuple[int, int],
-                 position: tuple[int, int]
-                 ):
+            cf_block: dict,
+            color_pool: list[Color] | None,
+            size: tuple[int, int],
+            position: tuple[int, int]
+        ):
 
         Sprite.__init__(self)
 
@@ -36,13 +36,8 @@ class Block(Sprite):
 
         # create surface, either as an image or color
         if (cf_block['texture'] == None):
-            # no texture provided, create a simple colored surface
-            if (alt_pallette):
-                # if a special pallette is passed, use it
-                self.color_pool = alt_pallette
-            else:
-                # otherwise default to the config pallette
-                self.color_pool: list[Color] = cf_block['color_pool']
+            self.color_pool = color_pool
+            # otherwise default to the config pallette
 
             # pick a random color from the color pool
             self.color = Color(self.color_pool[randint(0, len(self.color_pool)-1)])
@@ -74,49 +69,74 @@ class Block(Sprite):
 
 
 class Controllable(Sprite):
-    def __init__(self, cf_player: dict, cf_map: dict, initial_pos: tuple[int, int]):
+    def __init__(self, cf_player: dict, cf_map: dict, cf_global: dict, spawn_pos: tuple[int, int]):
         # initalize as pygame sprite
         Sprite.__init__(self)
 
-        self.initial_pos = initial_pos
-
-        self.GRAVITY   = float(cf_map['gravity'])
-        self.GRAVITY_C = float(cf_map['gravity_c'])
         # nested dicts
+        self.spawn_pos = spawn_pos
         cf_surface: dict = cf_player['surface']
         cf_weights: dict = cf_player['weights']
         
-        # store dict settings
-        self.img_src: Surface | None = cf_player['surface']['image']
+        # store non-player dict settings
+        self.FPS_LIMIT     = int(cf_global['fps_limit'])
+        # if player has no mass, ignore gravity
+        if (cf_weights['mass'] > 0.0):
+            self.GRAVITY_C     = float(cf_map['gravity_c'])
+            ''' gravity constant '''
+            self.GRAVITY_M     = float(cf_map['gravity_m'])
+            ''' gravity multiplier '''
+        else:
+            self.GRAVITY_C = 0.0
+            self.GRAVITY_M = 0.0
+
+        # store surface settings
+        self.img_src: Surface | None = cf_surface['image']
         self.width         = int(cf_surface['width'])
         self.height        = int(cf_surface['height'])
         self.color         = Color(cf_surface['color'])
         self.thrust_color  = Color(cf_surface['thrust_color'])
 
+        # store constant weights
         self.MAX_HEALTH    = int(cf_weights['max_health'])
         self.MAX_MANA      = int(cf_weights['max_mana'])
         self.MASS          = float(cf_weights['mass'])
         self.VELO_FALLOFF  = float(cf_weights['velocity_falloff'])
-        self.THRUST_FORCE  = float(cf_weights['thrust_force'])
         self.HANDLING      = float(cf_weights['handling'])
         self.MAX_VELO      = float(cf_weights['max_velocity'])
-        self.T_MAX_VELO    = self.MAX_VELO + float(cf_weights['t_max_velocity'])
-
-        # increased positive y-velocity, to simulate gravity
         self.TERM_VELO     = self.MAX_VELO + self.MASS
-        self.T_TERM_VELO   = self.T_MAX_VELO + self.MASS
 
-        # set up vectors
-        self.position      = Vec2(initial_pos)
-        self.velocity      = Vec2(0.0, 0.0)
+        # special weights during thrust
+        self.T_VELO        = float(cf_weights['t_velo'])
+        self.T_HANDLING    = float(cf_weights['t_handling'])
+
+        # initialize control and angle-related attributes
+        self.CENTER_VECTOR = Vec2(0.0, 0.0)
+        ''' used for relative angle calculation '''
+        self.thrusting     = False
+        ''' whether the thrust key is currently held '''
         self.direction     = Vec2(0.0, 0.0)
-        self.EMPTY_VECTOR  = Vec2(0.0, 0.0)
-        ''' used for angle calculation '''
-
-        # set up variables
-        self.thrust: bool  = False
-        self.thrust_remaining = int(0)
+        ''' 8-directional vector for reading key controls '''
         self.angle: float  = float(0)
+        ''' angle in degrees '''
+
+        # attributes related to thrust and the post-thrust transition phase
+        self.transition_frames          = int(0)
+        ''' num. frames left of transition phase '''
+        self.transition_lerp_weight     = float(0)
+        ''' weight for linear interpolation during transition '''
+        self.TRANSITION_VELO_DECREASE   = (1.0 / self.FPS_LIMIT)
+        ''' equal to to 1% of FPS limit '''
+
+        # create main physics-related variables
+        self.position      = Vec2(spawn_pos)
+        ''' position within the map '''
+        self.velocity      = Vec2(0.0, 0.0)
+        ''' direction and speed '''
+        self.grav_effect   = float(0)
+        ''' since angle is calculated from velocity, create another weight to gradually increase gravity '''
+
+        # other
         self.health: int   = self.MAX_HEALTH
         self.mana: int     = self.MAX_MANA
 
@@ -140,11 +160,9 @@ class Controllable(Sprite):
             # put short; ensures the original image is rotated, not the rotated one
             # rotating to -90 means there's no need to flip later.
             self.ORIGINAL_IMAGE = pg.transform.rotate(IMG, -90)
-            self.height = IMG_RECT.h
-            self.width = IMG_RECT.w
 
+            # self.angle = self.CENTER_VECTOR.angle_to(self.velocity)
             # set sprite staple attributes through update_image_angle(); image, rect & mask
-            self.angle = self.EMPTY_VECTOR.angle_to(self.velocity)
             self.update_image_angle()
         else:
             # TODO: support actual images
@@ -157,20 +175,14 @@ class Controllable(Sprite):
     def get_direction_y(self):
         return self.direction.y
 
+    def get_grav_effect(self):
+        return self.grav_effect
+
     def get_position(self):
         return self.rect.center
 
     def get_angle(self):
         return self.angle
-
-    def draw_thruster(self, len: float, width: int):
-        p1 = Vec2(self.position)
-        p2 = Vec2(self.position - (len * self.velocity))
-        pg.draw.line(self.surface, self.thrust_color, p1, p2, width)
-
-    def calc_gravity_factor(self):
-        ''' return a positive float based on velocity, mass and global gravity constant '''
-        return (self.GRAVITY * (abs(self.velocity.y) + self.GRAVITY)) + self.GRAVITY_C
 
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
@@ -189,22 +201,57 @@ class Controllable(Sprite):
         # get_rect(**kwargs: Any) accepts a position value as parameter
         self.rect = self.image.get_rect(center=self.position)
 
-    def update(self):
-        # # update y-velocity by gravity
-        # update velocity based on steering and falloff
-        if (self.thrust):
-            self.velocity *= self.THRUST_FORCE
-            self.velocity.x = pg.math.clamp(self.velocity.x, -self.T_MAX_VELO, self.T_MAX_VELO)
-            self.velocity.y = pg.math.clamp(self.velocity.y, -self.T_MAX_VELO, self.T_TERM_VELO)
-        else:
-            self.velocity.y += self.calc_gravity_factor()
-            self.velocity *= self.VELO_FALLOFF
-            self.velocity.x = pg.math.clamp(self.velocity.x, -self.MAX_VELO, self.MAX_VELO)
-            self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
+    def begin_thrust(self):
+        ''' begin thrust phase, increasing velocity and its limit '''
+        self.thrusting = True
+    
+    def end_thrust(self):
+        ''' end thrust phase, starting transition to normal velocity limits '''
+        self.thrusting = False
+        # set transition frames and the lerp weight to their max
+        self.transition_frames = self.FPS_LIMIT
+        self.transition_lerp_weight = 1.0
 
-        self.velocity += (self.direction * self.HANDLING)
-        self.position += self.velocity
-        self.angle = self.EMPTY_VECTOR.angle_to(self.velocity)
+    def update(self):
+
+        if (self.thrusting):
+            self.grav_effect *= 0.97    # reduce gravity by 2%
+            self.velocity += (self.direction * self.T_HANDLING)
+            self.velocity.scale_to_length(self.T_VELO)
+            self.position += self.velocity
+        else:
+            self.velocity += (self.direction * self.HANDLING)
+
+            if (self.transition_frames > 0):
+                self.grav_effect *= 0.98    # reduce gravity by 1%
+                # reduce max velocity gradually over a second. counter starts at fps
+                # print(f'frames left: {self.transition_frames}')
+                # use linear interpolation to find the right value for current max velocity
+                # finds the point which is a certain percent of fps closer to regular max velo
+                curr_max_velo = pg.math.lerp(self.MAX_VELO, self.T_VELO, (self.transition_lerp_weight))
+
+                # since player has velocity after thrusting, using clamp magnitude is safe without checks
+                self.velocity.clamp_magnitude_ip(self.MAX_VELO, curr_max_velo)
+
+                self.transition_frames -= 1
+                self.transition_lerp_weight -= self.TRANSITION_VELO_DECREASE
+                # reduce the weight by an amount equal to 1% of FPS
+            else:
+                self.velocity *= self.VELO_FALLOFF
+                
+                # if (abs(self.velocity.x) > self.MAX_VELO) or (abs(self.velocity.y) > self.MAX_VELO):
+                #     self.velocity.clamp_magnitude_ip(self.MAX_VELO)
+                    
+                self.velocity.x = pg.math.clamp(self.velocity.x, -self.MAX_VELO, self.MAX_VELO)
+                self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
+
+                if (self.grav_effect < self.TERM_VELO):
+                    self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
+
+            self.position.y += (self.velocity.y + self.grav_effect)
+            self.position.x += self.velocity.x
+
+        self.angle = self.CENTER_VECTOR.angle_to(self.velocity)
 
         # update image, position and rect position
         self.update_image_angle()

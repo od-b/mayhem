@@ -1,3 +1,5 @@
+import cProfile
+
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
@@ -150,6 +152,30 @@ class PG_App:
         #     self.get_player_dir_y
         # )
 
+        # create DIR_Y_TEXT
+        BOTTOM_PANEL.create_textbox_child(
+            self.cf_textbox_style,
+            "GRAV_TEXT",
+            "Grav: ",
+            self.get_player_gravity
+        )
+
+    def get_player_dir_x(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_direction_x():.2f}'
+
+    def get_player_dir_y(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_direction_y():.2f}'
+
+    def get_player_angle(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_angle():.1f}'
+
+    def get_player_gravity(self):
+        ''' for async creation and string formatting for UI '''
+        return f'{self.map.player.get_grav_effect():.3f}'
+
     def block_events(self, events: list):
         ''' blocks some unused events from entering the event queue
             * saves some time when iterating over pg.event.get()
@@ -175,18 +201,6 @@ class PG_App:
         self.STEER_DOWN  = int(cf_controls['steer_down'])
         self.STEER_RIGHT = int(cf_controls['steer_right'])
         self.THRUST      = int(cf_controls['thrust'])
-
-    def get_player_dir_x(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_direction_x():.2f}'
-
-    def get_player_dir_y(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_direction_y():.2f}'
-
-    def get_player_angle(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_angle():.1f}'
 
     def set_up_map(self, cf_maps_key: str, player_pos: tuple[int, int]):
         ''' bundle of function calls to initialize the map, player and controls '''
@@ -268,7 +282,7 @@ class PG_App:
                         case self.STEER_RIGHT:
                             self.map.player.direction.x += 1.0
                         case self.THRUST:
-                            self.map.player.thrust = True
+                            self.map.player.begin_thrust()
                         case _:
                             pass
                 case pg.KEYUP:
@@ -282,7 +296,7 @@ class PG_App:
                         case self.STEER_RIGHT:
                             self.map.player.direction.x -= 1.0
                         case self.THRUST:
-                            self.map.player.thrust = False
+                            self.map.player.end_thrust()
                         case _:
                             pass
                 case pg.QUIT:

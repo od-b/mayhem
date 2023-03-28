@@ -1,4 +1,4 @@
-from .cf_colors import RGB
+from .colors import RGB
 
 UI_SPRITES = {
     'CONTAINERS': {

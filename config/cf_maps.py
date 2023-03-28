@@ -1,4 +1,4 @@
-from .cf_colors import RGB
+from .colors import RGB
 from .cf_map_sprites import BLOCKS, PLAYERS
 
 MAPS = {
@@ -11,8 +11,8 @@ MAPS = {
         ## physics-related weights that may differ between maps
         # these are read by other sprites on creation.
         # gravitational constants. gravity_c must not be 0, or division by zero may occur.
-        'gravity':              float(0.015),     # generalized gravity weight 
-        'gravity_c':            float(0.002),     # literally just adds this to y-velocity on every frame
+        'gravity_m':            float(1.005),      # gravity multiplier. range = [1.0, 2.0]
+        'gravity_c':            float(0.007),     # added to the velocity.y or position of sprites every frame
         # sprite settings:
         'player':               PLAYERS['polygon'],
         'blocks': {
