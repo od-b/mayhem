@@ -46,21 +46,23 @@ PLAYERS = {
     'polygon': {
         # settings that determine how the sprite will look
         'surface': {
-            'color':    RGB['pastel_yellow_vibrant'],   # color, if image is not set
-            'texture':  None,       # not yet implemented. Leave as None
-            'image':    None,       # not yet implemented. Leave as None
-            'width':    int(30),    # width of object surface
-            'height':   int(40),    # height of object surface
+            'color':            RGB['pastel_yellow_vibrant'],   # color, if image is not set
+            'thrust_color':     RGB['dutchwhite'],         # thrust color
+            'texture':          None,       # not yet implemented. Leave as None
+            'image':            None,       # not yet implemented. Leave as None
+            'width':            int(30),    # width of object surface
+            'height':           int(40),    # height of object surface
         },
         # weights that will affect physics and/or gameplay
         'weights': {
             'max_health':       int(150),       # maximum and initial health
             'max_mana':         int(150),       # maximum and initial mana
-            'mass':             float(0.1),     # mass increases terminal velocity (mass * max_velo.y)
-            'handling':         float(0.07),    # how effective rotation will be (percent)
-            'thrust_force':     float(0.50),
-            'velocity_falloff': float(0.001),   # general decrease in velocity per frame 1-val
-            'max_velocity':     float(1.0),     # default: 1.5
+            'mass':             float(0.3),     # mass increases terminal velocity
+            'handling':         float(0.06),    # how effective rotation will be (percent)
+            'thrust_force':     float(1.01),    # multiplier for velocity during thrust
+            'velocity_falloff': float(0.99),    # general decrease in velocity per frame (percent)
+            'max_velocity':     float(0.7),     # regular max velocity
+            't_max_velocity':   float(0.5),     # added velocity during thrust (on top of normal)
         },
         # keyboard controls
         'controls': {

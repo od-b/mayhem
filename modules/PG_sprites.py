@@ -91,14 +91,20 @@ class Controllable(Sprite):
         self.width         = int(cf_surface['width'])
         self.height        = int(cf_surface['height'])
         self.color         = Color(cf_surface['color'])
+        self.thrust_color  = Color(cf_surface['thrust_color'])
 
         self.MAX_HEALTH    = int(cf_weights['max_health'])
         self.MAX_MANA      = int(cf_weights['max_mana'])
         self.MASS          = float(cf_weights['mass'])
-        self.MAX_VELOCITY  = float(cf_weights['max_velocity'])
-        self.HANDLING      = float(cf_weights['handling'])
+        self.VELO_FALLOFF  = float(cf_weights['velocity_falloff'])
         self.THRUST_FORCE  = float(cf_weights['thrust_force'])
-        self.VELO_FALLOFF  = float(1.00 - cf_weights['velocity_falloff'])
+        self.HANDLING      = float(cf_weights['handling'])
+        self.MAX_VELO      = float(cf_weights['max_velocity'])
+        self.T_MAX_VELO    = self.MAX_VELO + float(cf_weights['t_max_velocity'])
+
+        # increased positive y-velocity, to simulate gravity
+        self.TERM_VELO     = self.MAX_VELO + self.MASS
+        self.T_TERM_VELO   = self.T_MAX_VELO + self.MASS
 
         # set up vectors
         self.position      = Vec2(initial_pos)
@@ -157,6 +163,11 @@ class Controllable(Sprite):
     def get_angle(self):
         return self.angle
 
+    def draw_thruster(self, len: float, width: int):
+        p1 = Vec2(self.position)
+        p2 = Vec2(self.position - (len * self.velocity))
+        pg.draw.line(self.surface, self.thrust_color, p1, p2, width)
+
     def calc_gravity_factor(self):
         ''' return a positive float based on velocity, mass and global gravity constant '''
         return (self.GRAVITY * (abs(self.velocity.y) + self.GRAVITY)) + self.GRAVITY_C
@@ -182,17 +193,17 @@ class Controllable(Sprite):
         # # update y-velocity by gravity
         # update velocity based on steering and falloff
         if (self.thrust):
-            self.velocity *= 1.01
+            self.velocity *= self.THRUST_FORCE
+            self.velocity.x = pg.math.clamp(self.velocity.x, -self.T_MAX_VELO, self.T_MAX_VELO)
+            self.velocity.y = pg.math.clamp(self.velocity.y, -self.T_MAX_VELO, self.T_TERM_VELO)
         else:
             self.velocity.y += self.calc_gravity_factor()
-            self.velocity *= 0.99
-
-        # limit max velocity
-        self.velocity.x = pg.math.clamp(self.velocity.x, -self.MAX_VELOCITY, self.MAX_VELOCITY)
-        self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELOCITY, self.MAX_VELOCITY)
+            self.velocity *= self.VELO_FALLOFF
+            self.velocity.x = pg.math.clamp(self.velocity.x, -self.MAX_VELO, self.MAX_VELO)
+            self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
         self.velocity += (self.direction * self.HANDLING)
-        self.position = self.position + self.velocity
+        self.position += self.velocity
         self.angle = self.EMPTY_VECTOR.angle_to(self.velocity)
 
         # update image, position and rect position

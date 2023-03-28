@@ -215,7 +215,7 @@ class PG_App:
     def debug__draw_velocity(self, sprite, len: float, width: int):
         ''' visualize sprite velocity '''
         p1 = Vec2(sprite.position)
-        p2 = Vec2(sprite.position + len*sprite.velocity)
+        p2 = Vec2(sprite.position + (len * sprite.velocity))
         pg.draw.line(self.map.surface, self.DEBUG_COLOR, p1, p2, width)
 
     def debug__draw_bounds_rect(self, sprite: Sprite):
@@ -313,7 +313,7 @@ class PG_App:
                 self.app_UI.update()
 
                 self.debug__draw_mask(self.map.player)
-                self.debug__draw_velocity(self.map.player, 100.0, 1)
+                self.debug__draw_velocity(self.map.player, 40.0, 1)
                 self.debug__draw_bounds_rect(self.map.player)
 
                 # refresh the display, applying drawing etc.
@@ -340,7 +340,6 @@ class PG_App:
 
 
 if __name__ == '__main__':
-
     # initialize pygame and verify the version before anything else
     pg.init()
 
