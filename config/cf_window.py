@@ -1,6 +1,6 @@
 from .colors import RGB
 
-WINDOW = {
+CF_WINDOW = {
     'caption':      str('< app >'),
     'height':       int(840),
     'width':        int(1400),

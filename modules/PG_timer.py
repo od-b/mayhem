@@ -1,10 +1,11 @@
 from typing import Callable
 from pygame import time, event
 from pygame.event import Event
-from .timing import Timer
+from .general.timer import Timer
+
 
 class PG_Timer(Timer):
-    ''' Segment based time tracking. Extends Timer.
+    ''' Segment based time tracking. Extends .general/Timer
         * relies on the pygame clock to provide time values
         * update must be called every frame to yield the correct time values
         * Tracking activates when .start_first_segment() is called, not on __init__

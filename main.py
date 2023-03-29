@@ -3,25 +3,23 @@
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
-from pygame.event import Event
 from pygame import Color
-from pygame.sprite import Sprite, Group, GroupSingle
+from pygame.sprite import Sprite, Group
 from pygame.math import Vector2 as Vec2
 from pygame.mask import Mask
 
 ### local dir imports
-# general classes
-from modules.exceptions import VersionError, ConfigError
-# pygame specific classes
+from modules.general.exceptions import VersionError
 from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
 from modules.PG_ui import Container
+
 # import config dicts
-from config.cf_global import GLOBAL as CF_GLOBAL
-from config.cf_window import WINDOW as CF_WINDOW
-from config.cf_maps import MAPS as CF_MAPS
-from config.cf_ui_sprites import UI_SPRITES as CF_UI_SPRITES
+from config.cf_global import CF_GLOBAL
+from config.cf_window import CF_WINDOW
+from config.cf_maps import CF_MAPS
+from config.cf_ui import CF_CONTAINERS
 
 
 class PG_App:
@@ -44,21 +42,19 @@ class PG_App:
             config_global: dict,
             config_window: dict,
             config_maps: dict,
-            config_UI: dict
+            config_ui_containers: dict
         ):
 
         self.cf_global = config_global
         self.cf_window = config_window
         self.cf_maps = config_maps
-        self.cf_UI = config_UI
-        
+        self.config_ui_containers = config_ui_containers
+
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
         self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
 
         # store chosen ui style dicts
-        self.cf_container_style: dict = self.cf_UI['CONTAINERS'][str(self.cf_global['container_style'])]
-        self.cf_textbox_style: dict = self.cf_UI['TEXTBOXES'][str(self.cf_global['textbox_style'])]
 
         # create a list of available map keys
         self.valid_cf_maps_keys = []
@@ -86,12 +82,12 @@ class PG_App:
         ''' group of ui sprites that may be run at any point '''
 
         # init core app features
-        self.set_up_map_ui()
+        self.set_up_ui_bottom_panel()
         self.fetch_menu_controls()
         self.app_is_running = True
         self.map_is_active = False
 
-    def set_up_map_ui(self):
+    def set_up_ui_bottom_panel(self):
         ''' specialized, run-once function for creating the map ui
             * these do NOT need to be recreated on map change
         '''
@@ -107,7 +103,7 @@ class PG_App:
             return
 
         BOTTOM_PANEL = Container(
-            self.cf_container_style,
+            self.config_ui_containers['bottom_panel'],
             self.window.surface,
             self.window.map_rect.bottomleft,
             (width, height),
@@ -118,7 +114,6 @@ class PG_App:
 
         # create FPS_TEXT
         BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
             "FPS_TEXT",
             "FPS: ",
             self.timer.get_fps_int,
@@ -126,7 +121,6 @@ class PG_App:
 
         # create TIME_TEXT (duration text)
         BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
             "TIME_TEXT",
             "Time: ",
             self.timer.get_segment_duration_formatted
@@ -134,7 +128,6 @@ class PG_App:
 
         # create ANGLE_TEXT
         BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
             "ANGLE_TEXT",
             "Angle: ",
             self.get_player_angle
@@ -142,7 +135,6 @@ class PG_App:
 
         # create GRAV_TEXT
         BOTTOM_PANEL.create_textbox_child(
-            self.cf_textbox_style,
             "GRAV_TEXT",
             "Grav: ",
             self.get_player_gravity
@@ -316,7 +308,6 @@ class PG_App:
                 # loop through events before the display update 
                 self.check_map_events()
 
-
                 # for block in self.map.block_group:
                 #     self.debug__draw_mask(block)
 
@@ -329,7 +320,6 @@ class PG_App:
 
                 # now that events are read, update sprites before next frame
                 self.map.player_group.update()
-
                 self.map.block_group.update()
                 self.map.check_player_block_collide()
 
@@ -359,6 +349,7 @@ if __name__ == '__main__':
         )
 
     # load the game
-    GAME = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_UI_SPRITES)
+    GAME = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_CONTAINERS)
     # cProfile.run('GAME.loop()')
     GAME.loop()
+    pg.quit()

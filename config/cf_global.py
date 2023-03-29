@@ -1,7 +1,7 @@
 from .colors import RGB, RGBA
 import pygame as pg
 
-GLOBAL = {
+CF_GLOBAL = {
     # req_pygame_version:
     #   the required pygame version for the app. will be verified on init.
     #   set this value to your installed version if you would like to try running anyways

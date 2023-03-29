@@ -1,6 +1,6 @@
 
 class Segment:
-    ''' Time segment used by Timer
+    ''' Time segment created and used by Timer
         * ref is an ID of sort. can be for example a given map/challenge/algorithm
         * ref can be None if separating segment types is not needed
     '''

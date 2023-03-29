@@ -22,6 +22,8 @@ class Container(Sprite):
         
         The general idea here is creating a framework that is easy to modify and 
         configure to meet any need without having to modify any previous code
+        
+        * Containers use the same type of config for all their equally typed children.
     '''
 
     def __init__(self,
@@ -38,7 +40,8 @@ class Container(Sprite):
         self.position = position
         self.child_flow = child_flow
         self.child_align = child_align
-        
+        self.cf_children_styles = cf_container['children_styles']
+
         # store dict settings
         self.color = Color(cf_container['color'])
         self.border_width = int(cf_container['border_width'])
@@ -235,13 +238,19 @@ class Container(Sprite):
             msg += " -> change the font type used by the textbox\n"
             print(msg)
 
-    def create_textbox_child(self, cf_textbox: dict, ref_id, text: str, text_getter_func: Callable | None):
-        ''' creates a new child. ref_id may be any reference, or None
+    def create_textbox_child(self, ref_id, text: str, text_getter_func: Callable | None):
+        ''' creates a new textbox as a child of self. ref_id may be any reference, or None
             * children may share references
             * adds the child to self.children
-            * returns the child
+            * returns the child (in case a reference is needed)
         '''
-        NEW_CHILD = Child_Text_Box(cf_textbox, ref_id, text, text_getter_func)
+        NEW_CHILD = Text_Box(
+            self.cf_children_styles['text_box'],
+            ref_id,
+            text,
+            text_getter_func,
+            self.rect.topleft
+        )
         self.check_child_rect_fits(NEW_CHILD)
         self.children.add(NEW_CHILD)
         return NEW_CHILD
@@ -287,8 +296,8 @@ class Container(Sprite):
         msg += f'child_flow="{self.child_flow}", child_align="{self.child_align}"]'
 
 
-class Child_Text_Box(Sprite):
-    ''' Sprite for rendering and displaying text
+class Text_Box(Sprite):
+    ''' Created by container as a child
 
         Parameters
         ---
@@ -311,12 +320,14 @@ class Child_Text_Box(Sprite):
             ref_id,
             text: str,
             text_getter_func: Callable | None,
+            position: tuple | None,
         ):
 
         Sprite.__init__(self)
         self.ref_id = ref_id
         self.text = text
         self.text_getter_func = text_getter_func
+        self.position = position
 
         # store config settings
         self.bg_color = Color(cf_textbox['text_bg_color'])
@@ -329,14 +340,17 @@ class Child_Text_Box(Sprite):
         self.font = Font(self.font_path, self.font_size)
         self.old_text = text
 
-        # load the font, then render the text and create rect
+        # render the text and get its rect
         self.image = self.font.render(
             self.text,
             self.font_antialas,
             self.font_color,
             self.bg_color
         )
+
         self.rect = self.image.get_rect()
+        if (self.position):
+            self.rect.topleft = position
 
         self._set_internal_update_func()
 

@@ -1,15 +1,14 @@
 from random import randint
 
 # installed library imports
-import pygame as pg
-## simplify some imports for readability:
-from pygame import Color, Rect, Surface
+from pygame import Color, Surface, Rect
 from pygame.sprite import Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 
 ## general classes
-from modules.exceptions import ConfigError
+from .general.exceptions import ConfigError
 ## pygame specific classes
-from modules.PG_sprites import Block, Controllable
+from .PG_player import Player
+from .PG_block import Block
 
 
 class PG_Map:
@@ -101,10 +100,10 @@ class PG_Map:
             * updates the self.player reference
         '''
         # create the player sprite, then update player_group
-        self.player = Controllable(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
+        self.player = Player(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
         self.player_group.add(self.player)
 
-    def spawn_block_outline(self, cf_block: dict, group: Group, bounds: pg.Rect,
+    def spawn_block_outline(self, cf_block: dict, group: Group, bounds: Rect,
                               facing: int, alt_pallette: None | list[Color]):
 
         ''' encapsulate the given rects' bounds with blocks
@@ -299,17 +298,31 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
+    def fill_surface(self):
+        ''' fills/resets the map surface '''
+        self.surface.fill(self.fill_color)
+
     def check_player_block_collide(self):
         ''' get a list of sprites that collide with the player
             * uses collide_mask()
         '''
-        LIST = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-        for BLOCK in LIST:
-            BLOCK.init_highlight()
 
-    def fill_surface(self):
-        ''' fills/resets the map surface '''
-        self.surface.fill(self.fill_color)
+        LIST: list[Block] = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+        if (len(LIST)):
+            for BLOCK in LIST:
+                BLOCK.init_highlight()
+
+            # if not (self.player.crash_frames):
+            #     self.player.init_collision_recoil()
+            while (collide_mask(self.player, BLOCK)):
+                self.player.position -= (2.0 * self.player.velocity)
+                self.player_group.update()
+                self.player_group.draw(self.surface)
+
+            # offset = (self.player.width/2, self.player.height/2)
+            # collidepos = self.player.mask.overlap(BLOCK.mask, offset)
+            # print(collidepos)
+            # self.player.handle_terrain_collision(collidepos)
 
     def __str__(self):
         msg = f'< Map with name="{self.name}"\n'

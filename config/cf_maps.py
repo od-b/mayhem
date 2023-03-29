@@ -1,7 +1,8 @@
 from .colors import RGB
-from .cf_map_sprites import BLOCKS, PLAYERS
+from .cf_players import CF_PLAYERS
+from .cf_blocks import CF_BLOCKS
 
-MAPS = {
+CF_MAPS = {
     # a map is a setup config for the active part of the game surface
     'map_1': {
         'name':                 str('Map 1'),
@@ -14,11 +15,11 @@ MAPS = {
         'gravity_m':            float(1.005),      # gravity multiplier. range = [1.0, 2.0]
         'gravity_c':            float(0.007),     # added to the velocity.y or position of sprites every frame
         # sprite settings:
-        'player':               PLAYERS['polygon'],
+        'player':               CF_PLAYERS['polygon'],
         'blocks': {
-            'edge_outline':         BLOCKS['small_gray_block'],
-            'obstacle':             BLOCKS['pastel_block'],
-            'obstacle_outline':     BLOCKS['adaptive_block'],
+            'edge_outline':         CF_BLOCKS['small_gray_block'],
+            'obstacle':             CF_BLOCKS['pastel_block'],
+            'obstacle_outline':     CF_BLOCKS['adaptive_block'],
         }
     }
 }
