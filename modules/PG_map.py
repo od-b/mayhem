@@ -2,8 +2,8 @@ from random import randint
 
 # installed library imports
 from pygame import Color, Surface, Rect
+from pygame.math import Vector2 as Vec2
 from pygame.mask import Mask
-from pygame.gfxdraw import pixel as draw_pixel
 from pygame.sprite import Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 
 ## general classes
@@ -305,7 +305,7 @@ class PG_Map:
         ''' fills/resets the map surface '''
         self.surface.fill(self.fill_color)
 
-    def get_rect_offset(self, sprite_1, sprite_2):
+    def get_sprite_offset(self, sprite_1, sprite_2):
         ''' finds the offset between two sprites rects '''
         offset_x = (sprite_1.rect.x - sprite_2.rect.x)
         offset_y = (sprite_1.rect.y - sprite_2.rect.y)
@@ -313,7 +313,7 @@ class PG_Map:
 
     def get_overlap_mask(self, sprite_1, sprite_2) -> Mask:
         ''' returns a new mask covering the overlapping area of two sprites '''
-        offset = self.get_rect_offset(sprite_1, sprite_2)
+        offset = self.get_sprite_offset(sprite_1, sprite_2)
         overlap_mask = sprite_2.mask.overlap_mask(sprite_1.mask, offset)
         return overlap_mask
 
@@ -322,7 +322,7 @@ class PG_Map:
 
         overlap = self.get_overlap_mask(sprite_1, sprite_2)
         overlap_rect = overlap.get_rect(topleft=(sprite_2.rect.x, sprite_2.rect.y))
-        collidepos = overlap_rect.center
+        collidepos = Vec2(overlap_rect.center)
 
         return collidepos
 
@@ -336,8 +336,8 @@ class PG_Map:
             for BLOCK in LIST:
                 BLOCK.init_highlight()
 
-            collidepos = self.get_collision_center(self.player, LIST[0])
-            self.player.init_collision_recoil(collidepos)
+            # collidepos = self.get_collision_center(self.player, LIST[0])
+            # self.player.init_collision_recoil(collidepos)
         return LIST
 
 

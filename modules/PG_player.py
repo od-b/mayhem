@@ -1,5 +1,5 @@
 import pygame as pg
-from pygame import Color, Surface
+from pygame import Color, Surface, Rect
 from pygame.math import Vector2 as Vec2, lerp
 from pygame.sprite import Sprite
 from pygame.draw import polygon as draw_polygon
@@ -154,16 +154,28 @@ class Player(Sprite):
         self.transition_frames_left = self.TRANSITON_FRAMES
         self.transition_lerp_weight = 1.0
 
-    def init_collision_recoil(self, collidepos: tuple[int, int]):
-        # collidepos_vec = Vec2(collidepos)
+    def get_real_bounds(self):
+        ''' get the actual rect around the player, using mask bounding rect '''
+        bounds: Rect = self.mask.get_bounding_rects()[0]
+        return bounds
+
+    def init_collision_recoil(self, collidepos: Vec2):
         self.crash_frames = self.FPS_LIMIT
         self.transition_frames_left = 0
+
+        real_self_rect = self.get_real_bounds()
+
+        print(f'real_self_rect: {real_self_rect}')
+        print(f'real_self_center: {real_self_rect.center}')
+        # print(f'mask_bounds: {mask_bounds}')
+        # print(f'collidepos: {collidepos}')
+
+        distance_to_collidepos = self.position.distance_to(collidepos)
+        # print(f'distance to collidepos_2: {distance_to_collidepos}')
+
+        # collidepos_angle = self.acceleration.normalize().angle_to(collidepos.normalize())
+        # print(f'angle to collidepos: {collidepos_angle}')
         self.acceleration *= 0.5
-        print(f'collidepos: {collidepos}')
-        print(f'position to collidepos distance: {self.position.distance_to(collidepos)}')
-        
-        collidepos_angle = self.CENTER_VECTOR.angle_to(collidepos)
-        print(f'angle from position to collidepos: {collidepos_angle}')
 
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
@@ -227,8 +239,8 @@ class Player(Sprite):
             # reduce max acceleration gradually
             self.update_case_transition_end()
         else:
-            self.position.y += 0.5
-            
+            # self.position.y += 0.5
+
             # clamp acceleration, increase gravity
             self.update_case_default()
 

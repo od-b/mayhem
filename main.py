@@ -3,10 +3,12 @@
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
-from pygame import Color
+from pygame import Color, Rect
 from pygame.sprite import Sprite, Group
 from pygame.math import Vector2 as Vec2
 from pygame.mask import Mask
+from pygame.gfxdraw import pixel as draw_pixel
+from pygame.draw import line as draw_line
 
 ### local dir imports
 from modules.general.exceptions import VersionError
@@ -53,6 +55,7 @@ class PG_App:
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
         self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
+        self.DEBUG_COLOR_2 = Color(self.cf_global['debug_color_2'])
 
         # store chosen ui style dicts
 
@@ -194,26 +197,52 @@ class PG_App:
 
         self.map_is_active = True
 
-    def debug__draw_mask(self, sprite: Sprite):
-        ''' visualize mask outline by drawing lines along the set pixel points '''
-        p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
-        pg.draw.lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
-
     def debug__draw_velocity(self, sprite, len: float, width: int):
         ''' visualize sprite velocity '''
         p1 = Vec2(sprite.position)
         p2 = Vec2(sprite.position + (len * sprite.velocity))
         pg.draw.line(self.map.surface, self.DEBUG_COLOR, p1, p2, width)
 
-    def debug__draw_bounds_rect(self, sprite: Sprite):
+    def debug__draw_mask_outline(self, sprite: Sprite):
+        ''' visualize mask outline by drawing lines along the set pixel points '''
+        p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
+        # print(f'n_points in mask: {len(p_list)}')
+        pg.draw.lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
+
+    def debug__draw_rect(self, sprite: Sprite):
         ''' draw a border around the sprite bounding rect '''
         pg.draw.rect(self.map.surface, self.DEBUG_COLOR, sprite.rect, width=1)
+
+    def debug__draw_player_mask_bounds(self):
+        ''' draw the actual bounding rect of the player mask '''
+        mask_bounds: Rect = self.map.player.mask.get_bounding_rects()[0]
+        surf = self.map.player.image
+        pg.draw.rect(surf, self.DEBUG_COLOR_2, mask_bounds, width=1)
 
     def debug__draw_mask_overlap(self, sprite_1, sprite_2):
         dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
         overlap_mask = self.map.get_overlap_mask(sprite_1, sprite_2)
-        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=(255, 0, 0, 255))
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.DEBUG_COLOR_2)
         self.map.surface.blit(MASK_SURF, dest_pos)
+
+    def debug__draw_real_player_center(self):
+        mask_bounds: Rect = self.map.player.mask.get_bounding_rects()[0]
+        mask_center = self.map.player.mask.centroid()
+
+        line_1_p1 = mask_center
+        line_1_p2 = mask_bounds.midtop
+        line_2_p1 = mask_center
+        line_2_p2 = mask_bounds.midright
+        line_3_p1 = mask_center
+        line_3_p2 = mask_bounds.midleft
+        line_4_p1 = mask_center
+        line_4_p2 = mask_bounds.midbottom
+
+        surf = self.map.player.image
+        draw_line(surf, self.DEBUG_COLOR_2, line_1_p1, line_1_p2, width=1)
+        draw_line(surf, self.DEBUG_COLOR_2, line_2_p1, line_2_p2, width=1)
+        draw_line(surf, self.DEBUG_COLOR_2, line_3_p1, line_3_p2, width=1)
+        draw_line(surf, self.DEBUG_COLOR_2, line_4_p1, line_4_p2, width=1)
 
     def check_app_events(self):
         ''' events that are not dependand on a map 
@@ -294,9 +323,15 @@ class PG_App:
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
         
+        debugging = True
+        
         while (self.app_is_running):
-            self.timer.post_event(self.EVENT_UPDATE_UI)
-            self.set_up_map('map_1', (400, 400))
+            if (debugging):
+                self.timer.post_event(self.EVENT_UPDATE_UI)
+                self.set_up_map('map_1', (400, 400))
+                self.map.fill_surface()
+                self.map.block_group.draw(self.map.surface)
+                self.map.player_group.draw(self.map.surface)
 
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
@@ -308,6 +343,14 @@ class PG_App:
                 self.map.block_group.draw(self.map.surface)
 
                 # draw the player
+                if (debugging):
+                    for block in self.map.block_group:
+                        self.debug__draw_mask_outline(block)
+                    # self.debug__draw_player_mask_bounds()
+                    self.debug__draw_real_player_center()
+                    self.debug__draw_mask_outline(self.map.player)
+                    # self.debug__draw_rect(self.map.player)
+
                 self.map.player_group.draw(self.map.surface)
 
                 # update the ui
@@ -319,13 +362,9 @@ class PG_App:
                     for BLOCK in BLOCKS:
                         self.debug__draw_mask_overlap(self.map.player, BLOCK)
 
-
-                for block in self.map.block_group:
-                    self.debug__draw_mask(block)
-
-                # self.debug__draw_mask(self.map.player)
+                # self.debug__draw_mask_outline(self.map.player)
                 # self.debug__draw_velocity(self.map.player, 40.0, 1)
-                # self.debug__draw_bounds_rect(self.map.player)
+                # self.debug__draw_rect(self.map.player)
 
                 # refresh the display, applying drawing etc.
                 # pg.display.update()

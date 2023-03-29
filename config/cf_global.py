@@ -15,6 +15,7 @@ CF_GLOBAL = {
     'loop_limit': int(10000),
     # debug_color: high contrast color used for visualizing certain screen elements
     'debug_color': RGB['uranianblue'],
+    'debug_color_2': RGB['purple'],
     # fully transparent color
     'transparent_color': RGBA['alpha_0'],
     # fps_limit:
