@@ -2,6 +2,8 @@ from random import randint
 
 # installed library imports
 from pygame import Color, Surface, Rect
+from pygame.mask import Mask
+from pygame.gfxdraw import pixel as draw_pixel
 from pygame.sprite import Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 
 ## general classes
@@ -17,6 +19,7 @@ class PG_Map:
 
         self.cf_global = cf_global
         self.LOOP_LIMIT = cf_global['loop_limit']
+        self.DEBUG_COLOR = cf_global['debug_color']
         self.surface = surface
 
         # store dict settings
@@ -302,6 +305,27 @@ class PG_Map:
         ''' fills/resets the map surface '''
         self.surface.fill(self.fill_color)
 
+    def get_rect_offset(self, sprite_1, sprite_2):
+        ''' finds the offset between two sprites rects '''
+        offset_x = (sprite_1.rect.x - sprite_2.rect.x)
+        offset_y = (sprite_1.rect.y - sprite_2.rect.y)
+        return (offset_x, offset_y)
+
+    def get_overlap_mask(self, sprite_1, sprite_2) -> Mask:
+        ''' returns a new mask covering the overlapping area of two sprites '''
+        offset = self.get_rect_offset(sprite_1, sprite_2)
+        overlap_mask = sprite_2.mask.overlap_mask(sprite_1.mask, offset)
+        return overlap_mask
+
+    def get_collision_center(self, sprite_1, sprite_2):
+        # get overlapping mask to find point of collision
+
+        overlap = self.get_overlap_mask(sprite_1, sprite_2)
+        overlap_rect = overlap.get_rect(topleft=(sprite_2.rect.x, sprite_2.rect.y))
+        collidepos = overlap_rect.center
+
+        return collidepos
+
     def check_player_block_collide(self):
         ''' get a list of sprites that collide with the player
             * uses collide_mask()
@@ -312,17 +336,10 @@ class PG_Map:
             for BLOCK in LIST:
                 BLOCK.init_highlight()
 
-            # if not (self.player.crash_frames):
-            #     self.player.init_collision_recoil()
-            while (collide_mask(self.player, BLOCK)):
-                self.player.position -= (2.0 * self.player.velocity)
-                self.player_group.update()
-                self.player_group.draw(self.surface)
+            collidepos = self.get_collision_center(self.player, LIST[0])
+            self.player.init_collision_recoil(collidepos)
+        return LIST
 
-            # offset = (self.player.width/2, self.player.height/2)
-            # collidepos = self.player.mask.overlap(BLOCK.mask, offset)
-            # print(collidepos)
-            # self.player.handle_terrain_collision(collidepos)
 
     def __str__(self):
         msg = f'< Map with name="{self.name}"\n'

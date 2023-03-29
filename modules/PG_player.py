@@ -154,6 +154,17 @@ class Player(Sprite):
         self.transition_frames_left = self.TRANSITON_FRAMES
         self.transition_lerp_weight = 1.0
 
+    def init_collision_recoil(self, collidepos: tuple[int, int]):
+        # collidepos_vec = Vec2(collidepos)
+        self.crash_frames = self.FPS_LIMIT
+        self.transition_frames_left = 0
+        self.acceleration *= 0.5
+        print(f'collidepos: {collidepos}')
+        print(f'position to collidepos distance: {self.position.distance_to(collidepos)}')
+        
+        collidepos_angle = self.CENTER_VECTOR.angle_to(collidepos)
+        print(f'angle from position to collidepos: {collidepos_angle}')
+
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
 
@@ -172,26 +183,18 @@ class Player(Sprite):
         self.rect = self.image.get_rect(center=self.position)
 
     def update_case_crash(self):
-        pass
+        self.crash_frames -= 1
+        # self.position += (self.recoil_target_pos)
 
     def update_case_thrusting(self):
         ''' reduce gravity effect, increase accceleration. update position. '''
         self.grav_effect *= 0.97    # reduce gravity by 3%
         self.acceleration += (self.direction * self.T_HANDLING)
         self.acceleration.scale_to_length(self.T_ACCEL)
-        self.position += self.acceleration
-
-    def update_case_default(self):
-        ''' clamp acceleration, increase gravity '''
-        self.acceleration *= self.ACCEL_FALLOFF
-        self.acceleration.x = pg.math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL)
-        self.acceleration.y = pg.math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_GRAV_ACCEL)
-
-        if (self.grav_effect < self.MAX_GRAV_ACCEL):
-            self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
 
     def update_case_transition_end(self):
         ''' reduce max acceleration gradually over the set time period. '''
+        self.acceleration += (self.direction * self.HANDLING)
         self.grav_effect *= 0.99    # reduce gravity by 1%
 
         # use linear interpolation to find the right value for current max acceleration
@@ -204,33 +207,43 @@ class Player(Sprite):
         self.transition_frames_left -= 1
         self.transition_lerp_weight -= self.TRANSITION_LERP_DECREASE
 
+    def update_case_default(self):
+        ''' clamp acceleration, increase gravity '''
+        self.acceleration += (self.direction * self.HANDLING)
+        self.acceleration *= self.ACCEL_FALLOFF
+        self.acceleration.x = pg.math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL)
+        self.acceleration.y = pg.math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_GRAV_ACCEL)
+
+        if (self.grav_effect < self.MAX_GRAV_ACCEL):
+            self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
+
     def update(self):
         if (self.crash_frames):
             self.update_case_crash()
         elif (self.thrusting):
             # reduce gravity effect, increase accceleration. update position.
             self.update_case_thrusting()
+        elif (self.transition_frames_left > 0):
+            # reduce max acceleration gradually
+            self.update_case_transition_end()
         else:
-            self.acceleration += (self.direction * self.HANDLING)
+            self.position.y += 0.5
+            
+            # clamp acceleration, increase gravity
+            self.update_case_default()
 
-            if (self.transition_frames_left > 0):
-                # reduce max acceleration gradually
-                self.update_case_transition_end()
-            else:
-                # clamp acceleration, increase gravity
-                self.update_case_default()
-
-            if (self.direction.y == -1) and (self.grav_effect > 0):
-                self.position.y += ((self.acceleration.y / 2) + (self.grav_effect / 2))
-            else:
-                self.position.y += (self.acceleration.y + self.grav_effect)
-
-            self.position.x += self.acceleration.x
-
+        self.position += self.acceleration
         self.angle = self.CENTER_VECTOR.angle_to(self.acceleration)
 
         # update image, position and rect position
         self.update_image_angle()
+
+
+    # if (self.direction.y == -1) and (self.grav_effect > 0):
+    #     self.position.y += ((self.acceleration.y / 2) + (self.grav_effect / 2))
+    # else:
+    #     self.position.y += (self.acceleration.y + self.grav_effect)
+    # self.position.y += (self.acceleration.y + self.grav_effect)
 
 
     # if ((abs(self.position.x) - abs(self.old_pos.x)) > 1.0):

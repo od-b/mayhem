@@ -209,6 +209,12 @@ class PG_App:
         ''' draw a border around the sprite bounding rect '''
         pg.draw.rect(self.map.surface, self.DEBUG_COLOR, sprite.rect, width=1)
 
+    def debug__draw_mask_overlap(self, sprite_1, sprite_2):
+        dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
+        overlap_mask = self.map.get_overlap_mask(sprite_1, sprite_2)
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=(255, 0, 0, 255))
+        self.map.surface.blit(MASK_SURF, dest_pos)
+
     def check_app_events(self):
         ''' events that are not dependand on a map 
             * may share key constants with map_events
@@ -308,20 +314,27 @@ class PG_App:
                 # loop through events before the display update 
                 self.check_map_events()
 
-                # for block in self.map.block_group:
-                #     self.debug__draw_mask(block)
+                BLOCKS = self.map.check_player_block_collide()
+                if (BLOCKS):
+                    for BLOCK in BLOCKS:
+                        self.debug__draw_mask_overlap(self.map.player, BLOCK)
+
+
+                for block in self.map.block_group:
+                    self.debug__draw_mask(block)
 
                 # self.debug__draw_mask(self.map.player)
                 # self.debug__draw_velocity(self.map.player, 40.0, 1)
                 # self.debug__draw_bounds_rect(self.map.player)
 
                 # refresh the display, applying drawing etc.
+                # pg.display.update()
+
                 pg.display.update()
 
                 # now that events are read, update sprites before next frame
                 self.map.player_group.update()
                 self.map.block_group.update()
-                self.map.check_player_block_collide()
 
                 # update the timer. Also limits the framerate if set
                 self.timer.update()
