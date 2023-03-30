@@ -6,6 +6,7 @@ CF_WINDOW = {
     'width':        int(1400),
     'fill_color':   RGB['gray_100'],
     'vsync':        int(0), # bool, 0/1
+    'fullscreen':   False,  # warning -> it works, but not great
     # map_bounds:
     #   size of the surface dedicated to the map
     #   defined using positive padding values with reference to the width/height set above

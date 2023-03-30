@@ -1,6 +1,6 @@
 
 ## simplify some imports for readability:
-from pygame import display, Color, Rect
+from pygame import display, Color, Rect, FULLSCREEN
 
 
 class PG_Window:
@@ -25,10 +25,16 @@ class PG_Window:
 
         self.fill_color = Color(cf_window['fill_color'])
         self._vsync = int(cf_window['vsync'])
+        self.fullscreen: bool = cf_window['fullscreen']
         self.width = int(cf_window['width'])
         self.height = int(cf_window['height'])
-        self.surface = display.set_mode((self.width, self.height), vsync=self._vsync)
         self.caption = str(cf_window['caption'])
+
+        if (self.fullscreen):
+            self.surface = display.set_mode((self.width, self.height), vsync=self._vsync, flags=FULLSCREEN)
+        else:
+            self.surface = display.set_mode((self.width, self.height), vsync=self._vsync)
+
         self.fill_surface()
         self.set_extended_caption(None)
 

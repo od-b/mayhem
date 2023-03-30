@@ -1,7 +1,7 @@
 from random import randint
 
 import pygame as pg
-from pygame import Color, Surface
+from pygame import Color, Surface, SRCALPHA
 from pygame.sprite import Sprite
 from pygame.draw import rect as draw_rect
 # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
@@ -31,30 +31,33 @@ class Block(Sprite):
         Sprite.__init__(self)
 
         # store references to the config dicts
-        self.cf_global                  = cf_global
-        self.cf_block                   = cf_block
+        self.cf_global  = cf_global
+        self.cf_block   = cf_block
 
-        self.pallette                   = pallette
+        self.pallette   = pallette
         ''' list of one or more tuples. May be RGB, RGBA, or even a mix '''
-        self.position                   = position
+        self.position   = position
         ''' top left position '''
-        self.size                       = size
+        self.size       = size
         ''' use .rect for easier external access to the size '''
+        self.alpha_key  = int(cf_block['alpha_key'])
 
         # store attributes from config
-        self.mass                       = float(cf_block['mass'])
-        self.border_width               = int(cf_block['border_width'])
+        self.mass          = float(cf_block['mass'])
+        self.border_width  = int(cf_block['border_width'])
         self.border_color: Color | None = cf_block['border_color']
 
         # pick a random color from the given color pallette
         self.color = Color(self.pallette[randint(0, len(self.pallette)-1)])
 
         # determine if alpha conversion is needed
-        if (len(self.color) == 4):
-            # color is rgba
-            self.alpha_value = self.color.a
+        if (self.alpha_key < 255):
+            # convert to rgba
+            self.alpha_value = self.alpha_key
+            COLOR_TO_ALPHA = (self.color.r, self.color.g, self.color.b, self.alpha_key)
+            self.color = Color(COLOR_TO_ALPHA)
         else:
-            # color is rgb
+            # color is rgb, no convert_alpha() needed
             self.alpha_value = None
 
         self.MAIN_IMAGE = self._create_main_image()
@@ -94,7 +97,7 @@ class Block(Sprite):
         # create main surface, converting to the right format
         IMG: Surface
         if (self.alpha_value):
-            IMG = pg.Surface(self.size).convert_alpha()
+            IMG = pg.Surface(self.size, flags=SRCALPHA)
             IMG.fill((0, 0, 0, 0))
         else:
             IMG = pg.Surface(self.size).convert()
@@ -117,7 +120,7 @@ class Block(Sprite):
             # create alt surface, converting to the right format
             ALT_IMG: Surface
             if (self.alpha_value):
-                ALT_IMG = pg.Surface(self.size).convert_alpha()
+                ALT_IMG = pg.Surface(self.size, flags=SRCALPHA)
             else:
                 ALT_IMG = pg.Surface(self.size).convert()
 

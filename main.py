@@ -207,7 +207,8 @@ class PG_App:
         ''' visualize mask outline by drawing lines along the set pixel points '''
         p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
         # print(f'n_points in mask: {len(p_list)}')
-        pg.draw.lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
+        if (p_list):
+            pg.draw.lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
 
     def debug__draw_rect(self, sprite: Sprite):
         ''' draw a border around the sprite bounding rect '''
@@ -344,8 +345,8 @@ class PG_App:
 
                 # draw the player
                 if (debugging):
-                    for block in self.map.block_group:
-                        self.debug__draw_mask_outline(block)
+                    # for block in self.map.block_group:
+                    #     self.debug__draw_mask_outline(block)
                     # self.debug__draw_player_mask_bounds()
                     self.debug__draw_real_player_center()
                     self.debug__draw_mask_outline(self.map.player)

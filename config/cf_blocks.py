@@ -16,8 +16,8 @@ CF_BLOCKS = {
         'max_height':       int(80),
         'min_width':        int(8),
         'max_width':        int(90),
-        'is_alpha':         False,
         'color_pool':       PALLETTES['PASTEL_MIX'],
+        'alpha_key':        int(255),
         'border_color':     None,
         'border_width':     int(0),
         # alt_surface may be None or a subdict as below
@@ -34,8 +34,8 @@ CF_BLOCKS = {
         'max_height':       int(16),
         'min_width':        int(8),
         'max_width':        int(20),
-        'is_alpha':         False,
         'color_pool':       None,
+        'alpha_key':        int(255),
         'border_color':     None,
         'border_width':     int(0),
         'alt_surface': {
@@ -51,8 +51,8 @@ CF_BLOCKS = {
         'max_height':       int(16),
         'min_width':        int(8),
         'max_width':        int(22),
-        'is_alpha':         False,
         'color_pool':       PALLETTES['SHADES_OF_GRAY'],
+        'alpha_key':        int(255),
         'border_color':     None,
         'border_width':     int(0),
         'alt_surface': {

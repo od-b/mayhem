@@ -82,7 +82,7 @@ class PG_Map:
         self.spawn_obstacle_blocks(self.cf_blocks['obstacle'], self.obstacle_group)
 
         # outline the obstacles with smaller rects to create more jagged terrain
-        terrain_facing = 0
+        terrain_facing = 1
         for BLOCK in self.obstacle_group:
             # for each block in obstacle_group, outline the block rect
             alt_pallette = [BLOCK.color]
