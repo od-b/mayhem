@@ -33,6 +33,7 @@ class Block(Sprite):
         # store references to the config dicts
         self.cf_global  = cf_global
         self.cf_block   = cf_block
+        self.UPDATE_INTERVAL = int(self.cf_global['update_intervals']['blocks'])
 
         self.pallette   = pallette
         ''' list of one or more tuples. May be RGB, RGBA, or even a mix '''
@@ -52,12 +53,14 @@ class Block(Sprite):
 
         # determine if alpha conversion is needed
         if (self.alpha_key < 255):
-            # convert to rgba
             self.alpha_value = self.alpha_key
-            COLOR_TO_ALPHA = (self.color.r, self.color.g, self.color.b, self.alpha_key)
-            self.color = Color(COLOR_TO_ALPHA)
+            if (self.color):
+                # convert to rgba
+                self.color = Color((self.color.r, self.color.g, self.color.b, self.alpha_key))
+            else:
+                self.color = Color((0, 0, 0, self.alpha_key))
         else:
-            # color is rgb, no convert_alpha() needed
+            # color is rgb, no conversion needed needed
             self.alpha_value = None
 
         self.MAIN_IMAGE = self._create_main_image()
@@ -65,10 +68,9 @@ class Block(Sprite):
 
         self.ALT_IMAGE = self._create_alt_image()
         ''' if the blocks' cf_block-dict has a subdict under "['alt_surface']",
-            this will be a Surface.
-            Otherwise, it will be None.
-            ---
-            Iff ALT_IMAGE is a Surface, the following attributes may also be accessed:
+            this will be a Surface. Otherwise, it will be None.
+
+            _create_alt_image Sets these attributes:
             * self.alt_border_color
             * self.alt_color
             * self.ALT_SURF_DURATION
@@ -98,12 +100,10 @@ class Block(Sprite):
         IMG: Surface
         if (self.alpha_value):
             IMG = pg.Surface(self.size, flags=SRCALPHA)
-            IMG.fill((0, 0, 0, 0))
         else:
             IMG = pg.Surface(self.size).convert()
 
-        if (self.color):
-            IMG.fill(self.color)
+        IMG.fill(self.color)
 
         # draw border if set
         if (self.border_width > 0) and (self.border_color != None):
@@ -139,29 +139,48 @@ class Block(Sprite):
             else:
                 self.alt_border_color = None
 
-            # calculated the frames needed to display x milliseconds worth of highlight
-            self.ALT_SURF_DURATION  = int(1000 / (cf_alt_surf['duration'] / self.cf_global['fps_limit']))
-            ''' frames to highlight the block for, calculated using the FPS limit '''
+            # subtracting update interval yields the correct timing
+            # verify that this does not leave a negative timer, however
+            if (cf_alt_surf['duration'] == 0):
+                self.ALT_SURF_DURATION = int(0)
+                ''' ms to highlight the block for '''
+            elif (cf_alt_surf['duration'] < self.UPDATE_INTERVAL):
+                self.ALT_SURF_DURATION = self.UPDATE_INTERVAL
+            else:
+                self.ALT_SURF_DURATION = int(cf_alt_surf['duration'] - self.UPDATE_INTERVAL)
 
             return ALT_IMG
 
-        # else, no alt image is to be set
+        # else, no alt image is to be set. Be a good boy and set self values nonetheless
+        self.alt_color = None
+        self.alt_border_color = None
+        self.ALT_SURF_DURATION = 0
         return None
 
-    def init_highlight(self):
-        ''' swap to the ALT_IMAGE for a certain time
-            * the duration is specified as millisecond within cf_block
-            * does nothing if the block does not have an ALT_IMAGE
+    def swap_to_alt_image(self):
+        if (self.ALT_IMAGE):
+            self.image = self.ALT_IMAGE
+            self.alt_surf_timeleft = 0
+
+    def init_timed_highlight(self):
+        ''' if an alt image exists, swap to it. 
+            if self.ALT_SURF_DURATION is 0, the swap will be retained until manually reverted
+            auto swaps back through self.update(), which should be called every frame
         '''
         if (self.ALT_IMAGE):
-            self.alt_surf_timeleft = self.ALT_SURF_DURATION
-            # swap image to the alt image
             self.image = self.ALT_IMAGE
+            self.alt_surf_timeleft = self.ALT_SURF_DURATION
 
     def update(self):
-        ''' does nothing for the block unless highlighted through .init_highlight() '''
+        ''' checks if the block has a alt_surf_timeleft, swaps image back if time is up
+            * if NO blocks are EVER highlighted, this function does not need to be called.
+        '''
         if (self.alt_surf_timeleft):
-            self.alt_surf_timeleft -= 1
-            if (self.alt_surf_timeleft == 0):
+            self.alt_surf_timeleft -= self.UPDATE_INTERVAL
+            if (self.alt_surf_timeleft <= 0):
+                # debugging code to check timer works as intended (it does):
+                # time_diff = (timestamp - self.highlight_started_time)
+                # print(f'highlight lasted {time_diff}ms')
+                # self.highlight_started_time = int(0)
                 # swap image back if timer is up
                 self.image = self.MAIN_IMAGE

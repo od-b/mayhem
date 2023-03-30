@@ -15,7 +15,7 @@ class PG_Timer(Timer):
 
     def __init__(self, fps_limit: int, busy_loop: bool):
         super().__init__()
-        self.fps_limit = int(fps_limit)
+        self.FPS_LIMIT = int(fps_limit)
         self.busy_loop = busy_loop
         self.clock = time.Clock()
         self.first_init_done: bool = False
@@ -43,6 +43,9 @@ class PG_Timer(Timer):
     def get_blocked_events(self):
         return self.blocked_events
 
+    def get_segment_duration(self):
+        return self.active_segment.get_duration_int()
+
     def allow_event(self, event_id):
         event.set_allowed(event_id)
         if (event_id) in self.blocked_events:
@@ -60,6 +63,8 @@ class PG_Timer(Timer):
 
     def create_event_timer(self, ms_interval: int, n_loops: int):
         ''' creates a custom event+timer with an unique integer reference
+            * sec_interval: updates per second
+            * n_loops = 0 => don't stop looping
             * returns the assigned event id
         '''
         EVENT_ID = event.custom_type()
@@ -84,13 +89,13 @@ class PG_Timer(Timer):
 
     def clock_tick(self):
         ''' only tick the clock to keep track of time '''
-        self.clock.tick(self.fps_limit)
+        self.clock.tick(self.FPS_LIMIT)
 
     def clock_tick_busy(self):
         ''' tick the clock to keep track of time and limit time to next frame.
             More accurate than clock_tick, but consumes more resources
         '''
-        self.clock.tick_busy_loop(self.fps_limit)
+        self.clock.tick_busy_loop(self.FPS_LIMIT)
 
     def update(self):
         ''' overwrites parent method. 

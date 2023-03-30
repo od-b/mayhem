@@ -50,6 +50,12 @@ CF_GLOBAL = {
         pg.MOUSEBUTTONUP,
         pg.MOUSEBUTTONDOWN,
         pg.TEXTINPUT
-    ]
+    ],
+    # time between sprite updates, per type. Values are millisecs between updates
+    # these values will in reality typically have a variance of 0.5%
+    'update_intervals': {
+        'ui':     int(250),
+        'blocks': int(100),
+    }
 }
-''' various settings that didnt fit in anywhere else '''
+''' various settings that didnt fit in anywhere else, or are needed for multiple objects '''

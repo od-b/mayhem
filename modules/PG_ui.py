@@ -1,7 +1,7 @@
 from typing import Callable     # allows type hinting 'function pointers'
 
 ## import needed pygame modules
-from pygame import Surface, Rect, Color
+from pygame import Surface, Rect, Color, SRCALPHA
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
 from pygame.draw import line as draw_line
@@ -44,12 +44,14 @@ class Container(Sprite):
 
         # store dict settings
         self.color = Color(cf_container['color'])
+        ''' bg color '''
         self.border_width = int(cf_container['border_width'])
         self.border_color = Color(cf_container['border_color'])
+        self.bg_alpha_key      = int(cf_container['bg_alpha_key'])
         self.child_padding = int(cf_container['children_padding'])
         self.separator_width = int(cf_container['separator_width'])
         self.separator_color = Color(cf_container['separator_color'])
-        
+
         # calculate the correct padding for separator
         self.separator_padding = int((self.child_padding/2) + self.separator_width/2)
         self.draw_separator = False
@@ -71,21 +73,24 @@ class Container(Sprite):
             * => profit
         '''
 
-        # create the border of the container as a rect
-        self.image = Surface(self.size).convert()
-        self.rect = self.image.get_rect()
-        
-        if (self.border_width > 0):
-            self.image.fill(self.border_color, self.rect)
-            # create a rect -2*self.border_width smaller than the surface
-            PADDED_RE = self.rect.copy().inflate(
-                int(-2*self.border_width),
-                int(-2*self.border_width)
-            )
-            # draw the background color ontop of what now makes the border
-            draw_rect(self.image, self.color, PADDED_RE)
+        if (self.bg_alpha_key < 255):
+            # convert color to rgba
+            COLOR_TO_ALPHA = (self.color.r, self.color.g, self.color.b, self.bg_alpha_key)
+            self.color = Color(COLOR_TO_ALPHA)
+
+            # create a per pixel alpha surface
+            self.image = Surface(self.size, flags=SRCALPHA)
         else:
-            self.image.fill(self.color, self.rect)
+            self.bg_alpha_key = None
+            # create a regular surface
+            self.image = Surface(self.size).convert()
+
+        # create the border of the container as a rect
+        self.rect = self.image.get_rect()
+        self.image.fill(self.color)
+
+        if (self.border_width > 0):
+            draw_rect(self.image, self.border_color, self.rect, width=self.border_width)
 
         # find fitting functions instead of performing tests every frame:
         self._set_internal_references()
@@ -279,6 +284,9 @@ class Container(Sprite):
 
     def update(self):
         # re-blit the background surface to clear any past blits
+        # if (self.bg_alpha_key):
+        #     self.SURF.fill
+        # else:
         self.SURF.blit(self.image, self.rect)
 
         # call update on all children
@@ -320,7 +328,7 @@ class Text_Box(Sprite):
             ref_id,
             text: str,
             text_getter_func: Callable | None,
-            position: tuple | None,
+            position: tuple,
         ):
 
         Sprite.__init__(self)
@@ -347,10 +355,8 @@ class Text_Box(Sprite):
             self.font_color,
             self.bg_color
         )
-
         self.rect = self.image.get_rect()
-        if (self.position):
-            self.rect.topleft = position
+        self.rect.topleft = position
 
         self._set_internal_update_func()
 

@@ -18,6 +18,7 @@ CF_CONTAINERS = {
         'color':            RGB['offblack'],
         'border_color':     RGB['yellow'],
         'border_width':     int(2),
+        'bg_alpha_key':     int(255),
         'children_padding': int(40),             # pixels of padding added between the containers children
         'separator_width':  int(2),              # draw a separating line between children
         'separator_color':  RGB['yellow'],       # draw border between children

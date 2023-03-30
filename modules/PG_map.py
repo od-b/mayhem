@@ -3,27 +3,33 @@ from random import randint
 # installed library imports
 from pygame import Color, Surface, Rect
 from pygame.math import Vector2 as Vec2
+from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
+from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 from pygame.mask import Mask
-from pygame.sprite import Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 
 ## general classes
 from .general.exceptions import ConfigError
 ## pygame specific classes
 from .PG_player import Player
 from .PG_block import Block
+from .PG_timer import PG_Timer
 
 
 class PG_Map:
     ''' current map setup used by the the app '''
-    def __init__(self, cf_global: dict, cf_map: dict, surface: Surface):
+    def __init__(self, cf_global: dict, cf_map: dict, surface: Surface, timer: PG_Timer):
 
+        # self.cf_global = cf_global
         self.cf_global = cf_global
-        self.LOOP_LIMIT = cf_global['loop_limit']
-        self.DEBUG_COLOR = cf_global['debug_color']
+        self.cf_map = cf_map
         self.surface = surface
+        self.timer = timer
+
+        self.LOOP_LIMIT = int(cf_global['loop_limit'])
+        self.DEBUG_COLOR = Color(cf_global['debug_color'])
+        self.DEBUG_COLOR_2 = Color(cf_global['debug_color_2'])
 
         # store dict settings
-        self.cf_map = cf_map
         self.name = str(cf_map['name'])
         self.available_time = int(cf_map['available_time'])
         self.fill_color = Color(cf_map['fill_color'])
@@ -48,7 +54,9 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
-    
+        
+        self.debugging = True
+
     def get_player_controls(self) -> dict[str, int]:
         ''' return a dict containing the player control keys '''
         return self.cf_player['controls']
@@ -301,45 +309,135 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def fill_surface(self):
-        ''' fills/resets the map surface '''
-        self.surface.fill(self.fill_color)
-
-    def get_sprite_offset(self, sprite_1, sprite_2):
+    def get_rect_offset(self, rect_1: Rect, rect_2: Rect):
         ''' finds the offset between two sprites rects '''
-        offset_x = (sprite_1.rect.x - sprite_2.rect.x)
-        offset_y = (sprite_1.rect.y - sprite_2.rect.y)
+        offset_x = (rect_1.x - rect_2.x)
+        offset_y = (rect_1.y - rect_2.y)
         return (offset_x, offset_y)
 
-    def get_overlap_mask(self, sprite_1, sprite_2) -> Mask:
-        ''' returns a new mask covering the overlapping area of two sprites '''
-        offset = self.get_sprite_offset(sprite_1, sprite_2)
+    def get_largest_mask_component_bounds(self, mask: Mask):
+        ''' get the bounding rect of the largest connected component within the mask '''
+
+        bounding_rects: list[Rect] = mask.get_bounding_rects()
+        # when called directly, get_bounding_rects calls connected_components(),
+        # with a threshhold of only one pixel for each component
+        # https://www.pygame.org/docs/ref/mask.html#pygame.mask.Mask.connected_components
+
+        largest_re = bounding_rects[0]
+
+        # typically there's only one rect, but theoretically there could be many.
+        if (len(bounding_rects) > 1):
+            # UNTESTED CASE
+            print('[draw_mask_bounds]: found more than one c-component in mask')
+
+            # iterate over rects and find the largest one
+            for re in bounding_rects:
+                if ((re.w * re.h) > (largest_re.w * largest_re.h)):
+                    largest_re = re
+
+        return largest_re
+
+    def get_sprite_mask_overlap(self, sprite_1, sprite_2) -> Mask:
+        ''' returns a new mask covering the overlapping area of two sprites
+            * returns a new mask covering only the overlapping area
+        '''
+        offset = self.get_rect_offset(sprite_1.rect, sprite_2.rect)
         overlap_mask = sprite_2.mask.overlap_mask(sprite_1.mask, offset)
         return overlap_mask
 
     def get_collision_center(self, sprite_1, sprite_2):
-        # get overlapping mask to find point of collision
-
-        overlap = self.get_overlap_mask(sprite_1, sprite_2)
+        ''' for two overlapping sprites, finds the center of mask collision
+            * returns the center of this area as a vector2
+        '''
+        overlap = self.get_sprite_mask_overlap(sprite_1, sprite_2)
         overlap_rect = overlap.get_rect(topleft=(sprite_2.rect.x, sprite_2.rect.y))
         collidepos = Vec2(overlap_rect.center)
 
         return collidepos
 
     def check_player_block_collide(self):
-        ''' get a list of sprites that collide with the player
-            * uses collide_mask()
-        '''
+        ''' get a list of sprites that collide with the player '''
 
         LIST: list[Block] = spritecollide(self.player, self.block_group, False, collided=collide_mask)
         if (len(LIST)):
             for BLOCK in LIST:
-                BLOCK.init_highlight()
+                # BLOCK.init_timed_highlight()
+                if (self.debugging):
+                    self.debug__draw_mask_overlap(self.player, BLOCK)
 
             # collidepos = self.get_collision_center(self.player, LIST[0])
             # self.player.init_collision_recoil(collidepos)
         return LIST
 
+    def draw_blocks(self):
+        self.block_group.draw(self.surface)
+
+    def draw_player(self):
+        self.player_group.draw(self.surface)
+
+    def update_blocks(self):
+        self.block_group.update()
+
+    def update_player(self):
+        self.player_group.update()
+
+    def fill_surface(self):
+        ''' fills/resets the map surface '''
+        self.surface.fill(self.fill_color)
+
+    def debug__draw_sprite_velocity(self, sprite: Sprite, len: float, width: int):
+        ''' visualize sprite velocity from its position '''
+        p1 = Vec2(sprite.position)
+        p2 = Vec2(sprite.position + (len * sprite.velocity))
+        draw_line(self.surface, self.DEBUG_COLOR, p1, p2, width)
+
+    def debug__draw_mask_outline(self, sprite: Sprite):
+        ''' visualize mask outline by drawing lines along the set pixel points '''
+        p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
+        # print(f'n_points in mask: {len(p_list)}')
+        if (p_list):
+            draw_lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
+
+    def debug__draw_rect(self, sprite: Sprite):
+        ''' draw a border around the sprite bounding rect '''
+        draw_rect(self.surface, self.DEBUG_COLOR, sprite.rect, width=1)
+
+    def debug__draw_mask_bounds(self, sprite: Sprite):
+        ''' draw the actual bounding rect of the player mask '''
+        mask_bounds = self.get_largest_mask_component_bounds(sprite)
+        draw_rect(sprite.image, self.DEBUG_COLOR_2, mask_bounds, width=1)
+
+    def debug__draw_mask_overlap(self, sprite_1, sprite_2):
+        dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
+        overlap_mask = self.get_sprite_mask_overlap(sprite_1, sprite_2)
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.DEBUG_COLOR_2)
+        self.surface.blit(MASK_SURF, dest_pos)
+
+    def debug__draw_mask_center_mass(self, sprite: Sprite):
+        ''' visualize the actual mask bounds by drawing an interesction through it
+            * only works if 8 or moore pixels are connected
+        '''
+        sprite_mask: Mask = sprite.mask
+        mask_bounds = self.get_largest_mask_component_bounds(sprite_mask)
+        if mask_bounds == None:
+            print('[draw_mask_center_mass]: failed finding connected component')
+            return
+
+        mask_center = sprite_mask.centroid()
+
+        line_1_p1 = mask_center
+        line_1_p2 = mask_bounds.midtop
+        line_2_p1 = mask_center
+        line_2_p2 = mask_bounds.midright
+        line_3_p1 = mask_center
+        line_3_p2 = mask_bounds.midleft
+        line_4_p1 = mask_center
+        line_4_p2 = mask_bounds.midbottom
+
+        draw_line(self.player.image, self.DEBUG_COLOR_2, line_1_p1, line_1_p2, width=1)
+        draw_line(self.player.image, self.DEBUG_COLOR_2, line_2_p1, line_2_p2, width=1)
+        draw_line(self.player.image, self.DEBUG_COLOR_2, line_3_p1, line_3_p2, width=1)
+        draw_line(self.player.image, self.DEBUG_COLOR_2, line_4_p1, line_4_p2, width=1)
 
     def __str__(self):
         msg = f'< Map with name="{self.name}"\n'

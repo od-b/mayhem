@@ -2,6 +2,17 @@
 ## simplify some imports for readability:
 from pygame import display, Color, Rect, FULLSCREEN
 
+# https://www.pygame.org/docs/ref/display.html#pygame.display.set_mode
+#
+# pygame.FULLSCREEN    create a fullscreen display
+# pygame.DOUBLEBUF     only applicable with OPENGL
+# pygame.OPENGL        create an OpenGL-renderable display
+# pygame.RESIZABLE     display window should be sizeable
+# pygame.NOFRAME       display window will have no border or controls
+# pygame.SCALED        resolution depends on desktop size and scale graphics
+# pygame.SHOWN         window is opened in visible mode (default)
+# pygame.HIDDEN        window is opened in hidden mode
+
 
 class PG_Window:
     ''' wrapper for the main app surfaces / subsurfaces
@@ -11,10 +22,10 @@ class PG_Window:
     surface: 
         the entire window surface
     map_surface: 
-        subsurface designated to the active game area
+        subsurface of surface designated to the active game area
     map_Rect: 
         Rect of the subsurface
-    map_surface_position:
+    map_topleft_pos:
         map surface topleft, relative to the main surface
     '''
 
@@ -38,24 +49,27 @@ class PG_Window:
         self.fill_surface()
         self.set_extended_caption(None)
 
-        ''' set up the map area of the surface '''
+        # map subsurface topleft[x,y] position, relative to the main surface
+        map_topleft_pos = (
+            int(cf_window['map_bounds']['min_x']),
+            int(cf_window['map_bounds']['min_y'])
+        )
 
-        self.map_width = int(self.width - cf_window['map_bounds']['max_x'] - cf_window['map_bounds']['min_x'])
-        self.map_height = int(self.height - cf_window['map_bounds']['max_y'] - cf_window['map_bounds']['min_y'])
-        self.map_pos_x = int(cf_window['map_bounds']['min_x'])
-        self.map_pos_y = int(cf_window['map_bounds']['min_y'])
+        # map size[w,h]
+        map_size = (
+            int(self.width - cf_window['map_bounds']['max_x'] - cf_window['map_bounds']['min_x']), 
+            int(self.height - cf_window['map_bounds']['max_y'] - cf_window['map_bounds']['min_y'])
+        )
 
-        self.map_surface_position = (self.map_pos_x, self.map_pos_y)
-        ''' map subsurface topleft[x,y] position, relative to the main surface '''
+        self.map_rect = Rect(
+            (map_topleft_pos),
+            (map_size)
+        )
+        ''' rect of map subsurface. Positioned relative to the entire window surface. '''
 
-        self.map_size = (self.map_width, self.map_height)
-        ''' map size[w,h] '''
-
-        self.map_rect = Rect((self.map_surface_position), (self.map_size))
-        ''' rect describing the to-be-created map subsurface '''
-        
         self.map_surface = self.surface.subsurface(self.map_rect)
         ''' subsurface of the main surface dedicated to the map area '''
+        # self.map_surface.set_colorkey(self.fill_color)
 
     def set_extended_caption(self, extension: str | None):
         ''' append a text to the window caption
@@ -66,13 +80,10 @@ class PG_Window:
         else:
             display.set_caption(self.caption)
 
-    def fill_surface_alt_color(self, color: Color | None):
-        ''' uses self.fill_color if color is None '''
-        if color:
-            self.surface.fill(color)
-        else:
-            self.fill_surface()
-    
+    def fill_surface_alt_color(self, color: Color):
+        ''' fill surface with a color that isn't self.fill_color '''
+        self.surface.fill(color)
+
     def fill_surface(self):
         self.surface.fill(self.fill_color)
 
@@ -83,4 +94,3 @@ class PG_Window:
         else:
             msg += f'vsync = False'
         return msg
-

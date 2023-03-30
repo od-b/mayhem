@@ -24,7 +24,7 @@ CF_BLOCKS = {
         'alt_surface': {
             'color':        RGB['signal_red'],
             'border_color': None,
-            'duration':     int(1000),  # duration in ms once triggered
+            'duration':     int(3000),  # duration in ms once triggered
         },
     },
     'adaptive_block': {
@@ -41,7 +41,7 @@ CF_BLOCKS = {
         'alt_surface': {
             'color':        RGB['signal_red'],
             'border_color': None,
-            'duration':     int(1000),  # duration in ms once triggered
+            'duration':     int(3000),  # duration in ms once triggered
         },
     },
     'small_gray_block': {
@@ -58,7 +58,7 @@ CF_BLOCKS = {
         'alt_surface': {
             'color':        RGB['signal_red'],
             'border_color': None,
-            'duration':     int(1000),  # duration in ms once triggered
+            'duration':     int(3000),  # duration in ms once triggered
         },
     },
 }
