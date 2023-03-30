@@ -13,7 +13,7 @@ CF_MAPS = {
         # these are read by other sprites on creation.
         # gravitational constants. gravity_c must not be 0, or division by zero may occur.
         'gravity_m':            float(1.005),      # gravity multiplier. range = [1.0, 2.0]
-        'gravity_c':            float(0.007),     # added to the velocity.y or position of sprites every frame
+        'gravity_c':            float(0.004),     # added to the velocity.y or position of sprites every frame
         # sprite settings:
         'player':               CF_PLAYERS['polygon'],
         'blocks': {

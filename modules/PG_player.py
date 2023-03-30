@@ -18,44 +18,43 @@ class Player(Sprite):
         
         # store non-player dict settings
         self.FPS_LIMIT     = int(cf_global['fps_limit'])
-        # if player has no mass, ignore gravity
-        if (cf_weights['mass'] > 0.0):
-            self.GRAVITY_C     = float(cf_map['gravity_c'])
-            ''' gravity constant '''
-            self.GRAVITY_M     = float(cf_map['gravity_m'])
-            ''' gravity multiplier '''
-        else:
-            self.GRAVITY_C = 0.0
-            self.GRAVITY_M = 0.0
+        self.GRAVITY_C     = float(cf_map['gravity_c'])
+        ''' gravity constant '''
+        self.GRAVITY_M     = float(cf_map['gravity_m'])
+        ''' gravity multiplier '''
 
         # store surface settings
         self.img_src: Surface | None = cf_surface['image']
-        self.width         = int(cf_surface['width'])
-        self.height        = int(cf_surface['height'])
-        self.color         = Color(cf_surface['color'])
-        self.thrust_color  = Color(cf_surface['thrust_color'])
+        self.color          = Color(cf_surface['color'])
+        self.width          = int(cf_surface['width'])
+        self.height         = int(cf_surface['height'])
 
-        # store constant weights
-        self.MAX_HEALTH    = int(cf_weights['max_health'])
-        self.MAX_MANA      = int(cf_weights['max_mana'])
-        self.MASS          = float(cf_weights['mass'])
+        # constant gameplay weights
+        self.MAX_HEALTH     = int(cf_weights['max_health'])
+        self.MAX_MANA       = int(cf_weights['max_mana'])
+
+        # acceleration weights. T_ is during thrust
         self.ACCEL_FALLOFF  = float(cf_weights['accel_falloff'])
-        self.HANDLING      = float(cf_weights['handling'])
         self.MAX_ACCEL      = float(cf_weights['max_accel'])
-        self.MAX_GRAV_ACCEL     = self.MAX_ACCEL + self.MASS
-
-        # special weights during thrust
         self.T_ACCEL        = float(cf_weights['t_accel'])
-        self.T_HANDLING    = float(cf_weights['t_handling'])
+
+        # velocity weights
+        self.MAX_VELO       = float(cf_weights['max_velocity'])
+        self.TERM_VELO      = float(cf_weights['terminal_velocity'])
+        self.MASS           = float(cf_weights['mass'])
+
+        # steering weights
+        self.HANDLING       = float(cf_weights['handling'])
+        self.T_HANDLING     = float(cf_weights['t_handling'])
 
         # initialize control and angle-related attributes
-        self.CENTER_VECTOR = Vec2(0.0, 0.0)
+        self.CENTER_VECTOR  = Vec2(0.0, 0.0)
         ''' used for relative angle calculation '''
-        self.thrusting     = False
+        self.thrusting      = False
         ''' whether the thrust key is currently held '''
-        self.direction     = Vec2(0.0, 0.0)
+        self.direction      = Vec2(0.0, 0.0)
         ''' 8-directional vector for reading key controls '''
-        self.angle: float  = float(0)
+        self.angle: float   = float(0)
         ''' angle in degrees '''
 
         # attributes related the post-thrust transition phase
@@ -69,27 +68,25 @@ class Player(Sprite):
         ''' num. frames left of transition phase '''
         self.transition_lerp_weight     = float(0)
         ''' weight for linear interpolation during transition '''
-        
-        # attributes related to collision
-        self.crash_frames = int(0)
-        self.recoil_target: Vec2 = Vec2(0.0, 0.0)
-        self.recoil_lerp_weight = float(0)
-        
-        self.old_pos = Vec2(spawn_pos)
-        ''' last position within the map '''
+
 
         # create main physics-related variables
-        self.position      = Vec2(spawn_pos)
+        self.position       = Vec2(spawn_pos)
         ''' position within the map '''
-        self.acceleration  = Vec2(0.0, 0.0)
-        ''' determines angle and rate of change to velocity '''
-        self.velocity  = Vec2(0.0, 0.0)
+        self.acceleration   = Vec2(0.0, 0.0)
+        ''' determines direction and directional change of velocity '''
+        self.velocity       = Vec2(0.0, 0.0)
         ''' direction and speed ''' 
-        self.grav_effect   = float(0)
+        self.grav_effect    = float(0)
+        ''' accumulation of gravity '''
+
+        # attributes related to collision
+        self.crash_frames   = int(0)
+        self.recoil_target  = Vec2(0.0, 0.0)
 
         # other
-        self.health: int   = self.MAX_HEALTH
-        self.mana: int     = self.MAX_MANA
+        self.health: int    = self.MAX_HEALTH
+        self.mana: int      = self.MAX_MANA
 
         # set up surface, aka image
         if not self.img_src:
@@ -103,15 +100,6 @@ class Player(Sprite):
             p2 = Vec2(IMG_RECT.bottomright)
             p3 = Vec2(IMG_RECT.bottomleft)
 
-            # draw the polygon to the original image surface
-            # gfxdraw_aatrigon(
-            #     IMG, 
-            #     int(p1.x), int(p1.y),
-            #     int(p2.x), int(p2.y),
-            #     int(p3.x), int(p3.y),
-            #     self.color
-            # )
-            # gfxdraw_aapolygon(IMG, (p1, p2, p3), self.color)
             draw_polygon(IMG, self.color, (p1, p2, p3))
 
             # store the original image for transformation
@@ -120,28 +108,11 @@ class Player(Sprite):
             # rotating to -90 means there's no need to flip later.
             self.ORIGINAL_IMAGE = pg.transform.rotate(IMG, -90)
 
-            # self.angle = self.CENTER_VECTOR.angle_to(self.acceleration)
-            # set sprite staple attributes through update_image_angle(); image, rect & mask
             self.update_image_angle()
         else:
             # TODO: support actual images
             self.color = None
             raise ValueError("not yet implemented, don't include an image")
-
-    def get_direction_x(self):
-        return self.direction.x
-
-    def get_direction_y(self):
-        return self.direction.y
-
-    def get_grav_effect(self):
-        return self.grav_effect
-
-    def get_position(self):
-        return self.rect.center
-
-    def get_angle(self):
-        return self.angle
 
     def begin_thrust(self):
         ''' begin thrust phase, increasing acceleration and its limit '''
@@ -154,28 +125,9 @@ class Player(Sprite):
         self.transition_frames_left = self.TRANSITON_FRAMES
         self.transition_lerp_weight = 1.0
 
-    def get_real_bounds(self):
-        ''' get the actual rect around the player, using mask bounding rect '''
-        bounds: Rect = self.mask.get_bounding_rects()[0]
-        return bounds
-
     def init_collision_recoil(self, collidepos: Vec2):
         self.crash_frames = self.FPS_LIMIT
         self.transition_frames_left = 0
-
-        real_self_rect = self.get_real_bounds()
-
-        print(f'real_self_rect: {real_self_rect}')
-        print(f'real_self_center: {real_self_rect.center}')
-        # print(f'mask_bounds: {mask_bounds}')
-        # print(f'collidepos: {collidepos}')
-
-        distance_to_collidepos = self.position.distance_to(collidepos)
-        # print(f'distance to collidepos_2: {distance_to_collidepos}')
-
-        # collidepos_angle = self.acceleration.normalize().angle_to(collidepos.normalize())
-        # print(f'angle to collidepos: {collidepos_angle}')
-        self.acceleration *= 0.5
 
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
@@ -194,20 +146,18 @@ class Player(Sprite):
         # get_rect(**kwargs: Any) accepts a position value as parameter
         self.rect = self.image.get_rect(center=self.position)
 
-    def update_case_crash(self):
+    def accel_crash(self):
         self.crash_frames -= 1
         # self.position += (self.recoil_target_pos)
 
-    def update_case_thrusting(self):
+    def accel_thrusting(self):
         ''' reduce gravity effect, increase accceleration. update position. '''
-        self.grav_effect *= 0.97    # reduce gravity by 3%
         self.acceleration += (self.direction * self.T_HANDLING)
         self.acceleration.scale_to_length(self.T_ACCEL)
 
-    def update_case_transition_end(self):
+    def accel_transition_end(self):
         ''' reduce max acceleration gradually over the set time period. '''
         self.acceleration += (self.direction * self.HANDLING)
-        self.grav_effect *= 0.99    # reduce gravity by 1%
 
         # use linear interpolation to find the right value for current max acceleration
         # finds the point which is a certain percent of fps closer to regular max accel
@@ -219,54 +169,58 @@ class Player(Sprite):
         self.transition_frames_left -= 1
         self.transition_lerp_weight -= self.TRANSITION_LERP_DECREASE
 
-    def update_case_default(self):
-        ''' clamp acceleration, increase gravity '''
-        self.acceleration += (self.direction * self.HANDLING)
-        self.acceleration *= self.ACCEL_FALLOFF
+    def accel_default(self):
+        self.acceleration += (self.direction * self.HANDLING) * 0.5
         self.acceleration.x = pg.math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL)
-        self.acceleration.y = pg.math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_GRAV_ACCEL)
+        self.acceleration.y = pg.math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_ACCEL)
+        self.acceleration *= self.ACCEL_FALLOFF
 
-        if (self.grav_effect < self.MAX_GRAV_ACCEL):
-            self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
+    def apply_velocity_gravity(self):
+        self.velocity = self.acceleration.copy()
+        self.velocity.y += (self.MASS * self.grav_effect)
+        if (self.direction.y == -1.0) and (self.grav_effect >= self.MAX_ACCEL):
+            # this is not a great solution, but apply some additional gravity if accel up
+            self.velocity.y -= (self.acceleration.y / self.MASS)
+        self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
     def update(self):
         if (self.crash_frames):
-            self.update_case_crash()
+            self.accel_crash()
         elif (self.thrusting):
-            # reduce gravity effect, increase accceleration. update position.
-            self.update_case_thrusting()
+            self.accel_thrusting()
+            self.grav_effect *= 0.97
+            self.velocity = self.acceleration.copy()
         elif (self.transition_frames_left > 0):
-            # reduce max acceleration gradually
-            self.update_case_transition_end()
+            self.accel_transition_end()
+            self.grav_effect *= 0.99
+            self.apply_velocity_gravity()
         else:
-            # self.position.y += 0.5
+            self.accel_default()
+            if (self.grav_effect < self.MAX_ACCEL):
+                self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
+            self.apply_velocity_gravity()
 
-            # clamp acceleration, increase gravity
-            self.update_case_default()
 
-        self.position += self.acceleration
+        # print(f'velocity = {self.velocity}')
+        # print(f'acceleration = {self.acceleration}')
+        self.position += self.velocity
         self.angle = self.CENTER_VECTOR.angle_to(self.acceleration)
 
         # update image, position and rect position
         self.update_image_angle()
 
 
-    # if (self.direction.y == -1) and (self.grav_effect > 0):
-    #     self.position.y += ((self.acceleration.y / 2) + (self.grav_effect / 2))
-    # else:
-    #     self.position.y += (self.acceleration.y + self.grav_effect)
-    # self.position.y += (self.acceleration.y + self.grav_effect)
-
-
-    # if ((abs(self.position.x) - abs(self.old_pos.x)) > 1.0):
-    #     self.old_pos = self.position
-    #     # self.old_pos.x = self.position.x
-    # elif ((abs(self.position.y) - abs(self.old_pos.y)) > 1.0):
-    #     # self.old_pos.y = self.position.y
-    #     self.old_pos = self.position
-    # print(f'1) last pos: {self.old_pos}')
-    # print(f'2) current pos: {self.position}')
-
+    # external getters
+    def get_direction_x(self):
+        return self.direction.x
+    def get_direction_y(self):
+        return self.direction.y
+    def get_grav_effect(self):
+        return self.grav_effect
+    def get_position(self):
+        return self.rect.center
+    def get_angle(self):
+        return self.angle
 
     # def init_collision_recoil(self):
     #     # self.TRANSITON_FRAMES           = int(self.TRANSITION_TIME * self.FPS_LIMIT)

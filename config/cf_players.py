@@ -14,17 +14,19 @@ CF_PLAYERS = {
             'height':           int(40),    # height of object surface
         },
         # weights that will affect physics and/or gameplay
-        # gravity is controlled by the map, see .cf_maps.py
+        # general gravity is also affected by the map, see .cf_maps.py
         'weights': {
             'max_health':           int(150),       # maximum and initial health
             'max_mana':             int(150),       # maximum and initial mana
+            'mass':                 float(1.8),     # more mass = more gravity
             'handling':             float(0.05),    # how effective rotation will be
-            'accel_falloff':        float(0.985),   # change to velocity per frame when not thrusting (multiplier)
-            'mass':                 float(0.2),     # mass increases terminal velocity (positive y-max)
+            'accel_falloff':        float(0.98),    # change to velocity per frame when not thrusting (multiplier)
             'max_accel':            float(0.7),     # regular max velocity (pixels per frame)
             't_accel':              float(1.4),     # magnitude of velocity during thrust (pixels per frame)
             't_handling':           float(0.05),    # how effective rotation will be during thrust
-            't_transition_time':    float(0.7),     # how quickly the added velocity will fall off after thrusting (seconds)
+            't_transition_time':    float(1.0),     # how quickly the added velocity will fall off after thrusting (seconds)
+            'max_velocity':         float(0.7),
+            'terminal_velocity':    float(1.0)      # max velocity towards the positive y-axis
         },
         # keyboard controls
         'controls': {
