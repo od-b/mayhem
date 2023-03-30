@@ -69,7 +69,6 @@ class Player(Sprite):
         self.transition_lerp_weight     = float(0)
         ''' weight for linear interpolation during transition '''
 
-
         # create main physics-related variables
         self.position       = Vec2(spawn_pos)
         ''' position within the map '''
@@ -81,8 +80,11 @@ class Player(Sprite):
         ''' accumulation of gravity '''
 
         # attributes related to collision
-        self.crash_frames   = int(0)
-        self.recoil_target  = Vec2(0.0, 0.0)
+        self.crash_frames_left   = int(0)
+        # self.rebound_pos    = Vec2(0.0, 0.0)
+        # self.rebound_lerp_weight = float(0)
+        # self.rebound_lerp_decrease = float(0)
+        self.collision_in_progress = False
 
         # other
         self.health: int    = self.MAX_HEALTH
@@ -125,10 +127,6 @@ class Player(Sprite):
         self.transition_frames_left = self.TRANSITON_FRAMES
         self.transition_lerp_weight = 1.0
 
-    def init_collision_recoil(self, collidepos: Vec2):
-        self.crash_frames = self.FPS_LIMIT
-        self.transition_frames_left = 0
-
     def update_image_angle(self):
         ''' Rotate image to the correct angle. Create new rect and mask. '''
 
@@ -147,8 +145,8 @@ class Player(Sprite):
         self.rect = self.image.get_rect(center=self.position)
 
     def accel_crash(self):
-        self.crash_frames -= 1
         # self.position += (self.recoil_target_pos)
+        pass
 
     def accel_thrusting(self):
         ''' reduce gravity effect, increase accceleration. update position. '''
@@ -166,7 +164,6 @@ class Player(Sprite):
         # since player has acceleration after thrusting, using clamp magnitude is safe without checks
         self.acceleration.clamp_magnitude_ip(self.MAX_ACCEL, new_max_accel)
 
-        self.transition_frames_left -= 1
         self.transition_lerp_weight -= self.TRANSITION_LERP_DECREASE
 
     def accel_default(self):
@@ -183,9 +180,36 @@ class Player(Sprite):
             self.velocity.y -= (self.acceleration.y / self.MASS)
         self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
+    def init_collision_recoil(self):
+        self.crash_frames_left = 60
+        self.transition_frames_left = 0
+        # self.thrusting = False
+
+        if (abs(self.velocity.x < 0.2)):
+            if (self.velocity.x > 0):
+                self.velocity.x += 0.2
+            else:
+                self.velocity.x -= 0.2
+
+        if (abs(self.velocity.y < 0.2)):
+            if (self.velocity.y > 0):
+                self.velocity.y += 0.2
+            else:
+                self.velocity.y -= 0.2
+
+        self.velocity *= -1.0
+        self.velocity *= 0.6
+
     def update(self):
-        if (self.crash_frames):
-            self.accel_crash()
+        if (self.crash_frames_left):
+            # pos_cpy = self.position.copy().normalize()
+            self.crash_frames_left -= 1
+            self.position += self.velocity
+            self.velocity *= 0.97
+            self.acceleration *= 0.97
+            self.grav_effect *= 0.97
+            if (self.crash_frames_left == 0):
+                self.collision_in_progress = False
         elif (self.thrusting):
             self.accel_thrusting()
             self.grav_effect *= 0.97
@@ -194,16 +218,15 @@ class Player(Sprite):
             self.accel_transition_end()
             self.grav_effect *= 0.99
             self.apply_velocity_gravity()
+            self.transition_frames_left -= 1
         else:
             self.accel_default()
             if (self.grav_effect < self.MAX_ACCEL):
                 self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
             self.apply_velocity_gravity()
 
-
-        # print(f'velocity = {self.velocity}')
-        # print(f'acceleration = {self.acceleration}')
         self.position += self.velocity
+
         self.angle = self.CENTER_VECTOR.angle_to(self.acceleration)
 
         # update image, position and rect position
@@ -222,6 +245,8 @@ class Player(Sprite):
     def get_angle(self):
         return self.angle
 
+
+
     # def init_collision_recoil(self):
     #     # self.TRANSITON_FRAMES           = int(self.TRANSITION_TIME * self.FPS_LIMIT)
     #     # self.TRANSITION_LERP_DECREASE   = (1.0 / self.TRANSITON_FRAMES)
@@ -237,8 +262,18 @@ class Player(Sprite):
     #     recoil_length = self.position.distance_to(self.recoil_target)
     #     print(f'recoil_length: {recoil_length}')
 
-    #     # self.crash_frames = int(recoil_strength * self.FPS_LIMIT)
-    #     self.crash_frames = self.FPS_LIMIT
+    #     # self.crash_frames_left = int(recoil_strength * self.FPS_LIMIT)
+    #     self.crash_frames_left = self.FPS_LIMIT
 
-    #     self.recoil_lerp_decrease = (1.0 / self.crash_frames)
+    #     self.recoil_lerp_decrease = (1.0 / self.crash_frames_left)
     #     self.recoil_lerp_weight = 1.0
+    
+    
+    
+    # print(f'collidepos: {collidepos}')
+
+    # center_mass = Vec2(self.mask.centroid())
+    # print(f'center_mass: {center_mass}')
+
+    # angle_to_collidepos = self.position.angle_to(collidepos)
+    # print(f'center_mass angle to collidepos: {angle_to_collidepos}')

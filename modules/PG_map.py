@@ -1,7 +1,7 @@
 from random import randint
 
 # installed library imports
-from pygame import Color, Surface, Rect
+from pygame import Color, Surface, Rect, display
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
@@ -358,16 +358,27 @@ class PG_Map:
     def check_player_block_collide(self):
         ''' get a list of sprites that collide with the player '''
 
-        LIST: list[Block] = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-        if (len(LIST)):
-            for BLOCK in LIST:
-                # BLOCK.init_timed_highlight()
-                if (self.debugging):
-                    self.debug__draw_mask_overlap(self.player, BLOCK)
+        # before checking masks, perform a simple collision check using rects
+        if (spritecollideany(self.player, self.block_group)):
+            LIST: list[Block] = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            if (len(LIST)):
+                for BLOCK in LIST:
+                    # BLOCK.init_timed_highlight()
+                    if (self.debugging):
+                        self.debug__draw_mask_overlap(self.player, BLOCK)
+                # overlap = self.get_sprite_mask_overlap(self.player, BLOCK)
+                # overlap_rect = overlap.get_rect(topleft=(BLOCK.rect.x, BLOCK.rect.y))
 
-            # collidepos = self.get_collision_center(self.player, LIST[0])
-            # self.player.init_collision_recoil(collidepos)
-        return LIST
+                if not (self.player.collision_in_progress):
+                    self.player.collision_in_progress = True
+                    self.player.init_collision_recoil()
+
+                # # player_center = self.player.mask.centroid()
+                # collidepos = self.get_collision_center(self.player, LIST[0])
+                # print(f'collidepos: {collidepos}')
+
+                # if (self.debugging):
+                #     draw_line(self.surface, self.DEBUG_COLOR_2, collidepos, self.player.position)
 
     def draw_blocks(self):
         self.block_group.draw(self.surface)
@@ -444,3 +455,10 @@ class PG_Map:
         msg += f'topleft[x,y] = {self.rect.topleft}\n'
         msg += f'size[w,h] = [{self.rect.w}, {self.rect.h} >\n'
         return msg
+
+
+# collidepos = self.get_collision_center(self.player, LIST[0])
+# print(f'collidepos: {collidepos}')
+# player_mask_re = self.get_largest_mask_component_bounds(self.player.mask)
+# weight = Vec2(player_mask_re.center).distance_to(collidepos)
+# self.player.init_collision_recoil(weight)
