@@ -36,6 +36,7 @@ class PG_Map:
         self.n_obstacles = int(cf_map['n_obstacles'])
         self.gravity_m = float(cf_map['gravity_m'])
         self.gravity_c = float(cf_map['gravity_c'])
+        self.mask_blit_color = self.fill_color
 
         # store nested dict settings
         self.cf_player: dict = cf_map['player']
@@ -54,6 +55,8 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
+        
+        self.DEBUG_DRAW_PLAYER = False
 
     def get_player_controls(self) -> dict[str, int]:
         ''' return a dict containing the player control keys '''
@@ -356,7 +359,7 @@ class PG_Map:
     def blit_overlap_mask(self, sprite_1, sprite_2):
         dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
         overlap_mask = self.get_sprite_mask_overlap(sprite_1, sprite_2)
-        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.DEBUG_COLOR_2)
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.mask_blit_color)
         self.surface.blit(MASK_SURF, dest_pos)
 
     def blit_block_player_overlap(self):
@@ -372,7 +375,10 @@ class PG_Map:
         # case 0: ignore action if player has no mass
         if (self.player.MASS):
             # case 1: player is not in recoil or cooldown phase, and rects collide
-            if (self.player.collision_cooldown_frames_left == 0) and (spritecollideany(self.player, self.block_group)):
+            if (self.player.collision_cooldown_frames_left):
+                # player has active recoil or cooldown frames
+                self.blit_block_player_overlap()
+            elif (spritecollideany(self.player, self.block_group)):
                 # get list of colliding masks
                 collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
                 if (len(collidelist)):
@@ -381,43 +387,35 @@ class PG_Map:
                     # highlight blocks that player collided with
                     for BLOCK in collidelist:
                         BLOCK.init_timed_highlight()
-            else:
-                # player has active recoil or cooldown frames
-                self.blit_block_player_overlap()
         else:
             # player has no mass. draw the overlap
             self.blit_block_player_overlap()
 
-    def get_collision_group(self):
-        return self.block_group
+    def draw_sprites(self):
+        ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
+        self.surface.fill(self.fill_color)
 
-    def draw_blocks(self):
-        self.block_group.draw(self.surface)
-
-    def draw_player(self, debugging: bool):
-        if (debugging):
-            # mask debug draws apply to the sprites' temp image, so call before blitting that image
-            # self.debug__draw_mask_center_mass(self.player)
-            # self.debug__draw_mask_bounds(self.player)
-            # blit the player to the map surface
-            self.player_group.draw(self.surface)
-            # general debugging calls use the map surface instead, so call them post-draw.
-            # (they may extend the image of the sprite, so no way to draw them to the sprite image)
-            # self.debug__draw_sprite_velocity(self.player, 40.0, 1)
-            # self.debug__draw_sprite_acceleration(self.player, 40.0, 1)
-            # self.debug__outline_rect(self.player)
+        if (self.DEBUG_DRAW_PLAYER):
+            self.debug__draw_player_all_info()
         else:
             self.player_group.draw(self.surface)
 
-    def update_blocks(self):
-        self.block_group.update()
+        self.block_group.draw(self.surface)
 
-    def update_player(self):
-        self.player_group.update()
+    def check_for_collisions(self):
+        ''' since collision is based on image masks, call this after draw, but before update '''
+        self.check_player_block_collide()
 
-    def fill_surface(self):
-        ''' fills/resets the map surface '''
-        self.surface.fill(self.fill_color)
+    def debug__draw_player_all_info(self):
+        # mask debug draws apply to the sprites' temp image, so call before blitting that image
+        self.debug__draw_mask_center_mass(self.player)
+        self.debug__draw_mask_bounds(self.player)
+        self.player_group.draw(self.surface)
+        # general debugging calls use the map surface instead, so call them post-draw.
+        # (they may extend the image of the sprite, so no way to draw them to the sprite image)
+        self.debug__draw_sprite_velocity(self.player, 40.0, 1)
+        self.debug__draw_sprite_acceleration(self.player, 40.0, 1)
+        self.debug__outline_rect(self.player)
 
     def debug__draw_sprite_acceleration(self, sprite: Sprite, len: float, width: int):
         ''' visualize sprite acceleration from its position '''

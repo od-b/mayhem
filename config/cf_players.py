@@ -7,15 +7,17 @@ CF_PLAYERS = {
         # settings that determine how the sprite will look
         'surface': {
             # width / height determines size of the polygon
-            'width':            int(30),
-            'height':           int(40),
-            'color':            RGB['P_yellow_vibrant'],   # color, if image is not set
-            'color_post_crash': RGBA['P_yellow_vibrant_127'],
-            'thrusters_color':  RGB['dutchwhite'],              # thrust color
+            'width':  int(30),
+            'height': int(40),
+            # alpha colors must not have an alpha key below 127 without increasing maskcollide threshhold
+            'colors': {
+                'default':            RGB['P_yellow_vibrant'],
+                'collision_cooldown': RGBA['P_yellow_vibrant_128'],
+            }
         },
         'gameplay': {
-            'max_health':       int(150),       # maximum and initial health
-            'max_mana':         int(150),       # maximum and initial mana
+            'max_health': int(150),       # maximum and initial health
+            'max_mana':   int(150),       # maximum and initial mana
         },
         # weights that will affect physics and/or steering capability
         # general gravity is also affected by the map, see .cf_maps.py
@@ -33,7 +35,7 @@ CF_PLAYERS = {
             'collision_recoil':         float(0.5),     # weight[0,1]; links crash velocity, fps and n. recoil frames. 0 == no recoil
             'thrust_begin':             float(1.0),     # seconds; transition between normal and thrust accel
             'thrust_end':               float(1.0),     # seconds; transition between thrust and normal accel
-            'collision_cooldown':       float(0.5),     # seconds; min time between terrain collision
+            'collision_cooldown':       float(0.75),     # seconds; min time between terrain collision
         },
         # keyboard controls
         'controls': {

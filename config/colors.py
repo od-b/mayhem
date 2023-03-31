@@ -1,5 +1,6 @@
 
 RGB: dict[str, tuple[int, int, int]] = {
+    'white':            (255, 255, 255),
     'bone':             (237, 228, 201),
     'darkliver':        (100, 83, 83),
     'sage':             (200, 204, 146),
@@ -52,7 +53,7 @@ RGB: dict[str, tuple[int, int, int]] = {
 
 RGBA: dict[str, tuple[int, int, int, int]] = {
     'alpha_0':              (0, 0, 0, 0),
-    'P_yellow_vibrant_127': (255, 217, 102, 127)
+    'P_yellow_vibrant_128': (255, 217, 102, 128)
 }
 ''' RGBAlpha color tuples '''
 

@@ -279,7 +279,7 @@ class PG_App:
                     self.map_UI.update()
                     # self.app_UI.update()
                 case self.EVENT_UPDATE_BLOCKS:
-                    self.map.update_blocks()
+                    self.map.block_group.update()
                 case _:
                     pass
 
@@ -287,7 +287,6 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
         
         self.DEBUG_INIT = True
-        self.DEBUG_DRAW_PLAYER = True
 
         while (self.app_is_running):
             if (self.DEBUG_INIT):
@@ -296,22 +295,14 @@ class PG_App:
 
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
-                self.map.fill_surface()
-                self.map.draw_player(self.DEBUG_DRAW_PLAYER)
-                self.map.draw_blocks()
-
+                self.map.draw_sprites()
+                self.map.check_for_collisions()
                 # loop through events before the display update
-                # blocks/ui are updated through these events
                 self.check_map_events()
-
-                self.map.check_player_block_collide()
-
                 pg.display.update()
 
-                # now that events are read, update sprites before next frame
-                self.map.update_player()
-
-                # update the timer. Also limits the framerate if set
+                self.map.player_group.update()
+                # update the timer. Also limits the framerate if set to do so
                 self.timer.update()
 
             # check if app was exited or just the map

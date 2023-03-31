@@ -18,12 +18,12 @@ class Player(Sprite):
         # declare nested dicts for readability purposes
         # note that these are not stored in self, and are only read during init
         cf_surface:    dict = cf_player['surface']
+        cf_colors:     dict = cf_surface['colors']
         cf_weights:    dict = cf_player['weights']
         cf_gameplay:   dict = cf_player['gameplay']
         cf_phases:     dict = cf_player['phase_durations']
 
         # store surface settings
-        self.color          = Color(cf_surface['color'])
         self.width          = int(cf_surface['width'])
         self.height         = int(cf_surface['height'])
 
@@ -106,14 +106,15 @@ class Player(Sprite):
         self.health: int    = self.MAX_HEALTH
         self.mana: int      = self.MAX_MANA
 
-        self.ORIGINAL_IMAGE = self.create_original_image(self.color)
-        # self.ALT_IMAGE = self.create_original_image(Color())
-        ''' original image used for transformation '''
+        self.DEFAULT_IMAGE = self.create_image(cf_colors['default'])
+        self.COLLISION_CD_IMAGE = self.create_image(cf_colors['collision_cooldown'])
+
+        self.curr_image_src = self.DEFAULT_IMAGE
 
         # set .image, .rect and .mask through the update function
         self.update_image()
 
-    def create_original_image(self, color: Color):
+    def create_image(self, color: Color):
         ''' get the the original image used for later transformation
             * ensures the original image is rotated, not the rotated one.
                 if this is not done, two things will happen:
@@ -139,10 +140,10 @@ class Player(Sprite):
         return IMG
 
     def update_image(self):
-        ''' Create image transformed to the current angle. Create new rect and mask. '''
+        ''' update .image, transforming it to the current angle. Create new rect and mask. '''
 
         # get a new image by rotating the original image
-        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, -self.angle)
+        self.image = pg.transform.rotate(self.curr_image_src, -self.angle)
 
         # get new mask for collision checking purposes
         #   > "A new mask needs to be recreated each time a sprite's image is changed  
@@ -196,6 +197,7 @@ class Player(Sprite):
         # self.position += 2.0 * self.velocity
         self.velocity *= 0.8
         self.grav_effect = 0.0
+        self.curr_image_src = self.COLLISION_CD_IMAGE
 
     def set_accel_default(self):
         ''' apply direction to acceleration. clamp acceleration. reduce acceleration. '''
@@ -267,6 +269,8 @@ class Player(Sprite):
         elif (self.collision_cooldown_frames_left):
             self.collision_cooldown_frames_left -= 1
             self.apply_collision_cooldown_frame()
+            if (self.collision_cooldown_frames_left == 0):
+                self.curr_image_src = self.DEFAULT_IMAGE
         elif (self.thrusting):
             self.apply_thrust_frame()
         elif (self.thrust_end_frames_left > 0):
