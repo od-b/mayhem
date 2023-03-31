@@ -364,21 +364,28 @@ class PG_Map:
     def check_player_block_collide(self):
         ''' if player collides with a block, init the recoil sequence for the player '''
         # ignore the check if crash frames are already active
-        if (self.player.cooldown_frames_left):
-            self.player.cooldown_frames_left -= 1
-            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-            for BLOCK in collidelist:
-                self.blit_overlap_mask(self.player, BLOCK)
-        elif not (self.player.crash_frames_left):
-            # before checking masks, perform a simple collision check using rects
-            if (spritecollideany(self.player, self.block_group)):
-                # if any rects collide, check if masks collide
-                collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-                if (len(collidelist)):
-                    self.player.init_collision_recoil()
+        if (self.player.MASS):
+            if (self.player.crash_cooldown_frames_left):
+                self.player.crash_cooldown_frames_left -= 1
+                if (spritecollideany(self.player, self.block_group)):
+                    collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
                     for BLOCK in collidelist:
-                        BLOCK.init_timed_highlight()
                         self.blit_overlap_mask(self.player, BLOCK)
+            elif not (self.player.crash_frames_left):
+                # before checking masks, perform a simple collision check using rects
+                if (spritecollideany(self.player, self.block_group)):
+                    # if any rects collide, check if masks collide
+                    collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+                    if (len(collidelist)):
+                        self.player.init_collision_recoil()
+                        for BLOCK in collidelist:
+                            BLOCK.init_timed_highlight()
+                            self.blit_overlap_mask(self.player, BLOCK)
+        else:
+            if (spritecollideany(self.player, self.block_group)):
+                collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+                for BLOCK in collidelist:
+                    self.blit_overlap_mask(self.player, BLOCK)
 
     def get_collision_group(self):
         return self.block_group

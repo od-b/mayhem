@@ -11,63 +11,77 @@ class Player(Sprite):
         # initalize as pygame sprite
         Sprite.__init__(self)
 
-        # nested dicts
-        self.spawn_pos = spawn_pos
-        cf_surface: dict = cf_player['surface']
-        cf_weights: dict = cf_player['weights']
+        # store needed data from cf_global
+        self.FPS = int(cf_global['fps_limit'])
+        ''' global fps limit '''
         
-        # store non-player dict settings
-        self.FPS_LIMIT     = int(cf_global['fps_limit'])
-        self.GRAVITY_C     = float(cf_map['gravity_c'])
-        ''' gravity constant '''
-        self.GRAVITY_M     = float(cf_map['gravity_m'])
-        ''' gravity multiplier '''
+
+        # declare nested dicts for readability purposes
+        # note that these are not stored in self, and are only read during init
+        cf_surface:    dict = cf_player['surface']
+        cf_weights:    dict = cf_player['weights']
+        cf_gameplay:   dict = cf_player['gameplay']
+        cf_phases:     dict = cf_player['phase_durations']
 
         # store surface settings
-        self.img_src: Surface | None = cf_surface['image']
         self.color          = Color(cf_surface['color'])
         self.width          = int(cf_surface['width'])
         self.height         = int(cf_surface['height'])
 
-        # constant gameplay weights
-        self.MAX_HEALTH     = int(cf_weights['max_health'])
-        self.MAX_MANA       = int(cf_weights['max_mana'])
+        #### CONSTANTS ####
+
+        # gameplay weights
+        self.MAX_HEALTH     = int(cf_gameplay['max_health'])
+        self.MAX_MANA       = int(cf_gameplay['max_mana'])
 
         # acceleration weights. T_ is during thrust
-        self.ACCEL_FALLOFF  = float(cf_weights['accel_falloff'])
-        self.MAX_ACCEL      = float(cf_weights['max_accel'])
-        self.T_ACCEL        = float(cf_weights['t_accel'])
+        self.ACCEL_MULTI    = float(cf_weights['acceleration_multiplier'])
+        self.MAX_ACCEL      = float(cf_weights['max_acceleration'])
+        self.THRUST_ACCEL   = float(cf_weights['thrust_acceleration'])
 
         # velocity weights
         self.MAX_VELO       = float(cf_weights['max_velocity'])
         self.TERM_VELO      = float(cf_weights['terminal_velocity'])
-        self.MASS           = float(cf_weights['mass'])
 
         # steering weights
         self.HANDLING       = float(cf_weights['handling'])
-        self.T_HANDLING     = float(cf_weights['t_handling'])
+        self.T_HANDLING     = float(cf_weights['thrust_handling'])
 
-        # initialize control and angle-related attributes
+        # using the set timers from cf_phases, calculate the frames needed
+        self.THRUST_END_FRAMES        = int(cf_phases['thrust_end'] / 1000) * self.FPS
+        ''' n frames to set for the thrust end transition phase '''
+        self.CRASH_COOLDOWN_FRAMES    = int(cf_phases['collision_cooldown'] / 1000) * self.FPS
+        ''' n frames to set for the crash cooldown phase '''
+        self.THRUST_END_LERP_DECREASE = (1.0 / self.THRUST_END_FRAMES)
+        ''' weight used for linear interpolation during post thrust transition '''
+
+        # variables used during phase transitions
+        self.thrust_end_frames_left         = int(0)
+        self.thrust_end_curr_lerp_weight    = 1.0
+        self.crash_frames_left              = int(0)
+        self.crash_cooldown_frames_left     = int(0)
+
+
+        # physics related constant weights
+        self.GRAVITY_C      = float(cf_map['gravity_c'])
+        ''' map gravity constant '''
+        self.GRAVITY_M      = float(cf_map['gravity_m'])
+        ''' map gravity multiplier '''
+        if (cf_weights['mass'] == 0):
+            self.MASS = None
+        else:
+            self.MASS           = float(cf_weights['mass'])
+            ''' weight used when applying gravity '''
         self.CENTER_VECTOR  = Vec2(0.0, 0.0)
         ''' used for relative angle calculation '''
+
+        # initialize control and angle-related attributes
         self.thrusting      = False
         ''' whether the thrust key is currently held '''
         self.direction      = Vec2(0.0, 0.0)
         ''' 8-directional vector for reading key controls '''
         self.angle: float   = float(0)
         ''' angle in degrees '''
-
-        # attributes related the post-thrust transition phase
-        self.TRANSITION_TIME            = float(cf_weights['t_transition_time'])
-        ''' transition time, in seconds '''
-        self.TRANSITON_FRAMES           = int(self.TRANSITION_TIME * self.FPS_LIMIT)
-        ''' total number of frames used for the transition phase '''
-        self.TRANSITION_LERP_DECREASE   = (1.0 / self.TRANSITON_FRAMES)
-        ''' equal to to 1% of transition frames '''
-        self.transition_frames_left     = int(0)
-        ''' num. frames left of transition phase '''
-        self.transition_lerp_weight     = float(0)
-        ''' weight for linear interpolation during transition '''
 
         # create main physics-related variables
         self.position       = Vec2(spawn_pos)
@@ -78,112 +92,109 @@ class Player(Sprite):
         ''' direction and speed ''' 
         self.grav_effect    = float(0)
         ''' accumulation of gravity '''
-
-        # attributes related to collision
-        self.COOLDOWN_TIME     = float(cf_weights['collision_cooldown'])
-        self.COOLDOWN_FRAMES   = int(self.COOLDOWN_TIME * self.FPS_LIMIT)
-        self.cooldown_frames_left = int(0)
-        self.crash_frames_left = int(0)
+        self.temp_max_accel = 0.0
+        ''' temporary max acceleration '''
 
         # other
         self.health: int    = self.MAX_HEALTH
         self.mana: int      = self.MAX_MANA
 
-        # set up surface, aka image
-        if not self.img_src:
-            IMG = pg.Surface((self.width, self.height)).convert_alpha()
-            # fill the image with transparent pixels
-            IMG.fill((0,0,0,0))
-            IMG_RECT = IMG.get_rect()
+        self.ORIGINAL_IMAGE = self.create_original_image(self.color)
+        # self.ALT_IMAGE = self.create_original_image(Color())
+        ''' original image used for transformation '''
 
-            # create a polygon using the rect bounds as reference points
-            p1 = Vec2(IMG_RECT.midtop)
-            p2 = Vec2(IMG_RECT.bottomright)
-            p3 = Vec2(IMG_RECT.bottomleft)
+        # set .image, .rect and .mask through the update function
+        self.update_image()
 
-            draw_polygon(IMG, self.color, (p1, p2, p3))
+    def create_original_image(self, color: Color):
+        ''' get the the original image used for later transformation
+            * ensures the original image is rotated, not the rotated one.
+                if this is not done, two things will happen:
+                1) The image will become larger after each rotation at an exponential rate
+                   this will cause the program to crash when the image takes up too much memory.
+                2) The image quality will deteriorate after each rotation
+        '''
+        # create a surface
+        SURF = pg.Surface((self.width, self.height)).convert_alpha()
 
-            # store the original image for transformation
-            # otherwise, pygame will flood the memory in a matter of seconds
-            # put short; ensures the original image is rotated, not the rotated one
-            # rotating to -90 means there's no need to flip later.
-            self.ORIGINAL_IMAGE = pg.transform.rotate(IMG, -90)
+        # fill the surface with transparent pixels
+        SURF.fill((0,0,0,0))
+        SURF_RECT = SURF.get_rect()
 
-            self.update_image_angle()
-        else:
-            # TODO: support actual images
-            self.color = None
-            raise ValueError("not yet implemented, don't include an image")
+        # create a polygon using the surface bounds as reference points
+        p1 = SURF_RECT.midtop
+        p2 = SURF_RECT.bottomright
+        p3 = SURF_RECT.bottomleft
+        draw_polygon(SURF, color, (p1, p2, p3))
+
+        # rotating to -90 means there's no need to flip later. (pg inverted y-axis)
+        IMG = pg.transform.rotate(SURF, -90)
+        return IMG
+
+    def update_image(self):
+        ''' Create image transformed to the current angle. Create new rect and mask. '''
+
+        # get a new image by rotating the original image
+        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, -self.angle)
+
+        # get new mask for collision checking purposes
+        #   > "A new mask needs to be recreated each time a sprite's image is changed  
+        #   > (e.g. if a new image is used or the existing image is rotated)."
+        #   https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask  
+        self.mask = pg.mask.from_surface(self.image)
+
+        # set rect to the new images rect bounds. used for blitting through group draw
+        self.rect = self.image.get_rect(center=self.position)
 
     def begin_thrust(self):
         ''' begin thrust phase, increasing acceleration and its limit '''
         self.thrusting = True
-    
+
     def end_thrust(self):
         ''' end thrust phase, starting transition to normal acceleration limits '''
         self.thrusting = False
         # set transition frames and the lerp weight to their max
-        self.transition_frames_left = self.TRANSITON_FRAMES
-        self.transition_lerp_weight = 1.0
+        self.thrust_end_frames_left = self.THRUST_END_FRAMES
+        self.thrust_end_curr_lerp_weight = 1.0
+        self.temp_max_accel = self.THRUST_ACCEL
 
-    def update_image_angle(self):
-        ''' Rotate image to the correct angle. Create new rect and mask. '''
-
-        # get a new image by rotating the original image
-        # not referring to the original image will result in catastrophic memory flooding
-        self.image = pg.transform.rotate(self.ORIGINAL_IMAGE, -self.angle)
-
-        # get new mask for collision checking
-        # > Note A new mask needs to be recreated each time a sprite's image is changed  
-        # > (e.g. if a new image is used or the existing image is rotated).  
-        #   https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask  
-        self.mask = pg.mask.from_surface(self.image)
-
-        # set rect to the new images rect bounds
-        # get_rect(**kwargs: Any) accepts a position value as parameter
-        self.rect = self.image.get_rect(center=self.position)
-
-    def accel_crash(self):
-        # self.position += (self.recoil_target_pos)
-        pass
-
-    def accel_thrusting(self):
+    def set_accel_thrusting(self):
         ''' reduce gravity effect, increase accceleration. update position. '''
         self.acceleration += (self.direction * self.T_HANDLING)
-        self.acceleration.scale_to_length(self.T_ACCEL)
+        self.acceleration.scale_to_length(self.THRUST_ACCEL)
 
-    def accel_transition_end(self):
-        ''' reduce max acceleration gradually over the set time period. '''
+    def set_accel_thrust_ending(self):
+        ''' reduce max acceleration gradually over the set frames '''
+        self.acceleration.clamp_magnitude_ip(0.1, self.temp_max_accel)
         self.acceleration += (self.direction * self.HANDLING)
 
         # use linear interpolation to find the right value for current max acceleration
         # finds the point which is a certain percent of fps closer to regular max accel
-        new_max_accel = lerp(self.MAX_ACCEL, self.T_ACCEL, (self.transition_lerp_weight))
+        self.temp_max_accel = lerp(self.MAX_ACCEL, self.THRUST_ACCEL, (self.thrust_end_curr_lerp_weight))
+        self.thrust_end_curr_lerp_weight -= self.THRUST_END_LERP_DECREASE
 
         # since player has acceleration after thrusting, using clamp magnitude is safe without checks
-        self.acceleration.clamp_magnitude_ip(self.MAX_ACCEL, new_max_accel)
 
-        self.transition_lerp_weight -= self.TRANSITION_LERP_DECREASE
-
-    def accel_default(self):
-        self.acceleration += (self.direction * self.HANDLING) * 0.5
+    def set_accel_default(self):
+        self.acceleration += (self.direction * self.HANDLING)
         self.acceleration.x = pg.math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL)
         self.acceleration.y = pg.math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_ACCEL)
-        self.acceleration *= self.ACCEL_FALLOFF
+        self.acceleration *= self.ACCEL_MULTI
 
-    def apply_velocity_gravity(self):
+    def set_velocity_with_grav_effect(self):
         self.velocity = self.acceleration.copy()
-        self.velocity.y += (self.MASS * self.grav_effect)
-        if (self.direction.y == -1.0) and (self.grav_effect >= self.MAX_ACCEL):
-            # this is not a great solution, but apply some additional gravity if accel up
-            self.velocity.y -= (self.acceleration.y / self.MASS)
-        self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
+        if (self.MASS):
+            self.velocity.y += (self.MASS * self.grav_effect)
+            if (self.direction.y == -1.0) and (self.grav_effect >= self.MAX_ACCEL):
+                # this is not a great solution, but apply some additional gravity if accel up
+                self.velocity.y -= (self.acceleration.y / self.MASS)
+            self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
     def init_collision_recoil(self):
         ''' try to push the player back where it came from by inverting velocity '''
         self.collision_in_progress = True
-        self.crash_frames_left = int(self.FPS_LIMIT/4)
-        self.transition_frames_left = 0
+        self.crash_frames_left = int(self.FPS/4)
+        self.thrust_end_frames_left = 0
 
         if (abs(self.velocity.x < 0.1)):
             if (self.velocity.x > 0):
@@ -198,38 +209,42 @@ class Player(Sprite):
                 self.velocity.y -= 0.1
 
         self.velocity *= -1.0
-        self.velocity *= 0.6
+        self.position += 2 * self.velocity
+        self.velocity *= 0.8
 
     def update(self, map):
         if (self.crash_frames_left):
-            self.crash_frames_left -= 1
-            self.position += self.velocity
             self.velocity *= 0.97
             self.acceleration *= 0.97
             self.grav_effect *= 0.97
+            self.crash_frames_left -= 1
             if (self.crash_frames_left == 0):
-                self.cooldown_frames_left = self.COOLDOWN_FRAMES
+                # initiate crash cooldown phase. This attribute is checked and/or
+                # reduced by the map before allowing new crash frames on collision
+                self.crash_cooldown_frames_left = self.CRASH_COOLDOWN_FRAMES
+        # elif (self.crash_cooldown_frames_left):
+        #     pass
         elif (self.thrusting):
-            self.accel_thrusting()
+            self.set_accel_thrusting()
             self.grav_effect *= 0.97
             self.velocity = self.acceleration.copy()
-        elif (self.transition_frames_left > 0):
-            self.accel_transition_end()
+        elif (self.thrust_end_frames_left > 0):
+            self.set_accel_thrust_ending()
             self.grav_effect *= 0.99
-            self.apply_velocity_gravity()
-            self.transition_frames_left -= 1
+            self.set_velocity_with_grav_effect()
+            self.thrust_end_frames_left -= 1
         else:
-            self.accel_default()
+            self.set_accel_default()
             if (self.grav_effect < self.MAX_ACCEL):
                 self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
-            self.apply_velocity_gravity()
+            self.set_velocity_with_grav_effect()
 
         self.position += self.velocity
 
         self.angle = self.CENTER_VECTOR.angle_to(self.acceleration)
 
         # update image, position and rect position
-        self.update_image_angle()
+        self.update_image()
 
 
     # external getters
@@ -243,36 +258,3 @@ class Player(Sprite):
         return self.rect.center
     def get_angle(self):
         return self.angle
-
-
-
-    # def init_collision_recoil(self):
-    #     # self.TRANSITON_FRAMES           = int(self.TRANSITION_TIME * self.FPS_LIMIT)
-    #     # self.TRANSITION_LERP_DECREASE   = (1.0 / self.TRANSITON_FRAMES)
-    #     dist_to_last_pos = self.position.distance_to(self.last_position)
-    #     print(f'dist_to_last_pos: {dist_to_last_pos}')
-
-    #     self.recoil_target = self.last_position
-    #     print(f'recoil_target_raw: {self.recoil_target}')
-
-    #     self.recoil_target.scale_to_length((dist_to_last_pos * dist_to_last_pos))
-    #     print(f'recoil_target_scaled: {self.recoil_target}')
-
-    #     recoil_length = self.position.distance_to(self.recoil_target)
-    #     print(f'recoil_length: {recoil_length}')
-
-    #     # self.crash_frames_left = int(recoil_strength * self.FPS_LIMIT)
-    #     self.crash_frames_left = self.FPS_LIMIT
-
-    #     self.recoil_lerp_decrease = (1.0 / self.crash_frames_left)
-    #     self.recoil_lerp_weight = 1.0
-    
-    
-    
-    # print(f'collidepos: {collidepos}')
-
-    # center_mass = Vec2(self.mask.centroid())
-    # print(f'center_mass: {center_mass}')
-
-    # angle_to_collidepos = self.position.angle_to(collidepos)
-    # print(f'center_mass angle to collidepos: {angle_to_collidepos}')
