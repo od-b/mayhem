@@ -1,7 +1,7 @@
 from typing import Callable
 
 ## import needed pygame modules
-from pygame import Surface, Rect, Color, SRCALPHA
+from pygame import Surface, Rect, Color, SRCALPHA, transform
 from pygame.math import lerp
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
@@ -91,7 +91,8 @@ class UI_Bar(Sprite):
             return
 
         # create the bar rect using a midpoint value through lerp. this is faster than python math.
-        bar_rect = Rect(0, 0, lerp(0, self.bar_surf_rect.w, fill_weight), self.bar_surf_rect.h)
+        bar_width = lerp(0, self.bar_surf_rect.w, fill_weight)
+        bar_rect = Rect(0, 0, bar_width, self.bar_surf_rect.h)
 
         self.BAR_SURF.fill(self.bar_color, bar_rect)
 
@@ -99,7 +100,32 @@ class UI_Bar(Sprite):
             draw_rect(self.BAR_SURF, self.bar_border_color, bar_rect, width=self.bar_border_width)
 
     def draw_vertical_bar(self, fill_weight: float):
-        pass
+        ''' vertical bar fill. top to bottom '''
+        # clear the background
+        self.BG_SURF.fill(self.bg_color)
+
+        if (fill_weight <= 0):
+            # if there's no bar to draw, return (also avoids negative lerp)
+            return
+        elif (fill_weight >= 1):
+            self.BAR_SURF.fill(self.bar_color)
+            if (self.bar_border_width):
+                border_re = self.BAR_SURF.get_rect()
+                draw_rect(self.BAR_SURF, self.bar_border_color, border_re, width=self.bar_border_width)
+
+        # create the bar rect using a midpoint value through lerp. this is faster than python math.
+        bar_height = lerp(0, self.bar_surf_rect.h, fill_weight)
+        bar_rect = Rect(
+            0,
+            self.bar_surf_rect.h - bar_height,
+            self.bar_surf_rect.w,
+            bar_height
+        )
+
+        self.BAR_SURF.fill(self.bar_color, bar_rect)
+
+        if (self.bar_border_width):
+            draw_rect(self.BAR_SURF, self.bar_border_color, bar_rect, width=self.bar_border_width)
     
     def update(self):
         pass

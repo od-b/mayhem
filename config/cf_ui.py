@@ -2,14 +2,14 @@ from .colors import RGB
 
 CF_BAR_STYLES = {
     'default': {
-        'bg_alpha_key': int(0),
-        'bg_color': RGB['white'],
+        'bg_alpha_key': int(100),
+        'bg_color': RGB['purple'],
         'bg_border_color': RGB['purple'],
-        'bg_border_width': int(1),
+        'bg_border_width': int(2),
         'bar_alpha_key': int(200),
         'bar_color': RGB['peach'],
-        'bar_border_color': RGB['orange'],
-        'bar_border_width': int(1),
+        'bar_border_color': RGB['peach'],
+        'bar_border_width': int(2),
         'internal_padding_x': int(3),
         'internal_padding_y': int(3)
     }

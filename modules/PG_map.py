@@ -404,7 +404,6 @@ class PG_Map:
             # player has no mass. draw the overlap
             self.blit_block_player_overlap()
 
-
     def create_ui_bar(self):
         self.test_bar_weight = 1.0
         self.TEST_BAR = UI_Bar(self.cf_ui_bar_styles['default'], (20, 20), (600, 42))
@@ -417,14 +416,14 @@ class PG_Map:
             self.debug__draw_player_all_info()
         else:
             self.player_group.draw(self.surface)
+        # self.map_ui_temp.update()
+        # if (self.test_bar_weight <= 0):
+        #     self.test_bar_weight = 1.0
+        self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
+        # self.test_bar_weight -= 0.00001
+        self.map_ui_temp.draw(self.surface)
         self.block_group.draw(self.surface)
 
-        # self.map_ui_temp.update()
-        if (self.test_bar_weight <= 0):
-            self.test_bar_weight = 1.0
-        self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
-        self.test_bar_weight -= 0.0001
-        self.map_ui_temp.draw(self.surface)
 
     def check_for_collisions(self):
         ''' since collision is based on image masks, call this after draw, but before update '''
