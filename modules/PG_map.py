@@ -394,17 +394,17 @@ class PG_Map:
     def draw_sprites(self):
         ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
         self.surface.fill(self.fill_color)
-
         if (self.DEBUG_DRAW_PLAYER):
             self.debug__draw_player_all_info()
         else:
             self.player_group.draw(self.surface)
-
         self.block_group.draw(self.surface)
 
     def check_for_collisions(self):
         ''' since collision is based on image masks, call this after draw, but before update '''
         self.check_player_block_collide()
+
+
 
     def debug__draw_player_all_info(self):
         # mask debug draws apply to the sprites' temp image, so call before blitting that image

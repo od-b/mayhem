@@ -11,7 +11,7 @@ from modules.general.exceptions import VersionError
 from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
-from modules.PG_ui import Container
+from modules.PG_ui_container import UI_Container
 
 # import config dicts
 from config.cf_global import CF_GLOBAL
@@ -108,7 +108,7 @@ class PG_App:
                 Increase ['map']['padded_bounds'] to display the UI.")
             return
 
-        BOTTOM_PANEL = Container(
+        BOTTOM_PANEL = UI_Container(
             self.cf_ui_containers['bottom_panel'],
             self.window.surface,
             self.window.map_rect.bottomleft,
