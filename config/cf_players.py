@@ -30,8 +30,10 @@ CF_PLAYERS = {
             'terminal_velocity':        float(1.0),     # max velocity towards the positive y-axis
         },
         'phase_durations': {
-            'thrust_end':               int(1000),     # transition between thrust accel and normal
-            'collision_cooldown':       int(1000),     # seconds of 
+            'collision_recoil':         float(0.5),     # weight[0,1]; links crash velocity, fps and n. recoil frames. 0 == no recoil
+            'thrust_begin':             float(1.0),     # seconds; transition between normal and thrust accel
+            'thrust_end':               float(1.0),     # seconds; transition between thrust and normal accel
+            'collision_cooldown':       float(0.5),     # seconds; min time between terrain collision
         },
         # keyboard controls
         'controls': {

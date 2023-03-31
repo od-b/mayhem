@@ -286,19 +286,18 @@ class PG_App:
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
         
-        self.debugging = True
-        
+        self.DEBUG_INIT = True
+        self.DEBUG_DRAW_PLAYER = True
+
         while (self.app_is_running):
-            if (self.debugging):
+            if (self.DEBUG_INIT):
                 self.timer.post_event(self.EVENT_UPDATE_UI)
                 self.init_map('map_1', (400, 400))
 
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
-
-                # fill the main surface, then the game bounds
                 self.map.fill_surface()
-                self.map.draw_player()
+                self.map.draw_player(self.DEBUG_DRAW_PLAYER)
                 self.map.draw_blocks()
 
                 # loop through events before the display update

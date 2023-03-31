@@ -54,8 +54,6 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
-        
-        self.debugging = True
 
     def get_player_controls(self) -> dict[str, int]:
         ''' return a dict containing the player control keys '''
@@ -361,31 +359,34 @@ class PG_Map:
         MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.DEBUG_COLOR_2)
         self.surface.blit(MASK_SURF, dest_pos)
 
+    def blit_block_player_overlap(self):
+        # before checking masks, perform a simple collision check using rects
+        if (spritecollideany(self.player, self.block_group)):
+            # get list of colliding masks
+            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            for BLOCK in collidelist:
+                self.blit_overlap_mask(self.player, BLOCK)
+
     def check_player_block_collide(self):
         ''' if player collides with a block, init the recoil sequence for the player '''
-        # ignore the check if crash frames are already active
+        # case 0: ignore action if player has no mass
         if (self.player.MASS):
-            if (self.player.crash_cooldown_frames_left):
-                self.player.crash_cooldown_frames_left -= 1
-                if (spritecollideany(self.player, self.block_group)):
-                    collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-                    for BLOCK in collidelist:
-                        self.blit_overlap_mask(self.player, BLOCK)
-            elif not (self.player.crash_frames_left):
-                # before checking masks, perform a simple collision check using rects
-                if (spritecollideany(self.player, self.block_group)):
-                    # if any rects collide, check if masks collide
-                    collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-                    if (len(collidelist)):
-                        self.player.init_collision_recoil()
-                        for BLOCK in collidelist:
-                            BLOCK.init_timed_highlight()
-                            self.blit_overlap_mask(self.player, BLOCK)
-        else:
-            if (spritecollideany(self.player, self.block_group)):
+            # case 1: player is not in recoil or cooldown phase, and rects collide
+            if (self.player.collision_cooldown_frames_left == 0) and (spritecollideany(self.player, self.block_group)):
+                # get list of colliding masks
                 collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-                for BLOCK in collidelist:
-                    self.blit_overlap_mask(self.player, BLOCK)
+                if (len(collidelist)):
+                    # init player recoil phase
+                    self.player.init_collision_recoil()
+                    # highlight blocks that player collided with
+                    for BLOCK in collidelist:
+                        BLOCK.init_timed_highlight()
+            else:
+                # player has active recoil or cooldown frames
+                self.blit_block_player_overlap()
+        else:
+            # player has no mass. draw the overlap
+            self.blit_block_player_overlap()
 
     def get_collision_group(self):
         return self.block_group
@@ -393,18 +394,36 @@ class PG_Map:
     def draw_blocks(self):
         self.block_group.draw(self.surface)
 
-    def draw_player(self):
-        self.player_group.draw(self.surface)
+    def draw_player(self, debugging: bool):
+        if (debugging):
+            # mask debug draws apply to the sprites' temp image, so call before blitting that image
+            # self.debug__draw_mask_center_mass(self.player)
+            # self.debug__draw_mask_bounds(self.player)
+            # blit the player to the map surface
+            self.player_group.draw(self.surface)
+            # general debugging calls use the map surface instead, so call them post-draw.
+            # (they may extend the image of the sprite, so no way to draw them to the sprite image)
+            # self.debug__draw_sprite_velocity(self.player, 40.0, 1)
+            # self.debug__draw_sprite_acceleration(self.player, 40.0, 1)
+            # self.debug__outline_rect(self.player)
+        else:
+            self.player_group.draw(self.surface)
 
     def update_blocks(self):
         self.block_group.update()
 
     def update_player(self):
-        self.player_group.update(self)
+        self.player_group.update()
 
     def fill_surface(self):
         ''' fills/resets the map surface '''
         self.surface.fill(self.fill_color)
+
+    def debug__draw_sprite_acceleration(self, sprite: Sprite, len: float, width: int):
+        ''' visualize sprite acceleration from its position '''
+        p1 = Vec2(sprite.position)
+        p2 = Vec2(sprite.position + (len * sprite.acceleration))
+        draw_line(self.surface, self.DEBUG_COLOR_2, p1, p2, width)
 
     def debug__draw_sprite_velocity(self, sprite: Sprite, len: float, width: int):
         ''' visualize sprite velocity from its position '''
@@ -412,20 +431,20 @@ class PG_Map:
         p2 = Vec2(sprite.position + (len * sprite.velocity))
         draw_line(self.surface, self.DEBUG_COLOR, p1, p2, width)
 
-    def debug__draw_mask_outline(self, sprite: Sprite):
+    def debug__outline_mask(self, sprite: Sprite):
         ''' visualize mask outline by drawing lines along the set pixel points '''
         p_list = sprite.mask.outline()  # get a list of cooordinates from the mask outline
         # print(f'n_points in mask: {len(p_list)}')
         if (p_list):
             draw_lines(sprite.image, self.DEBUG_COLOR, 1, p_list)
 
-    def debug__draw_rect(self, sprite: Sprite):
+    def debug__outline_rect(self, sprite: Sprite):
         ''' draw a border around the sprite bounding rect '''
         draw_rect(self.surface, self.DEBUG_COLOR, sprite.rect, width=1)
 
     def debug__draw_mask_bounds(self, sprite: Sprite):
         ''' draw the actual bounding rect of the player mask '''
-        mask_bounds = self.get_largest_mask_component_bounds(sprite)
+        mask_bounds = self.get_largest_mask_component_bounds(sprite.mask)
         draw_rect(sprite.image, self.DEBUG_COLOR_2, mask_bounds, width=1)
 
     def debug__draw_mask_center_mass(self, sprite: Sprite):
