@@ -33,7 +33,7 @@ CF_PLAYERS = {
         },
         'phase_durations': {
             'collision_recoil':         float(0.5),     # weight[0,1]; links crash velocity, fps and n. recoil frames. 0 == no recoil
-            'thrust_begin':             float(1.0),     # seconds; transition between normal and thrust accel
+            'thrust_begin':             float(0.5),     # seconds; transition between normal and thrust accel
             'thrust_end':               float(1.0),     # seconds; transition between thrust and normal accel
             'collision_cooldown':       float(0.75),     # seconds; min time between terrain collision
         },

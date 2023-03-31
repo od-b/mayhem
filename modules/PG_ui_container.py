@@ -5,7 +5,7 @@ from pygame import Surface, Rect, Color, SRCALPHA
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
 from pygame.draw import line as draw_line
-from .PG_text_box import Text_Box
+from .PG_ui_text_box import Text_Box
 
 
 class UI_Container(Sprite):

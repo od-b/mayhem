@@ -10,6 +10,7 @@ from pygame.mask import Mask
 ## general classes
 from .general.exceptions import ConfigError
 ## pygame specific classes
+from .PG_ui_bar import UI_Bar
 from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
@@ -17,11 +18,21 @@ from .PG_timer import PG_Timer
 
 class PG_Map:
     ''' current map setup used by the the app '''
-    def __init__(self, cf_global: dict, cf_map: dict, surface: Surface, timer: PG_Timer):
+    def __init__(self,
+            cf_global: dict,
+            cf_map: dict,
+            cf_ui_bar_styles: dict,
+            cf_ui_containers : dict,
+            surface: Surface,
+            timer: PG_Timer
+        ):
 
         # self.cf_global = cf_global
         self.cf_global = cf_global
         self.cf_map = cf_map
+        self.cf_ui_bar_styles = cf_ui_bar_styles
+        self.cf_ui_containers = cf_ui_containers 
+
         self.surface = surface
         self.timer = timer
 
@@ -55,8 +66,10 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
-        
+
+        self.map_ui_temp = Group()
         self.DEBUG_DRAW_PLAYER = False
+        self.create_ui_bar()
 
     def get_player_controls(self) -> dict[str, int]:
         ''' return a dict containing the player control keys '''
@@ -391,8 +404,14 @@ class PG_Map:
             # player has no mass. draw the overlap
             self.blit_block_player_overlap()
 
+
+    def create_ui_bar(self):
+        self.test_bar_weight = 1.0
+        self.TEST_BAR = UI_Bar(self.cf_ui_bar_styles['default'], (20, 20), (600, 42))
+        self.map_ui_temp.add(self.TEST_BAR)
+
     def draw_sprites(self):
-        ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
+        # ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
         self.surface.fill(self.fill_color)
         if (self.DEBUG_DRAW_PLAYER):
             self.debug__draw_player_all_info()
@@ -400,11 +419,16 @@ class PG_Map:
             self.player_group.draw(self.surface)
         self.block_group.draw(self.surface)
 
+        # self.map_ui_temp.update()
+        if (self.test_bar_weight <= 0):
+            self.test_bar_weight = 1.0
+        self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
+        self.test_bar_weight -= 0.0001
+        self.map_ui_temp.draw(self.surface)
+
     def check_for_collisions(self):
         ''' since collision is based on image masks, call this after draw, but before update '''
         self.check_player_block_collide()
-
-
 
     def debug__draw_player_all_info(self):
         # mask debug draws apply to the sprites' temp image, so call before blitting that image

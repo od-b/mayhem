@@ -17,7 +17,7 @@ from modules.PG_ui_container import UI_Container
 from config.cf_global import CF_GLOBAL
 from config.cf_window import CF_WINDOW
 from config.cf_maps import CF_MAPS
-from config.cf_ui import CF_CONTAINERS
+from config.cf_ui import CF_CONTAINERS, CF_BAR_STYLES
 
 
 class PG_App:
@@ -40,13 +40,15 @@ class PG_App:
             config_global: dict,
             config_window: dict,
             config_maps: dict,
-            config_ui_containers: dict
+            config_ui_containers: dict,
+            config_ui_bar_styles: dict
         ):
 
         self.cf_global = config_global
         self.cf_window = config_window
         self.cf_maps = config_maps
         self.cf_ui_containers = config_ui_containers
+        self.cf_ui_bar_styles = config_ui_bar_styles
 
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
@@ -190,6 +192,8 @@ class PG_App:
         self.map = PG_Map(
             self.cf_global,
             self.cf_maps[cf_maps_key],
+            self.cf_ui_bar_styles,
+            self.cf_ui_containers,
             self.window.map_surface,
             self.timer
         )
@@ -328,7 +332,7 @@ if __name__ == '__main__':
         )
 
     # load the game
-    GAME = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_CONTAINERS)
+    GAME = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_CONTAINERS, CF_BAR_STYLES)
     # cProfile.run('GAME.loop()')
     GAME.loop()
     pg.quit()
