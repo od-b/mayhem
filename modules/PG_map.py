@@ -355,30 +355,33 @@ class PG_Map:
 
         return collidepos
 
+    def blit_overlap_mask(self, sprite_1, sprite_2):
+        dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
+        overlap_mask = self.get_sprite_mask_overlap(sprite_1, sprite_2)
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.DEBUG_COLOR_2)
+        self.surface.blit(MASK_SURF, dest_pos)
+
     def check_player_block_collide(self):
-        ''' get a list of sprites that collide with the player '''
-
-        # before checking masks, perform a simple collision check using rects
-        if (spritecollideany(self.player, self.block_group)):
-            LIST: list[Block] = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-            if (len(LIST)):
-                for BLOCK in LIST:
-                    # BLOCK.init_timed_highlight()
-                    if (self.debugging):
-                        self.debug__draw_mask_overlap(self.player, BLOCK)
-                # overlap = self.get_sprite_mask_overlap(self.player, BLOCK)
-                # overlap_rect = overlap.get_rect(topleft=(BLOCK.rect.x, BLOCK.rect.y))
-
-                if not (self.player.collision_in_progress):
-                    self.player.collision_in_progress = True
+        ''' if player collides with a block, init the recoil sequence for the player '''
+        # ignore the check if crash frames are already active
+        if (self.player.cooldown_frames_left):
+            self.player.cooldown_frames_left -= 1
+            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            for BLOCK in collidelist:
+                self.blit_overlap_mask(self.player, BLOCK)
+        elif not (self.player.crash_frames_left):
+            # before checking masks, perform a simple collision check using rects
+            if (spritecollideany(self.player, self.block_group)):
+                # if any rects collide, check if masks collide
+                collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+                if (len(collidelist)):
                     self.player.init_collision_recoil()
+                    for BLOCK in collidelist:
+                        BLOCK.init_timed_highlight()
+                        self.blit_overlap_mask(self.player, BLOCK)
 
-                # # player_center = self.player.mask.centroid()
-                # collidepos = self.get_collision_center(self.player, LIST[0])
-                # print(f'collidepos: {collidepos}')
-
-                # if (self.debugging):
-                #     draw_line(self.surface, self.DEBUG_COLOR_2, collidepos, self.player.position)
+    def get_collision_group(self):
+        return self.block_group
 
     def draw_blocks(self):
         self.block_group.draw(self.surface)
@@ -390,7 +393,7 @@ class PG_Map:
         self.block_group.update()
 
     def update_player(self):
-        self.player_group.update()
+        self.player_group.update(self)
 
     def fill_surface(self):
         ''' fills/resets the map surface '''
@@ -417,12 +420,6 @@ class PG_Map:
         ''' draw the actual bounding rect of the player mask '''
         mask_bounds = self.get_largest_mask_component_bounds(sprite)
         draw_rect(sprite.image, self.DEBUG_COLOR_2, mask_bounds, width=1)
-
-    def debug__draw_mask_overlap(self, sprite_1, sprite_2):
-        dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
-        overlap_mask = self.get_sprite_mask_overlap(sprite_1, sprite_2)
-        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.DEBUG_COLOR_2)
-        self.surface.blit(MASK_SURF, dest_pos)
 
     def debug__draw_mask_center_mass(self, sprite: Sprite):
         ''' visualize the actual mask bounds by drawing an interesction through it

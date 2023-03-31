@@ -1,7 +1,7 @@
 import pygame as pg
 from pygame import Color, Surface, Rect
 from pygame.math import Vector2 as Vec2, lerp
-from pygame.sprite import Sprite
+from pygame.sprite import Sprite, Group, spritecollide, spritecollideany, collide_mask
 from pygame.draw import polygon as draw_polygon
 # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
 
@@ -80,11 +80,10 @@ class Player(Sprite):
         ''' accumulation of gravity '''
 
         # attributes related to collision
-        self.crash_frames_left   = int(0)
-        # self.rebound_pos    = Vec2(0.0, 0.0)
-        # self.rebound_lerp_weight = float(0)
-        # self.rebound_lerp_decrease = float(0)
-        self.collision_in_progress = False
+        self.COOLDOWN_TIME     = float(cf_weights['collision_cooldown'])
+        self.COOLDOWN_FRAMES   = int(self.COOLDOWN_TIME * self.FPS_LIMIT)
+        self.cooldown_frames_left = int(0)
+        self.crash_frames_left = int(0)
 
         # other
         self.health: int    = self.MAX_HEALTH
@@ -181,35 +180,35 @@ class Player(Sprite):
         self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
     def init_collision_recoil(self):
-        self.crash_frames_left = 60
+        ''' try to push the player back where it came from by inverting velocity '''
+        self.collision_in_progress = True
+        self.crash_frames_left = int(self.FPS_LIMIT/4)
         self.transition_frames_left = 0
-        # self.thrusting = False
 
-        if (abs(self.velocity.x < 0.2)):
+        if (abs(self.velocity.x < 0.1)):
             if (self.velocity.x > 0):
-                self.velocity.x += 0.2
+                self.velocity.x += 0.1
             else:
-                self.velocity.x -= 0.2
+                self.velocity.x -= 0.1
 
-        if (abs(self.velocity.y < 0.2)):
+        if (abs(self.velocity.y < 0.1)):
             if (self.velocity.y > 0):
-                self.velocity.y += 0.2
+                self.velocity.y += 0.1
             else:
-                self.velocity.y -= 0.2
+                self.velocity.y -= 0.1
 
         self.velocity *= -1.0
         self.velocity *= 0.6
 
-    def update(self):
+    def update(self, map):
         if (self.crash_frames_left):
-            # pos_cpy = self.position.copy().normalize()
             self.crash_frames_left -= 1
             self.position += self.velocity
             self.velocity *= 0.97
             self.acceleration *= 0.97
             self.grav_effect *= 0.97
             if (self.crash_frames_left == 0):
-                self.collision_in_progress = False
+                self.cooldown_frames_left = self.COOLDOWN_FRAMES
         elif (self.thrusting):
             self.accel_thrusting()
             self.grav_effect *= 0.97

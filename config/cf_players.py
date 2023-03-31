@@ -20,13 +20,14 @@ CF_PLAYERS = {
             'max_mana':             int(150),       # maximum and initial mana
             'mass':                 float(1.8),     # more mass = more gravity
             'handling':             float(0.05),    # how effective rotation will be
-            'accel_falloff':        float(0.985),    # change to velocity per frame when not thrusting (multiplier)
+            'accel_falloff':        float(0.985),   # change to velocity per frame when not thrusting (multiplier)
             'max_accel':            float(0.7),     # regular max velocity (pixels per frame)
             't_accel':              float(1.4),     # magnitude of velocity during thrust (pixels per frame)
             't_handling':           float(0.05),    # how effective rotation will be during thrust
             't_transition_time':    float(1.0),     # how quickly the added velocity will fall off after thrusting (seconds)
             'max_velocity':         float(0.7),
-            'terminal_velocity':    float(1.0)      # max velocity towards the positive y-axis
+            'terminal_velocity':    float(1.0),     # max velocity towards the positive y-axis
+            'collision_cooldown':   float(1.0),     # seconds
         },
         # keyboard controls
         'controls': {
