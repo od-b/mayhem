@@ -1,7 +1,7 @@
 from random import randint
 
 # installed library imports
-from pygame import Color, Surface, Rect, display
+from pygame import Color, Surface, Rect
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask

@@ -1,7 +1,6 @@
 from random import randint
 
-import pygame as pg
-from pygame import Color, Surface, SRCALPHA
+from pygame import Color, Surface, mask, SRCALPHA
 from pygame.sprite import Sprite
 from pygame.draw import rect as draw_rect
 # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
@@ -92,16 +91,16 @@ class Block(Sprite):
         self.rect.topleft = self.position
 
         # create a mask for fast collision detection
-        self.mask = pg.mask.from_surface(self.image)
+        self.mask = mask.from_surface(self.image)
         ''' pygame mask from the main surface, for fast collision detection '''
 
     def _create_main_image(self):
         # create main surface, converting to the right format
         IMG: Surface
         if (self.alpha_value):
-            IMG = pg.Surface(self.size, flags=SRCALPHA)
+            IMG = Surface(self.size, flags=SRCALPHA)
         else:
-            IMG = pg.Surface(self.size).convert()
+            IMG = Surface(self.size).convert()
 
         IMG.fill(self.color)
 
@@ -120,9 +119,9 @@ class Block(Sprite):
             # create alt surface, converting to the right format
             ALT_IMG: Surface
             if (self.alpha_value):
-                ALT_IMG = pg.Surface(self.size, flags=SRCALPHA)
+                ALT_IMG = Surface(self.size, flags=SRCALPHA)
             else:
-                ALT_IMG = pg.Surface(self.size).convert()
+                ALT_IMG = Surface(self.size).convert()
 
             # read and store the dict settings as proper types
             if (cf_alt_surf['color'] != None):

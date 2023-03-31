@@ -1,7 +1,6 @@
-import pygame as pg
-from pygame import Color, Surface, Rect
+from pygame import Color, Surface, transform, mask, math as pg_math
 from pygame.math import Vector2 as Vec2, lerp
-from pygame.sprite import Sprite, Group, spritecollide, spritecollideany, collide_mask
+from pygame.sprite import Sprite
 from pygame.draw import polygon as draw_polygon
 # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
 
@@ -123,7 +122,7 @@ class Player(Sprite):
                 2) The image quality will deteriorate after each rotation
         '''
         # create a surface
-        SURF = pg.Surface((self.width, self.height)).convert_alpha()
+        SURF = Surface((self.width, self.height)).convert_alpha()
 
         # fill the surface with transparent pixels
         SURF.fill((0,0,0,0))
@@ -136,20 +135,20 @@ class Player(Sprite):
         draw_polygon(SURF, color, (p1, p2, p3))
 
         # rotating to -90 means there's no need to flip later. (pg inverted y-axis)
-        IMG = pg.transform.rotate(SURF, -90)
+        IMG = transform.rotate(SURF, -90)
         return IMG
 
     def update_image(self):
         ''' update .image, transforming it to the current angle. Create new rect and mask. '''
 
         # get a new image by rotating the original image
-        self.image = pg.transform.rotate(self.curr_image_src, -self.angle)
+        self.image = transform.rotate(self.curr_image_src, -self.angle)
 
         # get new mask for collision checking purposes
         #   > "A new mask needs to be recreated each time a sprite's image is changed  
         #   > (e.g. if a new image is used or the existing image is rotated)."
         #   https://www.pygame.org/docs/ref/sprite.html#pygame.sprite.collide_mask  
-        self.mask = pg.mask.from_surface(self.image)
+        self.mask = mask.from_surface(self.image)
 
         # set rect to the new images rect bounds. used for blitting through group draw
         self.rect = self.image.get_rect(center=self.position)
@@ -203,8 +202,8 @@ class Player(Sprite):
         ''' apply direction to acceleration. clamp acceleration. reduce acceleration. '''
         self.acceleration += (self.direction * self.HANDLING)
         self.acceleration.update(
-            pg.math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL),
-            pg.math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_ACCEL)
+            pg_math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL),
+            pg_math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_ACCEL)
         )
         self.acceleration *= self.ACCEL_MULTI
 
@@ -217,7 +216,7 @@ class Player(Sprite):
             if (self.direction.y == -1.0) and (self.grav_effect >= self.MAX_ACCEL):
                 # this is not a great solution, but apply some additional gravity if accel up
                 self.velocity.y -= (self.acceleration.y / self.MASS)
-            self.velocity.y = pg.math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
+            self.velocity.y = pg_math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
     def apply_recoil_frame(self):
         ''' reduce velocity and acceleration. ignore acceleration. ignore gravity. '''

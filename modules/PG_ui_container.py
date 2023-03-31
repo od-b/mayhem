@@ -1,4 +1,4 @@
-from typing import Callable     # allows type hinting 'function pointers'
+from typing import Callable
 
 ## import needed pygame modules
 from pygame import Surface, Rect, Color, SRCALPHA
