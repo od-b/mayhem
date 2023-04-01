@@ -175,7 +175,6 @@ class Player(Sprite):
 
     def init_collision_recoil(self):
         ''' try to push the player back where it came from by inverting velocity '''
-        self.collision_cooldown_frames_left = self.COLLISION_COOLDOWN_FRAMES
 
         if (abs(self.velocity.x < 0.1)):
             if (self.velocity.x > 0):
@@ -191,9 +190,9 @@ class Player(Sprite):
 
         # scale recoil frames to how fast the sprite was going
         self.collision_recoil_frames_left = round(self.velocity.length() * self.COLLISION_RECOIL_MULTI)
+        self.collision_cooldown_frames_left = self.COLLISION_COOLDOWN_FRAMES + self.collision_recoil_frames_left
 
-        self.velocity *= -1.0
-        self.velocity *= 0.8
+        self.velocity *= -0.3
         self.acceleration *= 0.1
         self.curr_image_src = self.COLLISION_CD_IMAGE
 
@@ -285,6 +284,7 @@ class Player(Sprite):
 
     def update(self):
         if (self.collision_cooldown_frames_left):
+            # collision cooldown frames co-occur with other frames
             self.collision_cooldown_frames_left -= 1
             if (self.collision_cooldown_frames_left == 0):
                 self.curr_image_src = self.DEFAULT_IMAGE
