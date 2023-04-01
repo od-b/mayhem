@@ -1,11 +1,11 @@
 from typing import Callable
 
 ## import needed pygame modules
-from pygame import Surface, Rect, Color, SRCALPHA, transform
+from pygame import Surface, Rect, Color, SRCALPHA, transform, image
 from pygame.math import lerp, clamp
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
-from pygame.draw import line as draw_line
+from pygame.draw import line as draw_line, lines as draw_lines
 
 
 class UI_Bar(Sprite):
@@ -42,45 +42,37 @@ class UI_Bar(Sprite):
         self.convert_color_alpha()
 
         # create a root surface 
-        SURF = Surface(self.size, flags=SRCALPHA)
-        # draw border onto the root surface
+        self.ROOT_SURF = Surface(self.size).convert_alpha()
+        self.ROOT_RECT = self.ROOT_SURF.get_rect()
+        # self.ROOT_SURF.fill((0, 0, 0, 0))
+
+        # bg image with border drawn on it, can be blitted to the surface to clear it
+        # if this is alpha, root surf needs to be filled with alpha as well
+        self.BG_IMAGE = Surface(self.size).convert_alpha()
+        # self.BG_IMAGE.fill((0, 0, 0, 0))
+        self.BG_IMAGE.fill(self.bg_color)
         if (self.bg_border_width):
-            draw_rect(SURF, self.bg_border_color, SURF.get_rect(), width=self.bg_border_width)
-
-        self.ROOT_SURF = SURF
-        self.ROOT_RECT = SURF.get_rect()
-
-        # create background area as a rect
-        self.bg_surf_rect = Rect(
-            (self.ROOT_RECT.x + self.bg_border_width),
-            (self.ROOT_RECT.y + self.bg_border_width),
-            (self.ROOT_RECT.w - (2 * self.bg_border_width)),
-            (self.ROOT_RECT.h - (2 * self.bg_border_width))
-        )
+            draw_rect(self.BG_IMAGE, self.bg_border_color, self.ROOT_RECT, width=self.bg_border_width)
 
         # create bar area as a rect
-        self.bar_surf_rect = Rect(
-            (self.bg_surf_rect.x + self.internal_padding_x),
-            (self.bg_surf_rect.y + self.internal_padding_y),
-            (self.bg_surf_rect.w - (2 * self.internal_padding_x)),
-            (self.bg_surf_rect.h - (2 * self.internal_padding_y))
+        bar_surf_rect = Rect(
+            (self.ROOT_RECT.x + self.internal_padding_x + self.bg_border_width),
+            (self.ROOT_RECT.y + self.internal_padding_y + self.bg_border_width),
+            (self.ROOT_RECT.w - (2 * (self.internal_padding_x + self.bg_border_width))),
+            (self.ROOT_RECT.h - (2 * (self.internal_padding_y + self.bg_border_width)))
         )
 
-        # assign areas of the root surface to the different parts
-        self.BG_SURF = self.ROOT_SURF.subsurface(self.bg_surf_rect)
-        self.BAR_SURF = self.ROOT_SURF.subsurface(self.bar_surf_rect)
+        # assign areas of the root surface to the different parts for easy blitting
+        self.BG_SURF = self.ROOT_SURF.subsurface(self.ROOT_RECT)
+        self.BAR_SURF = self.ROOT_SURF.subsurface(bar_surf_rect)
+
+        self.bg_surf_rect = self.BG_SURF.get_rect()
+        self.bar_surf_rect = self.BAR_SURF.get_rect()
 
         # set image to the root surface
         self.image = self.ROOT_SURF
         self.rect = self.ROOT_RECT
         self.rect.topleft = position
-        
-        self.fill_weight = 1.0
-
-    def update(self):
-        # self.fill_weight += 0.1
-        # self.draw_horizontal_bar(self.fill_weight)
-        pass
 
     def convert_color_alpha(self):
         ''' convert all colors to rgba '''
@@ -93,7 +85,9 @@ class UI_Bar(Sprite):
 
     def draw_horizontal_bar(self, fill_weight: float):
         # clear the background
-        self.BG_SURF.fill(self.bg_color)
+        if (self.bg_alpha_key != 255):
+            self.ROOT_SURF.fill((0, 0, 0, 0))
+        self.BG_SURF.blit(self.BG_IMAGE, (0, 0))
 
         if (fill_weight <= 0.0):
             # if there's no bar to draw, return (also avoids negative lerp)
@@ -111,12 +105,16 @@ class UI_Bar(Sprite):
         self.BAR_SURF.fill(self.bar_color, bar_rect)
 
         if (self.bar_border_width):
+            # bar_rect.inflate(-self.bar_border_width, -self.bar_border_width)
+            # draw_lines(self.BAR_SURF, self.bar_border_color, False, coords, self.bar_border_width)
             draw_rect(self.BAR_SURF, self.bar_border_color, bar_rect, width=self.bar_border_width)
 
     def draw_vertical_bar(self, fill_weight: float):
         ''' vertical bar fill. top to bottom '''
         # clear the background
-        self.BG_SURF.fill(self.bg_color)
+        if (self.bg_alpha_key != 255):
+            self.ROOT_SURF.fill((0, 0, 0, 0))
+        self.BG_SURF.blit(self.BG_IMAGE, (0, 0))
 
         if (fill_weight <= 0.0):
             # if there's no bar to draw, return (also avoids negative lerp)
@@ -138,6 +136,8 @@ class UI_Bar(Sprite):
         self.BAR_SURF.fill(self.bar_color, bar_rect)
 
         if (self.bar_border_width):
+            # coords = [bar_rect.topleft, bar_rect.topright, bar_rect.bottomright, bar_rect.bottomleft]
+            # draw_lines(self.BAR_SURF, self.bar_border_color, False, coords, self.bar_border_width)
             draw_rect(self.BAR_SURF, self.bar_border_color, bar_rect, width=self.bar_border_width)
     
     def update(self):
@@ -155,14 +155,78 @@ class UI_Icon_Bar(UI_Bar):
             cf_global: dict,
             ref_id,
             position: tuple[int, int],
-            size: tuple[int, int],
-            icon_path: str
+            bar_size: tuple[int, int],
+            icon_path: str,
+            icon_offset: int,
+            copy_super_bg: bool
         ):
-        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
-        
+
+        super().__init__(cf_bar_style, cf_global, ref_id, position, bar_size)
+
         self.icon_path = icon_path
+        self.icon_offset = icon_offset
+        self.copy_super_bg = copy_super_bg
         
-    
+        old_rect = self.rect.copy()
+
+        icon_size = (self.rect.h, self.rect.h)
+        ICON_IMG = image.load(icon_path).convert_alpha()
+
+        if (self.copy_super_bg):
+            # create background/border for icon
+            ICON_BG_SURF = Surface((icon_size)).convert_alpha()
+            ICON_BG_SURF.fill((0, 0, 0, 0))
+            if (self.bg_border_width):
+                draw_rect(ICON_BG_SURF, self.bg_border_color, ICON_BG_SURF.get_rect(), width=self.bg_border_width)
+
+            # scale down icon by border width and a pixel clearing
+            # icon_size = (icon_size[0] - self.bg_border_width - 1, icon_size[0] - self.bg_border_width - 1)
+            ICON = transform.scale(ICON_IMG, icon_size)
+
+            ICON_BG_SURF.blit(ICON, icon_size)
+            self.ICON = ICON_BG_SURF
+        else:
+            self.ICON = transform.scale(ICON_IMG, icon_size)
+
+        self.icon_rect = self.ICON.get_rect()
+
+        new_root_width = (self.rect.w + self.rect.h + self.icon_offset)
+        new_root_height = self.rect.h
+
+        # replace super root surf with the extended one
+        self.ROOT_SURF = Surface((new_root_width, new_root_height)).convert_alpha()
+        self.ROOT_SURF.fill((0, 0, 0, 0))
+
+        self.rect = self.ROOT_SURF.get_rect()
+
+        # reposition rects
+        self.bg_surf_rect.left += (self.icon_rect.w + self.icon_offset)
+        self.bar_surf_rect.left += (self.icon_rect.w + self.icon_offset)
+        self.icon_rect.topleft = self.rect.topleft
+
+        # update subsurfaces from super
+        self.BG_SURF = self.ROOT_SURF.subsurface(self.bg_surf_rect)
+        self.BAR_SURF = self.ROOT_SURF.subsurface(self.bar_surf_rect)
+        self.ICON_SURF = self.ROOT_SURF.subsurface(self.icon_rect)
+
+        if (self.copy_super_bg):
+            self.ROOT_SURF.fill(self.bg_color, self.BG_SURF.get_rect())
+
+        if (self.bg_border_width):
+            topright_pos = self.ROOT_SURF.get_rect().topright
+            draw_rect(
+                self.ROOT_SURF,
+                self.bg_border_color, 
+                self.BG_SURF.get_rect(topright=topright_pos),
+                width=self.bg_border_width
+            )
+
+        self.rect.topleft = self.position
+        self.image = self.ROOT_SURF
+
+    def draw_horizontal_bar(self, fill_weight: float):
+        super().draw_horizontal_bar(fill_weight)
+        self.ICON_SURF.blit(self.ICON, self.icon_rect)
 
 
 class UI_Auto_Bar(UI_Bar):
