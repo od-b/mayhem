@@ -390,7 +390,7 @@ class PG_Map:
         '''
 
         # case 0: ignore collision if player has no mass or cooldown frames
-        if self.player.collision_cooldown_frames_left or not self.player.MASS:
+        if self.player.collision_cooldown_frames_left:
             # blit the visual overlap
             self.blit_block_player_overlap()
         elif spritecollideany(self.player, self.block_group):

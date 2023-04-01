@@ -241,7 +241,7 @@ class PG_App:
                         case self.STEER_RIGHT:
                             self.map.player.direction.x += 1.0
                         case self.THRUST:
-                            self.map.player.begin_thrust()
+                            self.map.player.init_begin_thrust()
                         case _:
                             pass
                 case pg.KEYUP:
@@ -255,7 +255,7 @@ class PG_App:
                         case self.STEER_RIGHT:
                             self.map.player.direction.x -= 1.0
                         case self.THRUST:
-                            self.map.player.end_thrust()
+                            self.map.player.init_end_thrust()
                         case _:
                             pass
                 case pg.QUIT:
