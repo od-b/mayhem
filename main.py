@@ -183,6 +183,7 @@ class PG_App:
         self.map.spawn_player(player_pos)
         self.window.set_extended_caption(self.map.name)
         self.fetch_player_controls()
+        self.map.set_up_ui()
 
         if not (self.timer.first_init_done):
             self.timer.start_first_segment(self.map.name)

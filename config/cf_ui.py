@@ -22,7 +22,7 @@ CF_TEXT_BOXES = {
         # default textbox style
         'text_bg_color':  RGB['offblack'],
         'font_size':      int(24),
-        'font_path':      str("media/fonts/JetBrainsMono-SemiBold.ttf"),
+        'font_path':      str("assets/fonts/JetBrainsMono-SemiBold.ttf"),
         'font_antialias': True,
         'font_color':     RGB['bone']
     }

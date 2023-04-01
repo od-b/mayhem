@@ -14,7 +14,7 @@ from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
 from .PG_ui_container import UI_Container
-from .PG_ui_bar import UI_Bar
+from .PG_ui_bar import UI_Bar, UI_Auto_Bar
 
 
 class PG_Map:
@@ -57,6 +57,10 @@ class PG_Map:
         self.rect = self.surface.get_rect()
         ''' rect of the map surface '''
 
+        # self.surface.fill(self.fill_color)
+        # self.CLEAR_SURF = Surface((self.rect.w, self.rect.h)).convert_alpha()
+        # self.CLEAR_SURF.fill(self.fill_color)
+
         # combined groups
         self.block_group = Group()
         ''' combined group of constant, map-anchored rectangular sprites '''
@@ -70,7 +74,6 @@ class PG_Map:
 
         self.map_ui_temp = Group()
         self.DEBUG_DRAW_PLAYER = False
-        self.create_ui_bar()
 
     def get_player_controls(self) -> dict[str, int]:
         ''' return a dict containing the player control keys '''
@@ -403,9 +406,22 @@ class PG_Map:
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
 
+    def set_up_ui(self):
+        self.create_ui_bar()
+
     def create_ui_bar(self):
         self.test_bar_weight = 1.0
-        self.TEST_BAR = UI_Bar(self.cf_ui_bar_styles['default'], self.cf_global, "TEST", (20, 20), (600, 42))
+        self.TEST_BAR = UI_Auto_Bar(
+            self.cf_ui_bar_styles['default'],
+            self.cf_global, "TEST",
+            (20, 20),
+            (600, 42),
+            0.0,
+            1.0,
+            self.player.get_grav_effect,
+            'horizontal',
+            True
+        )
         self.map_ui_temp.add(self.TEST_BAR)
 
     def draw_sprites(self):
@@ -415,13 +431,9 @@ class PG_Map:
             self.debug__draw_player_all_info()
         else:
             self.player_group.draw(self.surface)
-        self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
-        self.test_bar_weight -= 0.0001
-        self.map_ui_temp.draw(self.surface)
         self.block_group.draw(self.surface)
-
-    def check_terrain_collisions(self):
-        self.check_player_block_collide()
+        self.map_ui_temp.update()
+        self.map_ui_temp.draw(self.surface)
 
     #### DEBUGGING METHODS ####
 
@@ -495,10 +507,3 @@ class PG_Map:
         msg += f'topleft[x,y] = {self.rect.topleft}\n'
         msg += f'size[w,h] = [{self.rect.w}, {self.rect.h} >\n'
         return msg
-
-
-# collidepos = self.collision_center(self.player, LIST[0])
-# print(f'collidepos: {collidepos}')
-# player_mask_re = self.largest_mask_component_bounds(self.player.mask)
-# weight = Vec2(player_mask_re.center).distance_to(collidepos)
-# self.player.init_collision_recoil(weight)

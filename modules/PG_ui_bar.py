@@ -97,11 +97,11 @@ class UI_Bar(Sprite):
 
         if (fill_weight <= 0.0):
             # if there's no bar to draw, return (also avoids negative lerp)
-            if (fill_weight < 0.0):
-                print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} < 0.0. returning.')
+            # if (fill_weight < 0.0):
+            #     print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} < 0.0. returning.')
             return
         elif (fill_weight > 1.0):
-            print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
+            # print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
             fill_weight = 1.0
 
         # create the bar rect using a midpoint value through lerp. this is faster than python math.
@@ -148,10 +148,66 @@ class UI_Bar(Sprite):
         msg += f'rect="{self.rect}", ref_id={self.ref_id}]'
         return msg
 
-# class UI_Bar_Timed_Horizontal(Sprite):
-#     def __init__(self,
-#             cf_duration_bar: dict,
-#             ref_id,
-#             position: tuple,
-#         ):
-#         self.
+
+class UI_Icon_Bar(UI_Bar):
+    def __init__(self,
+            cf_bar_style: dict,
+            cf_global: dict,
+            ref_id,
+            position: tuple[int, int],
+            size: tuple[int, int],
+            icon_path: str
+        ):
+        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
+        
+        self.icon_path = icon_path
+        
+    
+
+
+class UI_Auto_Bar(UI_Bar):
+    def __init__(self,
+            cf_bar_style: dict,
+            cf_global: dict,
+            ref_id,
+            position: tuple[int, int],
+            size: tuple[int, int],
+            min_val: float,
+            max_val: float,
+            getter_func: Callable[[None], float],
+            fill_direction: str,
+            auto_adjust_max_val: bool
+        ):
+        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
+
+        self.min_val = min_val
+        self.max_val = max_val
+        self.auto_adjust_max_val = auto_adjust_max_val
+
+        self.getter_func = getter_func
+        self.fill_direction = fill_direction
+
+        if (fill_direction == 'horizontal'):
+            self.bar_draw_func = super().draw_horizontal_bar
+        elif (fill_direction == 'vertical'):
+            self.bar_draw_func = super().draw_vertical_bar
+        else:
+            raise ValueError(f'"horizontal" or "vertical". Found "{fill_direction}"')
+
+    def update(self):
+        fill_val = self.getter_func()
+        if (fill_val > self.min_val):
+            if (fill_val > self.max_val):
+                if (self.auto_adjust_max_val):
+                    self.max_val = fill_val
+                else:
+                    fill_weight = 1.0
+            else:
+                fill_weight = (fill_val/self.max_val)
+            self.bar_draw_func(
+                lerp(
+                    self.min_val,
+                    self.max_val,
+                    fill_weight
+                )
+            )
