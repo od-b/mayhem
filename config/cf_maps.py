@@ -12,8 +12,8 @@ CF_MAPS = {
         ## physics-related weights that may differ between maps
         # these are read by other sprites on creation.
         # gravitational constants. gravity_c must not be 0, or division by zero may occur.
-        'gravity_m':            float(1.005),      # gravity multiplier. range = [1.0, 2.0]
-        'gravity_c':            float(0.004),      # gravitational constant. 0 = no gravity
+        'gravity_m':            float(0.004),      # gravity multiplier. range = [1.0, 2.0]
+        'gravity_c':            float(0.003),      # gravitational constant. 0 = no gravity
         # sprite settings:
         'player':               CF_PLAYERS['polygon'],
         'blocks': {

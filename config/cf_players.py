@@ -31,6 +31,7 @@ CF_PLAYERS = {
             'acceleration_multiplier':  float(0.985),   # multiplier for to acceleration, per frame when not thrusting
             'max_velocity':             float(0.7),     # general max velocity
             'terminal_velocity':        float(1.0),     # max velocity towards the positive y-axis
+            'collision_recoil_force':   float(0.3),     # max velocity towards the positive y-axis
         },
         # WARNING: the values below must not be set too low without adding a bunch of if-conditions
         # try and see.
