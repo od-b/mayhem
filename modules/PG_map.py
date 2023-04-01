@@ -10,10 +10,11 @@ from pygame.mask import Mask
 ## general classes
 from .general.exceptions import ConfigError
 ## pygame specific classes
-from .PG_ui_bar import UI_Bar
 from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
+from .PG_ui_container import UI_Container
+from .PG_ui_bar import UI_Bar
 
 
 class PG_Map:
@@ -323,13 +324,13 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def get_rect_offset(self, rect_1: Rect, rect_2: Rect):
+    def rect_offset(self, rect_1: Rect, rect_2: Rect):
         ''' finds the offset between two sprites rects '''
         offset_x = (rect_1.x - rect_2.x)
         offset_y = (rect_1.y - rect_2.y)
         return (offset_x, offset_y)
 
-    def get_largest_mask_component_bounds(self, mask: Mask):
+    def largest_mask_component_bounds(self, mask: Mask):
         ''' get the bounding rect of the largest connected component within the mask '''
 
         bounding_rects: list[Rect] = mask.get_bounding_rects()
@@ -351,19 +352,19 @@ class PG_Map:
 
         return largest_re
 
-    def get_sprite_mask_overlap(self, sprite_1, sprite_2) -> Mask:
+    def sprite_mask_overlap(self, sprite_1, sprite_2) -> Mask:
         ''' returns a new mask covering the overlapping area of two sprites
             * returns a new mask covering only the overlapping area
         '''
-        offset = self.get_rect_offset(sprite_1.rect, sprite_2.rect)
+        offset = self.rect_offset(sprite_1.rect, sprite_2.rect)
         overlap_mask = sprite_2.mask.overlap_mask(sprite_1.mask, offset)
         return overlap_mask
 
-    def get_collision_center(self, sprite_1, sprite_2):
+    def collision_center(self, sprite_1, sprite_2):
         ''' for two overlapping sprites, finds the center of mask collision
             * returns the center of this area as a vector2
         '''
-        overlap = self.get_sprite_mask_overlap(sprite_1, sprite_2)
+        overlap = self.sprite_mask_overlap(sprite_1, sprite_2)
         overlap_rect = overlap.get_rect(topleft=(sprite_2.rect.x, sprite_2.rect.y))
         collidepos = Vec2(overlap_rect.center)
 
@@ -371,7 +372,7 @@ class PG_Map:
 
     def blit_overlap_mask(self, sprite_1, sprite_2):
         dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
-        overlap_mask = self.get_sprite_mask_overlap(sprite_1, sprite_2)
+        overlap_mask = self.sprite_mask_overlap(sprite_1, sprite_2)
         MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.mask_blit_color)
         self.surface.blit(MASK_SURF, dest_pos)
 
@@ -383,30 +384,28 @@ class PG_Map:
             for BLOCK in collidelist:
                 self.blit_overlap_mask(self.player, BLOCK)
 
-    def check_player_block_collide(self):
-        ''' if player collides with a block, init the recoil sequence for the player '''
-        # case 0: ignore action if player has no mass
-        if (self.player.MASS):
-            # case 1: player is not in recoil or cooldown phase, and rects collide
-            if (self.player.collision_cooldown_frames_left):
-                # player has active recoil or cooldown frames
-                self.blit_block_player_overlap()
-            elif (spritecollideany(self.player, self.block_group)):
-                # get list of colliding masks
-                collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-                if (len(collidelist)):
-                    # init player recoil phase
-                    self.player.init_collision_recoil()
-                    # highlight blocks that player collided with
-                    for BLOCK in collidelist:
-                        BLOCK.init_timed_highlight()
-        else:
-            # player has no mass. draw the overlap
+    def check_player_block_collision(self):
+        ''' since collision is based on image masks, call this after draw, but before update
+            * if player collides with a block, init the recoil sequence for the player 
+        '''
+
+        # case 0: ignore collision if player has no mass or cooldown frames
+        if self.player.collision_cooldown_frames_left or not self.player.MASS:
+            # blit the visual overlap
             self.blit_block_player_overlap()
+        elif spritecollideany(self.player, self.block_group):
+            # if player rect collides with any block rects, check detailed mask collision
+            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            if collidelist:
+                # if masks collide, init player recoil phase
+                self.player.init_collision_recoil()
+                # highlight blocks that player collided with
+                for BLOCK in collidelist:
+                    BLOCK.init_timed_highlight()
 
     def create_ui_bar(self):
         self.test_bar_weight = 1.0
-        self.TEST_BAR = UI_Bar(self.cf_ui_bar_styles['default'], (20, 20), (600, 42))
+        self.TEST_BAR = UI_Bar(self.cf_ui_bar_styles['default'], self.cf_global, "TEST", (20, 20), (600, 42))
         self.map_ui_temp.add(self.TEST_BAR)
 
     def draw_sprites(self):
@@ -416,18 +415,15 @@ class PG_Map:
             self.debug__draw_player_all_info()
         else:
             self.player_group.draw(self.surface)
-        # self.map_ui_temp.update()
-        # if (self.test_bar_weight <= 0):
-        #     self.test_bar_weight = 1.0
         self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
-        # self.test_bar_weight -= 0.00001
+        self.test_bar_weight -= 0.0001
         self.map_ui_temp.draw(self.surface)
         self.block_group.draw(self.surface)
 
-
-    def check_for_collisions(self):
-        ''' since collision is based on image masks, call this after draw, but before update '''
+    def check_terrain_collisions(self):
         self.check_player_block_collide()
+
+    #### DEBUGGING METHODS ####
 
     def debug__draw_player_all_info(self):
         # mask debug draws apply to the sprites' temp image, so call before blitting that image
@@ -465,7 +461,7 @@ class PG_Map:
 
     def debug__draw_mask_bounds(self, sprite: Sprite):
         ''' draw the actual bounding rect of the player mask '''
-        mask_bounds = self.get_largest_mask_component_bounds(sprite.mask)
+        mask_bounds = self.largest_mask_component_bounds(sprite.mask)
         draw_rect(sprite.image, self.DEBUG_COLOR_2, mask_bounds, width=1)
 
     def debug__draw_mask_center_mass(self, sprite: Sprite):
@@ -473,7 +469,7 @@ class PG_Map:
             * only works if 8 or moore pixels are connected
         '''
         sprite_mask: Mask = sprite.mask
-        mask_bounds = self.get_largest_mask_component_bounds(sprite_mask)
+        mask_bounds = self.largest_mask_component_bounds(sprite_mask)
         if mask_bounds == None:
             print('[draw_mask_center_mass]: failed finding connected component')
             return
@@ -501,8 +497,8 @@ class PG_Map:
         return msg
 
 
-# collidepos = self.get_collision_center(self.player, LIST[0])
+# collidepos = self.collision_center(self.player, LIST[0])
 # print(f'collidepos: {collidepos}')
-# player_mask_re = self.get_largest_mask_component_bounds(self.player.mask)
+# player_mask_re = self.largest_mask_component_bounds(self.player.mask)
 # weight = Vec2(player_mask_re.center).distance_to(collidepos)
 # self.player.init_collision_recoil(weight)

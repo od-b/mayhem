@@ -158,10 +158,15 @@ class Player(Sprite):
         # set rect to the new images rect bounds. used for blitting through group draw
         self.rect = self.image.get_rect(center=self.position)
 
-    def begin_thrust(self):
-        ''' begin thrust phase, increasing acceleration and its limit '''
+    def clear_all_phase_frames(self):
+        self.collision_recoil_frames_left = 0
         self.collision_cooldown_frames_left = 0
         self.thrust_end_frames_left = 0
+        self.thrust_begin_frames_left = 0
+
+    def begin_thrust(self):
+        ''' begin thrust phase, increasing acceleration and its limit '''
+        self.clear_all_phase_frames()
         self.curr_image_src = self.DEFAULT_IMAGE
         self.thrust_begin_frames_left = self.THRUST_BEGIN_FRAMES
         self.thrust_begin_curr_lerp_weight = 0.0
@@ -178,9 +183,8 @@ class Player(Sprite):
 
     def init_collision_recoil(self):
         ''' try to push the player back where it came from by inverting velocity '''
-        self.collision_in_progress = True
-        self.thrust_end_frames_left = 0
-        
+        self.clear_all_phase_frames()
+
         if (abs(self.velocity.x < 0.1)):
             if (self.velocity.x > 0):
                 self.velocity.x += 0.1
@@ -227,34 +231,43 @@ class Player(Sprite):
                 self.velocity.y -= (self.acceleration.y / self.MASS)
             self.velocity.y = pg_math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
 
-    def apply_recoil_frame(self):
+    def apply_collision_recoil_frame(self):
         ''' reduce velocity and acceleration. ignore acceleration. ignore gravity. '''
+        self.collision_recoil_frames_left -= 1
         self.velocity *= 0.97
         self.acceleration *= 0.97
 
     def apply_collision_cooldown_frame(self):
-        ''' apply default acceleration. do not apply gravity. indirectly prevent thrust during cooldown. '''
+        ''' apply default acceleration. do not apply gravity. '''
+        self.collision_cooldown_frames_left -= 1
+        if (self.collision_cooldown_frames_left == 0):
+            self.curr_image_src = self.DEFAULT_IMAGE
         self.set_accel_default()
         self.velocity.update(self.acceleration)
 
     def apply_thrust_begin_frame(self):
         ''' gradually increase to thrust acceleration over the set frames '''
+        self.thrust_begin_frames_left -= 1
+
         # reduce max acceleration gradually over the set frames
         self.acceleration += (self.direction * self.T_HANDLING)
 
         # use linear interpolation to find the right value for current max acceleration
         # finds the point which is a certain percent of fps closer to max thrust accel
         new_accel = lerp(self.thrust_begin_accel_length, self.THRUST_ACCEL, (self.thrust_begin_curr_lerp_weight))
+        # print(f'new_accel: {new_accel}')
+
+        # scale up acceleration
         self.acceleration.scale_to_length(new_accel)
-        # print(f'self.curr_accel: {self.curr_accel}')
+
         self.thrust_begin_curr_lerp_weight += self.THRUST_BEGIN_LERP_INCREASE
-        # print(f'lerp weight: {self.thrust_begin_curr_lerp_weight}')
+        # print(f'self.thrust_begin_curr_lerp_weight: {self.thrust_begin_curr_lerp_weight}')
 
         # apply gravity
         self.grav_effect *= 0.99
         self.set_velocity_with_grav_effect()
 
-    def apply_thrust_frame(self):
+    def thrust_frame(self):
         ''' applies acceleration directly to velocity at increased handling and force.
             * reduce gravity effect. do not apply gravity.
         '''
@@ -265,6 +278,7 @@ class Player(Sprite):
 
     def apply_thrust_end_frame(self):
         ''' gradually reduce the max acceleration. apply gravity, without increasing it. '''
+        self.thrust_end_frames_left -= 1
 
         # reduce max acceleration gradually over the set frames
         self.acceleration += (self.direction * self.HANDLING)
@@ -280,8 +294,8 @@ class Player(Sprite):
         # apply gravity
         self.set_velocity_with_grav_effect()
 
-    def apply_default_frame(self):
-        ''' set normal acceleration, increase effects of gravity. apply gravity. '''
+    def default_frame(self):
+        ''' set default acceleration. increase gravity. apply gravity. '''
         self.set_accel_default()
         if (self.grav_effect < self.MAX_ACCEL):
             self.grav_effect = (self.grav_effect + self.GRAVITY_C) * self.GRAVITY_M
@@ -289,40 +303,37 @@ class Player(Sprite):
 
     def update(self):
         if (self.collision_recoil_frames_left):
-            self.collision_recoil_frames_left -= 1
-            self.apply_recoil_frame()
+            self.apply_collision_recoil_frame()
         elif (self.collision_cooldown_frames_left):
-            self.collision_cooldown_frames_left -= 1
             self.apply_collision_cooldown_frame()
-            if (self.collision_cooldown_frames_left == 0):
-                self.curr_image_src = self.DEFAULT_IMAGE
         elif (self.thrust_begin_frames_left):
-            self.thrust_begin_frames_left -= 1
             self.apply_thrust_begin_frame()
         elif (self.thrusting):
-            self.apply_thrust_frame()
+            self.thrust_frame()
         elif (self.thrust_end_frames_left):
-            self.thrust_end_frames_left -= 1
             self.apply_thrust_end_frame()
         else:
-            self.apply_default_frame()
+            # default frame
+            self.default_frame()
 
         self.position += self.velocity
         self.angle = self.CENTER_VECTOR.angle_to(self.acceleration)
         # update image, position and rect position
         self.update_image()
 
-    # basic external getters
-    def get_direction_x(self):
-        return self.direction.x
-    def get_direction_y(self):
-        return self.direction.y
-    def get_grav_effect(self):
-        return self.grav_effect
-    def get_position(self):
-        return self.rect.center
-    def get_angle(self):
-        return self.angle
+    #### FORMATTED STRING GETTERS ####
+
+    def get_str_dir_x(self):
+        return f'{self.direction.x():.2f}'
+
+    def get_str_dir_y(self):
+        return f'{self.direction.y():.2f}'
+
+    def get_str_angle(self):
+        return f'{self.angle():.1f}'
+
+    def get_str_gravity(self):
+        return f'{self.grav_effect():.3f}'
 
 
 ''' TODO

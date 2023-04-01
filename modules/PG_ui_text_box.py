@@ -5,7 +5,7 @@ from pygame import Color
 from pygame.sprite import Sprite
 from pygame.font import Font
 
-class Text_Box(Sprite):
+class UI_Text_Box(Sprite):
     ''' Created by container as a child
 
         Parameters
@@ -26,6 +26,7 @@ class Text_Box(Sprite):
 
     def __init__(self,
             cf_textbox: dict,
+            cf_global: dict,
             ref_id,
             text: str,
             text_getter_func: Callable | None,
@@ -33,6 +34,8 @@ class Text_Box(Sprite):
         ):
 
         Sprite.__init__(self)
+        self.cf_textbox = cf_textbox
+        self.cf_global = cf_global
         self.ref_id = ref_id
         self.text = text
         self.text_getter_func = text_getter_func
@@ -126,7 +129,6 @@ class Text_Box(Sprite):
 
     def update(self):
         ''' update rendering if text has changed '''
-
         if self.render_on_update:
             # get updated text from one of the internal methods
             # this will either be through a getter func, or if self.text has been
@@ -140,6 +142,7 @@ class Text_Box(Sprite):
                 self.update_text_render()
 
     def __str__(self):
-        msg = f'[Child_Text_Box with text="{self.pre_text}{self.text}", '
-        msg += f'height={self.rect.h}, width={self.rect.w}]'
+        msg = f'[{super().__str__()} : '
+        msg += f'text="{self.pre_text}{self.text}", height={self.rect.h}, width={self.rect.w}'
+        msg += f'ref_id(s)={self.ref_id}]'
         return msg

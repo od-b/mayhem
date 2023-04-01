@@ -5,7 +5,6 @@ from pygame import Surface, Rect, Color, SRCALPHA
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
 from pygame.draw import line as draw_line
-from .PG_ui_text_box import Text_Box
 
 
 class UI_Container(Sprite):
@@ -18,12 +17,10 @@ class UI_Container(Sprite):
         * child_flow expects: "top_bottom", "left_right"
         * All configurations work, but combinations like "bottomleft" and "top_bottom"
             do not exactly look pretty
-        * update() is the only function that should be called externally.
-        
+        * update() serves as a all-in-one clear, update children and draw children
+
         The general idea here is creating a framework that is easy to modify and 
         configure to meet any need without having to modify any previous code
-        
-        * Containers use the same type of config for all their equally typed children.
     '''
 
     def __init__(self,
@@ -40,10 +37,10 @@ class UI_Container(Sprite):
         self.position = position
         self.child_flow = child_flow
         self.child_align = child_align
-        self.cf_children_styles = cf_container['children_styles']
+        self.cf_children_styles: dict = cf_container['children_styles']
 
         # store dict settings
-        self.color = Color(cf_container['color'])
+        self.bg_color = Color(cf_container['bg_color'])
         ''' bg color '''
         self.border_width = int(cf_container['border_width'])
         self.border_color = Color(cf_container['border_color'])
@@ -64,7 +61,7 @@ class UI_Container(Sprite):
         ''' the surfaces here might seem confusing at first glance.
             * SURF_RECT / SURF is the entire container portion of the subsurface
             * image is the empty background surface with border, created for the container
-            
+
             in short:
             * never blit/draw a source surface onto to self.image
             * blit self.image onto SURF to clear
@@ -73,27 +70,22 @@ class UI_Container(Sprite):
             * => profit
         '''
 
-        if (self.bg_alpha_key < 255):
-            # convert color to rgba
-            COLOR_TO_ALPHA = (self.color.r, self.color.g, self.color.b, self.bg_alpha_key)
-            self.color = Color(COLOR_TO_ALPHA)
+        self.bg_color = (self.bg_color.r, self.bg_color.g, self.bg_color.b, self.bg_alpha_key)
 
-            # create a per pixel alpha surface
-            self.image = Surface(self.size, flags=SRCALPHA)
-        else:
-            self.bg_alpha_key = None
-            # create a regular surface
-            self.image = Surface(self.size).convert()
+        # create a per pixel alpha surface
+        self.image = Surface(self.size, flags=SRCALPHA)
 
         # create the border of the container as a rect
         self.rect = self.image.get_rect()
-        self.image.fill(self.color)
+        self.image.fill(self.bg_color)
 
         if (self.border_width > 0):
             draw_rect(self.image, self.border_color, self.rect, width=self.border_width)
 
         # find fitting functions instead of performing tests every frame:
         self._set_internal_references()
+
+    #### INTERNAL METHODS ####
 
     def _set_internal_references(self):
         ''' sets internally used references based on configuration
@@ -106,7 +98,7 @@ class UI_Container(Sprite):
             as opposed to on __every single__ update. This amounts to a huge performance gain,
             considering the update function is called <FPS> times per second, on every single child
             
-            E.g., if we have 6 textboxes at 125 frames per sec, that would amount to a combined
+            E.g., if we have 6 children at 125 frames per sec, that would amount to a combined
             125*6*3 = 2250 checks per SECOND, or 135000 checks every minute.
         '''
 
@@ -188,28 +180,6 @@ class UI_Container(Sprite):
         p2 = ((RE.bottomright[0] + self.separator_padding), RE.bottomright[1])
         draw_line(self.SURF, self.separator_color, p1, p2, self.separator_width)
 
-    def _set_align_func(self, child_align: str) -> Callable[[Rect, Rect], None]:
-        ''' get the correct alignment function for positioning children '''
-        # additional positioning functions can easily be added
-        match (child_align):
-            case 'left':
-                self.ALIGN_FUNC = self._align_to_left_of
-            case 'right':
-                self.ALIGN_FUNC = self._align_to_right_of
-            case 'top':
-                self.ALIGN_FUNC = self._align_to_top_of
-            case 'bottom':
-                self.ALIGN_FUNC = self._align_to_bottom_of
-            case 'bottomleft':
-                self.ALIGN_FUNC = self._align_to_topleft_of
-            case 'topleft':
-                self.ALIGN_FUNC = self._align_to_bottomleft_of
-            case _:
-                raise ValueError(f'\
-                    children_align expected: "top", "bottom",\
-                    "left", "right", "bottomleft" or "topleft".\n\
-                    Found "{child_align}"')
-
     def _position_children(self):
         ''' positions children according to the align_func '''
         parent = self.ALIGN_PARENT
@@ -230,51 +200,53 @@ class UI_Container(Sprite):
             # draw separating line vertically
             self.DRAW_FUNC(RE)
 
-    def check_child_rect_fits(self, child):
+    #### CALLABLE METHODS ####
+
+    def get_child_cf(self, key: str):
+        for _key, val in self.cf_children_styles.items():
+            if (str(_key) == key):
+                cf_style: dict = val
+                return cf_style
+        print(f'{self}[get_child_cf_style]: key={key} not in cf_children_styles.')
+        return None
+
+    def child_fits_self(self, child: Sprite) -> bool:
         ''' simple check for verifying that child can fit inside this container '''
         if ((child.rect.h > self.rect.h) or (child.rect.w > self.rect.w)):
-            msg = "[Container][check_child_rect_fits][WARNING]"
-            msg += f':Child does not fit: {child}'
-            msg += f'[Container]: {self}\n'
-            msg += "to make child fit, perform one or several of the following actions:\n"
-            msg += " -> reduce the font size in the set textbox config\n"
-            msg += " -> reduce the length of the text given to the text box\n"
-            msg += " -> increase the size of the container\n"
-            msg += " -> change the font type used by the textbox\n"
-            print(msg)
+            print(f'{self}[child_fits_self]: {child} does not fit as a child')
+            return False
+        return True
 
-    def create_textbox_child(self, ref_id, text: str, text_getter_func: Callable | None):
-        ''' creates a new textbox as a child of self. ref_id may be any reference, or None
-            * children may share references
-            * adds the child to self.children
-            * returns the child (in case a reference is needed)
-        '''
-        NEW_CHILD = Text_Box(
-            self.cf_children_styles['text_box'],
-            ref_id,
-            text,
-            text_getter_func,
-            self.rect.topleft
-        )
-        self.check_child_rect_fits(NEW_CHILD)
-        self.children.add(NEW_CHILD)
-        return NEW_CHILD
+    def add_child(self, child: Sprite):
+        self.child_fits_self(child)
+        self.children.add(child)
 
-    def get_children_by_ref(self, ref_id):
-        ''' get child by its ref_id. Accepts ref_id = None.
+    def get_children_by_ref_id(self, ref_id):
+        ''' get children by ref_id. 
             * returns a list of children with the given ref_id
+
+            Example usage:
+            for child in MY_CONTAINER.get_children_by_ref_id("APP"):
+                print(child)
         '''
         matching_children = []
         for child in self.children:
-            if (child.ref_id == ref_id):
-                matching_children.append(child)
+            if type(child.ref_id) == list:
+                for elem in child.ref_id:
+                    if ref_id == elem:
+                        matching_children.append(child)
+                        break
+            else:
+                if ref_id == child.ref_id:
+                    matching_children.append(child)
+
         return matching_children
 
     def get_children(self) -> list[Sprite]:
         ''' returns a list containing the children sprites '''
         return self.children.sprites()
 
-    def get_num_children(self) -> int:
+    def get_n_children(self) -> int:
         ''' returns the current number of children '''
         return len(self.children.sprites())
 
@@ -283,10 +255,8 @@ class UI_Container(Sprite):
         self.children.empty()
 
     def update(self):
+        ''' all in one: clear surface. update children. position children. draw children. '''
         # re-blit the background surface to clear any past blits
-        # if (self.bg_alpha_key):
-        #     self.SURF.fill
-        # else:
         self.SURF.blit(self.image, self.rect)
 
         # call update on all children
@@ -299,7 +269,7 @@ class UI_Container(Sprite):
         self.children.draw(self.SURF)
 
     def __str__(self):
-        msg = f'[Container with n={self.get_num_children()} children.\n'
-        msg += f'position(x,y)={self.position}, height={self.rect.h}, width={self.rect.w},\n'
+        msg = f'[{super().__str__()} : '
+        msg += f'rect="{self.rect}", n_children={self.get_n_children()}, '
         msg += f'child_flow="{self.child_flow}", child_align="{self.child_align}"]'
-
+        return msg

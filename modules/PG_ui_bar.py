@@ -2,39 +2,42 @@ from typing import Callable
 
 ## import needed pygame modules
 from pygame import Surface, Rect, Color, SRCALPHA, transform
-from pygame.math import lerp
+from pygame.math import lerp, clamp
 from pygame.sprite import Sprite, Group
 from pygame.draw import rect as draw_rect
 from pygame.draw import line as draw_line
-from .PG_ui_text_box import Text_Box
+
 
 class UI_Bar(Sprite):
     def __init__(self,
             cf_bar_style: dict,
+            cf_global: dict,
+            ref_id,
             position: tuple[int, int],
-            size: tuple[int, int] 
+            size: tuple[int, int]
         ):
         Sprite.__init__(self)
 
-        self.FULL_ALPHA = Color(0,0,0,0)
         self.cf_bar_style = cf_bar_style
+        self.cf_global = cf_global
+        self.ref_id = ref_id
         self.position = position
         self.size = size
-        self.width = size[0]
-        self.height = size[1]
 
-        self.bg_alpha_key       = int(cf_bar_style['bg_alpha_key'])
-        self.bg_color           = Color(cf_bar_style['bg_color'])
-        self.bg_border_color    = Color(cf_bar_style['bg_border_color'])
-        self.bg_border_width    = int(cf_bar_style['bg_border_width'])
+        self.bg_color               = Color(cf_bar_style['bg_color'])
+        self.bg_alpha_key           = int(cf_bar_style['bg_alpha_key'])
+        self.bg_border_color        = Color(cf_bar_style['bg_border_color'])
+        self.bg_border_alpha_key    = int(cf_bar_style['bg_border_alpha_key'])
+        self.bg_border_width        = int(cf_bar_style['bg_border_width'])
 
-        self.bar_alpha_key      = int(cf_bar_style['bar_alpha_key'])
-        self.bar_color          = Color(cf_bar_style['bar_color'])
-        self.bar_border_color   = Color(cf_bar_style['bar_border_color'])
-        self.bar_border_width   = int(cf_bar_style['bar_border_width'])
+        self.bar_color              = Color(cf_bar_style['bar_color'])
+        self.bar_alpha_key          = int(cf_bar_style['bar_alpha_key'])
+        self.bar_border_color       = Color(cf_bar_style['bar_border_color'])
+        self.bar_border_alpha_key   = int(cf_bar_style['bar_border_alpha_key'])
+        self.bar_border_width       = int(cf_bar_style['bar_border_width'])
 
-        self.internal_padding_x = int(cf_bar_style['internal_padding_x'])
-        self.internal_padding_y = int(cf_bar_style['internal_padding_y'])
+        self.internal_padding_x     = int(cf_bar_style['internal_padding_x'])
+        self.internal_padding_y     = int(cf_bar_style['internal_padding_y'])
 
         self.convert_color_alpha()
 
@@ -71,24 +74,35 @@ class UI_Bar(Sprite):
         self.image = self.ROOT_SURF
         self.rect = self.ROOT_RECT
         self.rect.topleft = position
+        
+        self.fill_weight = 1.0
 
     def update(self):
+        # self.fill_weight += 0.1
+        # self.draw_horizontal_bar(self.fill_weight)
         pass
 
     def convert_color_alpha(self):
-        # convert colors to rgba
-        if (self.bg_alpha_key < 255):
-            self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.bg_alpha_key))
-        if (self.bar_alpha_key < 255):
-            self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.bar_alpha_key))
+        ''' convert all colors to rgba '''
+        self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.bg_alpha_key))
+        self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.bar_alpha_key))
+        self.bg_border_color = Color((self.bg_border_color.r, self.bg_border_color.g,
+                                       self.bg_border_color.b, self.bar_border_alpha_key))
+        self.bar_border_color = Color((self.bar_border_color.r, self.bar_border_color.g,
+                                       self.bar_border_color.b, self.bar_border_alpha_key))
 
     def draw_horizontal_bar(self, fill_weight: float):
         # clear the background
         self.BG_SURF.fill(self.bg_color)
 
-        if (fill_weight <= 0):
+        if (fill_weight <= 0.0):
             # if there's no bar to draw, return (also avoids negative lerp)
+            if (fill_weight < 0.0):
+                print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} < 0.0. returning.')
             return
+        elif (fill_weight > 1.0):
+            print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
+            fill_weight = 1.0
 
         # create the bar rect using a midpoint value through lerp. this is faster than python math.
         bar_width = lerp(0, self.bar_surf_rect.w, fill_weight)
@@ -104,22 +118,21 @@ class UI_Bar(Sprite):
         # clear the background
         self.BG_SURF.fill(self.bg_color)
 
-        if (fill_weight <= 0):
+        if (fill_weight <= 0.0):
             # if there's no bar to draw, return (also avoids negative lerp)
+            if (fill_weight < 0.0):
+                print(f'{self}[draw_vertical_bar]: fill_weight={fill_weight} < 0.0. returning.')
             return
-        elif (fill_weight >= 1):
-            self.BAR_SURF.fill(self.bar_color)
-            if (self.bar_border_width):
-                border_re = self.BAR_SURF.get_rect()
-                draw_rect(self.BAR_SURF, self.bar_border_color, border_re, width=self.bar_border_width)
+        elif (fill_weight > 1.0):
+            print(f'{self}[draw_vertical_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
+            fill_weight = 1.0
+
 
         # create the bar rect using a midpoint value through lerp. this is faster than python math.
         bar_height = lerp(0, self.bar_surf_rect.h, fill_weight)
         bar_rect = Rect(
-            0,
-            self.bar_surf_rect.h - bar_height,
-            self.bar_surf_rect.w,
-            bar_height
+            0, (self.bar_surf_rect.h - bar_height),
+            self.bar_surf_rect.w, bar_height
         )
 
         self.BAR_SURF.fill(self.bar_color, bar_rect)
@@ -130,6 +143,10 @@ class UI_Bar(Sprite):
     def update(self):
         pass
 
+    def __str__(self):
+        msg = f'[{super().__str__()} : '
+        msg += f'rect="{self.rect}", ref_id={self.ref_id}]'
+        return msg
 
 # class UI_Bar_Timed_Horizontal(Sprite):
 #     def __init__(self,

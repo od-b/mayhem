@@ -54,7 +54,7 @@ CF_GLOBAL = {
     # time between sprite updates, per type. Values are millisecs between updates
     # these values will in reality typically have a variance of 0.5%
     'update_intervals': {
-        'ui':     int(250),
+        'ui':     int(100),
         'blocks': int(100),
     }
 }

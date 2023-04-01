@@ -12,6 +12,8 @@ from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
 from modules.PG_ui_container import UI_Container
+from modules.PG_ui_text_box import UI_Text_Box
+from modules.PG_ui_bar import UI_Bar
 
 # import config dicts
 from config.cf_global import CF_GLOBAL
@@ -79,14 +81,14 @@ class PG_App:
 
         # init core app features
         self.timer.block_events(self.cf_global['blocked_events'])
-        self.set_up_updates_intervals()
+        self.set_up_update_intervals()
         self.set_up_ui_bottom_panel()
         self.fetch_menu_controls()
 
         self.app_is_running = True
         self.map_is_active = False
 
-    def set_up_updates_intervals(self):
+    def set_up_update_intervals(self):
         cf_intervals = self.cf_global['update_intervals']
 
         # set the UI to be updated 4 times per second, through the event queue
@@ -120,49 +122,29 @@ class PG_App:
         )
         self.map_UI.add(BOTTOM_PANEL)
 
-        # create FPS_TEXT
-        BOTTOM_PANEL.create_textbox_child(
-            "FPS_TEXT",
-            "FPS: ",
-            self.timer.get_fps_int,
+        # create FPS text
+        BOTTOM_PANEL.add_child(
+            UI_Text_Box(
+                BOTTOM_PANEL.get_child_cf('text_box'),
+                self.cf_global,
+                ["APP", "TEXT_BOX", "FPS"],
+                "FPS: ",
+                self.timer.get_fps_int,
+                BOTTOM_PANEL.rect.center
+            )
         )
 
-        # create TIME_TEXT (duration text)
-        BOTTOM_PANEL.create_textbox_child(
-            "TIME_TEXT",
-            "Time: ",
-            self.timer.get_segment_duration_formatted
+        # create time text
+        BOTTOM_PANEL.add_child(
+            UI_Text_Box(
+                BOTTOM_PANEL.get_child_cf('text_box'),
+                self.cf_global,
+                ["APP", "TEXT_BOX", "TIME"],
+                "Time: ",
+                self.timer.get_segment_duration_formatted,
+                BOTTOM_PANEL.rect.center
+            )
         )
-
-        # create ANGLE_TEXT
-        BOTTOM_PANEL.create_textbox_child(
-            "ANGLE_TEXT",
-            "Angle: ",
-            self.get_player_angle
-        )
-
-        # create GRAV_TEXT
-        BOTTOM_PANEL.create_textbox_child(
-            "GRAV_TEXT",
-            "Grav: ",
-            self.get_player_gravity
-        )
-
-    def get_player_dir_x(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_direction_x():.2f}'
-
-    def get_player_dir_y(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_direction_y():.2f}'
-
-    def get_player_angle(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_angle():.1f}'
-
-    def get_player_gravity(self):
-        ''' for async creation and string formatting for UI '''
-        return f'{self.map.player.get_grav_effect():.3f}'
 
     def fetch_menu_controls(self):
         ''' fetch and store player controls from the global config '''
@@ -299,8 +281,9 @@ class PG_App:
 
             # if a map was initiated by the menu, launch the main loop
             while (self.map_is_active):
+                # self.window.fill_surface()
                 self.map.draw_sprites()
-                self.map.check_for_collisions()
+                self.map.check_player_block_collision()
                 # loop through events before the display update
                 self.check_map_events()
                 pg.display.update()
