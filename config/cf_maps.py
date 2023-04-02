@@ -1,6 +1,7 @@
 from .colors import RGB
 from .cf_players import CF_PLAYERS
 from .cf_blocks import CF_BLOCKS
+from .cf_ui import CF_CONTAINERS, CF_TEXT_BOXES, CF_BARS
 
 CF_MAPS = {
     # a map is a setup config for the active part of the game surface
@@ -22,11 +23,14 @@ CF_MAPS = {
             'obstacle_outline':     CF_BLOCKS['adaptive_block'],
         },
         # time between sprite updates, per type. Values are millisecs between updates
-        # these values will in reality typically have a variance of 0.5%
+        # these values will typically have an applied variance of 0.5%
         'upd_interval': {
-            'ui_core':  int(100),
-            'ui_temp':   int(100),
-            'terrain':   int(100),
+            'ui_core': int(100),
+            'ui_temp': int(100),
+            'terrain': int(100),
+        },
+        'containers': {
+            'bottom_center':    CF_CONTAINERS['test']
         }
     }
 }

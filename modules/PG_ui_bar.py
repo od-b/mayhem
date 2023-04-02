@@ -161,13 +161,12 @@ class UI_Icon_Bar(UI_Bar):
             copy_super_bg: bool
         ):
 
+        # bar_width = size[0] - icon_offset - size[1]
         super().__init__(cf_bar_style, cf_global, ref_id, position, bar_size)
 
         self.icon_path = icon_path
         self.icon_offset = icon_offset
         self.copy_super_bg = copy_super_bg
-        
-        old_rect = self.rect.copy()
 
         self.icon_size = (self.rect.h, self.rect.h)
         ICON_IMG = image.load(icon_path).convert_alpha()
@@ -218,24 +217,28 @@ class UI_Icon_Bar(UI_Bar):
         self.ICON_SURF.blit(self.ICON, self.icon_rect)
 
 
-class UI_Auto_Bar(UI_Bar):
+class UI_Icon_Auto_Bar(UI_Icon_Bar):
     def __init__(self,
             cf_bar_style: dict,
             cf_global: dict,
             ref_id,
             position: tuple[int, int],
-            size: tuple[int, int],
+            bar_size: tuple[int, int],
+            icon_path: str,
+            icon_offset: int,
+            copy_super_bg: bool,
+
             min_val: float,
             max_val: float,
             getter_func: Callable[[None], float],
-            fill_direction: str,
-            auto_adjust_max_val: bool
+            fill_direction: str
         ):
-        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
+
+        # bar_width = size[0] - icon_offset - size[1]
+        super().__init__(cf_bar_style, cf_global, ref_id, position, bar_size, icon_path, icon_offset, copy_super_bg)
 
         self.min_val = min_val
         self.max_val = max_val
-        self.auto_adjust_max_val = auto_adjust_max_val
 
         self.getter_func = getter_func
         self.fill_direction = fill_direction
@@ -249,18 +252,46 @@ class UI_Auto_Bar(UI_Bar):
 
     def update(self):
         fill_val = self.getter_func()
+        print(fill_val, self.max_val)
         if (fill_val > self.min_val):
             if (fill_val > self.max_val):
-                if (self.auto_adjust_max_val):
-                    self.max_val = fill_val
-                else:
-                    fill_weight = 1.0
-            else:
-                fill_weight = (fill_val/self.max_val)
-            self.bar_draw_func(
-                lerp(
-                    self.min_val,
-                    self.max_val,
-                    fill_weight
-                )
-            )
+                self.max_val = fill_val
+            fill_weight = (fill_val/self.max_val)
+            self.bar_draw_func(lerp(self.min_val, self.max_val, fill_weight))
+
+
+class UI_Auto_Bar(UI_Bar):
+    def __init__(self,
+            cf_bar_style: dict,
+            cf_global: dict,
+            ref_id,
+            position: tuple[int, int],
+            size: tuple[int, int],
+            min_val: float,
+            max_val: float,
+            getter_func: Callable[[None], float],
+            fill_direction: str
+        ):
+        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
+
+        self.min_val = min_val
+        self.max_val = max_val
+
+        self.getter_func = getter_func
+        self.fill_direction = fill_direction
+
+        if (fill_direction == 'horizontal'):
+            self.bar_draw_func = super().draw_horizontal_bar
+        elif (fill_direction == 'vertical'):
+            self.bar_draw_func = super().draw_vertical_bar
+        else:
+            raise ValueError(f'"horizontal" or "vertical". Found "{fill_direction}"')
+
+    def update(self):
+        fill_val = self.getter_func()
+        print(fill_val, self.max_val)
+        if (fill_val > self.min_val):
+            if (fill_val > self.max_val):
+                self.max_val = fill_val
+            fill_weight = (fill_val/self.max_val)
+            self.bar_draw_func(lerp(self.min_val, self.max_val, fill_weight))

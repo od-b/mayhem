@@ -16,7 +16,7 @@ from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
 from .PG_ui_container import UI_Container
-from .PG_ui_bar import UI_Bar, UI_Auto_Bar, UI_Icon_Bar
+from .PG_ui_bar import UI_Bar, UI_Auto_Bar, UI_Icon_Bar, UI_Icon_Auto_Bar
 
 
 class PG_Map:
@@ -29,8 +29,7 @@ class PG_Map:
         # store needed parent attributes
         self.timer: PG_Timer        = PARENT.timer
         self.cf_global: dict        = PARENT.cf_global
-        self.cf_ui_containers: dict = PARENT.cf_ui_containers   # TODO: map ui config file
-        self.cf_ui_bar_styles: dict = PARENT.cf_ui_bar_styles   # TODO: map ui config file
+        self.cf_containers: dict    = cf_map['containers']
         self.cf_player: dict        = cf_map['player']
         self.cf_blocks: dict        = cf_map['blocks']
 
@@ -57,8 +56,8 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
-        self.ui_core_group = Group()
-        self.ui_temp_group = Group()
+        self.container_group = Group()
+        self.temp_ui_group = Group()
 
         # misc
         self.mask_overlap_color = self.fill_color
@@ -76,10 +75,12 @@ class PG_Map:
         if (start_loop):
             self.looping = True
             self.timer.new_segment(self.name, False)
+        
+        self.set_up_ui()
 
     def set_update_intervals(self):
-        self.EVENT_UPDATE_UI_CORE = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_core'], 0)
-        ''' custom pygame event call to update ui '''
+        # self.EVENT_UPDATE_UI_CORE = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_core'], 0)
+        # ''' custom pygame event call to update ui '''
         # self.EVENT_UPDATE_UI_TEMP = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_temp'], 0)
         # ''' custom pygame event call to update ui '''
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_interval']['terrain'], 0)
@@ -351,31 +352,89 @@ class PG_Map:
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
 
-    def draw_sprites(self):
-        # ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
-        self.surface.fill(self.fill_color)
-        if (self.debug_player_visuals):
-            self.debug__draw_player_all_info()
-        else:
-            self.player_group.draw(self.surface)
-        self.block_group.draw(self.surface)
-        # self.ui_core_group.update()
-        # self.test_bar_weight -= 0.0005
-        # self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
-        # self.ui_temp_group.draw(self.surface)
+    def set_up_ui(self):
+        # create bar container
+        width = 400
+        height = 300
+        bottom_padding = 100
+        pos_x = int(self.rect.centerx - (width/2))
+        pos_y = int(self.rect.bottom - height - bottom_padding)
+
+        self.CONT_BOTTOM_CENTER = UI_Container(
+            self.cf_containers['bottom_center'],
+            (pos_x, pos_y),
+            (width, height),
+            "bottom",
+            "top_bottom"
+        )
+        self.container_group.add(self.CONT_BOTTOM_CENTER)
+
+        cf_bar = self.CONT_BOTTOM_CENTER.get_child_cf("bar")
+        child_pos = self.CONT_BOTTOM_CENTER.rect.topleft
+        self.test_bar_weight = 1.0
+        self.TEST_BAR = UI_Auto_Bar(
+            cf_bar,
+            self.cf_global, "TEST",
+            child_pos,
+            (300, 28),
+            0.0,
+            self.player.get_max_grav_effect(),
+            self.player.get_grav_effect,
+            'horizontal'
+        )
+        self.TEST_BAR_2 = UI_Auto_Bar(
+            cf_bar,
+            self.cf_global, "TEST",
+            child_pos,
+            (300, 28),
+            0.0,
+            self.player.get_max_grav_effect(),
+            self.player.get_grav_effect,
+            'horizontal'
+        )
+
+        self.TEST_BAR_3 = UI_Icon_Auto_Bar(
+            cf_bar,
+            self.cf_global,
+            "TEST",
+            child_pos,
+            (300, 28),
+            'assets/icons/protection.png',
+            4,
+            True,
+            0.0,
+            self.player.get_max_grav_effect(),
+            self.player.get_grav_effect,
+            'horizontal'
+        )
+
+        # self.test_group = Group()
+        self.CONT_BOTTOM_CENTER.add_child(self.TEST_BAR)
+        self.CONT_BOTTOM_CENTER.add_child(self.TEST_BAR_2)
+        self.CONT_BOTTOM_CENTER.add_child(self.TEST_BAR_3)
+        # self.test_group.add(self.TEST_BAR_3)
 
     def loop(self):
         # if a map was initiated by the menu, launch the main loop
         while (self.looping):
-            # self.window.fill_surface()
-            self.draw_sprites()
+            self.surface.fill(self.fill_color)
+
+            if (self.debug_player_visuals):
+                self.debug__draw_player_all_info()
+            else:
+                self.player_group.draw(self.surface)
+            self.block_group.draw(self.surface)
+
             self.check_player_block_collision()
-            # loop through events before the display update
             self.check_events()
+
+            # self.test_group.update()
+            # self.test_group.draw(self.surface)
+            self.container_group.update(self.surface)
+
             display.update()
 
             self.player_group.update()
-            # update the timer. Also limits the framerate if set to do so
             self.timer.update()
 
     def check_events(self):
@@ -407,6 +466,7 @@ class PG_Map:
                             self.player.direction.x += 1.0
                         case self.STEER_RIGHT:
                             self.player.direction.x -= 1.0
+                            self.TEST_BAR.kill()
                         case self.THRUST:
                             self.player.init_phase_thrust_end()
                         case _:
@@ -414,8 +474,8 @@ class PG_Map:
                 case pg.QUIT:
                     self.looping = False
                     self.PARENT.looping = False
-                case self.EVENT_UPDATE_UI_CORE:
-                    self.ui_core_group.update()
+                # case self.EVENT_UPDATE_UI_CORE:
+                #     self.ui_core_group.update()
                 case self.EVENT_UPDATE_TERRAIN:
                     self.block_group.update()
                 case _:

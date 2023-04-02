@@ -1,6 +1,6 @@
 from .colors import RGB
 
-CF_BAR_STYLES = {
+CF_BARS = {
     'default': {
         'bg_color':             RGB['purple'],
         'bg_alpha_key':         int(110),
@@ -32,16 +32,18 @@ CF_CONTAINERS = {
     # containers for ui elements
     'bottom_panel': {
         # default container style
-        'bg_color':         RGB['offblack'],
-        'bg_alpha_key':     int(255),
-        'border_color':     RGB['yellow'],
-        'border_width':     int(2),
         'children_padding': int(40),             # pixels of padding added between the containers children
-        'separator_width':  int(2),              # draw a separating line between children
-        'separator_color':  RGB['yellow'],       # draw border between children
         'children_styles': {
             'text_box': CF_TEXT_BOXES['default'],
-            'bar':      CF_BAR_STYLES['default']
+            'bar':      CF_BARS['default']
         }
-    }
+    },
+    'test': {
+        # default container style
+        'children_padding': int(10),             # pixels of padding added between the containers children
+        'children_styles': {
+            'text_box': CF_TEXT_BOXES['default'],
+            'bar':      CF_BARS['default']
+        }
+    },
 }

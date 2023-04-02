@@ -10,46 +10,45 @@ class Player(Sprite):
         # initalize as pygame sprite
         Sprite.__init__(self)
 
-        # store needed data from cf_global
         self.FPS = int(cf_global['fps_limit'])
         ''' global fps limit '''
 
         # declare nested dicts for readability purposes
         # note that these are not stored in self, and are only read during init
-        cf_surface:    dict = cf_player['surface']
-        cf_colors:     dict = cf_surface['colors']
-        cf_weights:    dict = cf_player['weights']
-        cf_gameplay:   dict = cf_player['gameplay']
-        cf_phases:     dict = cf_player['phase_durations']
+        cf_surface:  dict = cf_player['surface']
+        cf_colors:   dict = cf_surface['colors']
+        cf_weights:  dict = cf_player['weights']
+        cf_gameplay: dict = cf_player['gameplay']
+        cf_phases:   dict = cf_player['phase_durations']
         
         # store relevant map settings
-        self.MAP_GRAV_C      = float(cf_map['gravity_c'])
+        self.MAP_GRAV_C         = float(cf_map['gravity_c'])
         ''' map gravity constant '''
-        self.MAP_GRAV_M      = float(cf_map['gravity_m'])
+        self.MAP_GRAV_M         = float(cf_map['gravity_m'])
         ''' map gravity multiplier '''
 
         # store surface settings
-        self.SURF_WIDTH          = int(cf_surface['width'])
-        self.SURF_HEIGHT         = int(cf_surface['height'])
+        self.SURF_WIDTH         = int(cf_surface['width'])
+        self.SURF_HEIGHT        = int(cf_surface['height'])
 
         #### CONSTANTS ####
 
         # gameplay weights
-        self.MAX_HEALTH     = int(cf_gameplay['max_health'])
-        self.MAX_MANA       = int(cf_gameplay['max_mana'])
+        self.MAX_HEALTH         = int(cf_gameplay['max_health'])
+        self.MAX_MANA           = int(cf_gameplay['max_mana'])
 
         # acceleration weights
-        self.ACCEL_REDUCT    = float(cf_weights['acceleration_multiplier'])
-        self.MAX_ACCEL      = float(cf_weights['max_acceleration'])
+        self.ACCEL_REDUCT       = float(cf_weights['acceleration_multiplier'])
+        self.MAX_ACCEL          = float(cf_weights['max_acceleration'])
         self.THRUST_MAX_ACCEL   = float(cf_weights['thrust_acceleration'])
 
         # velocity weights
-        self.MAX_VELO       = float(cf_weights['max_velocity'])
-        self.MAX_GRAV      = float(cf_weights['terminal_velocity'])
+        self.MAX_VELO           = float(cf_weights['max_velocity'])
+        self.MAX_GRAV           = float(cf_weights['terminal_velocity'])
 
         # steering weights
-        self.HANDLING            = float(cf_weights['handling'])
-        self.THRUST_HANDLING_M   = float(cf_weights['thrust_handling_m'] * self.HANDLING)
+        self.HANDLING           = float(cf_weights['handling'])
+        self.THRUST_HANDLING_M  = float(cf_weights['thrust_handling_m'] * self.HANDLING)
 
         # phase weights / durations. for time related settings, calculate the frames needed
         self.THRUST_BEGIN_FRAMES        = int(cf_phases['thrust_begin'] * self.FPS)
@@ -97,25 +96,24 @@ class Player(Sprite):
         ''' determines direction and directional change of velocity '''
         self.velocity       = Vec2(0.0, 0.0)
         ''' direction and speed ''' 
-        self.grav_force    = 0.0
+        self.grav_force     = 0.0
         ''' accumulation of gravity '''
         self.temp_max_accel = 0.0
         ''' temporary max acceleration '''
 
-        # other
+        # misc
         self.health: int    = self.MAX_HEALTH
         self.mana: int      = self.MAX_MANA
-        
-        # store image variants as constants
+
+        # setup
         self.DEFAULT_IMAGE = self.set_up_image(cf_colors['default'])
         self.COLLISION_CD_IMAGE = self.set_up_image(cf_colors['collision_cooldown'])
-
         self.curr_image_src = self.DEFAULT_IMAGE
         ''' which of the loaded images is currently in use '''
-
-        self.PHASE_DEBUG_PRINT = False
         # set .image, .rect and .mask through the update function
         self.update_image()
+
+        self.PHASE_DEBUG_PRINT = False
 
     def set_up_image(self, color: Color):
         ''' get the the original image used for later transformation
@@ -353,6 +351,7 @@ class Player(Sprite):
     #### ORDINARY GETTERS ####
 
     def get_max_grav_effect(self):
+        print(self.MAX_GRAV * self.MASS)
         return self.MAX_GRAV
 
     def get_grav_effect(self):
