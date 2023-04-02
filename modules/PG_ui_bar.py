@@ -169,31 +169,29 @@ class UI_Icon_Bar(UI_Bar):
         
         old_rect = self.rect.copy()
 
-        icon_size = (self.rect.h, self.rect.h)
+        self.icon_size = (self.rect.h, self.rect.h)
         ICON_IMG = image.load(icon_path).convert_alpha()
 
         if (self.copy_super_bg):
             # create background/border for icon
-            ICON_BG_SURF = Surface((icon_size)).convert_alpha()
-            ICON_BG_SURF.fill((0, 0, 0, 0))
+            ICON_BG_SURF = Surface((self.icon_size)).convert_alpha()
+            ICON_BG_SURF.fill(self.bg_color)
             if (self.bg_border_width):
                 draw_rect(ICON_BG_SURF, self.bg_border_color, ICON_BG_SURF.get_rect(), width=self.bg_border_width)
 
             # scale down icon by border width and a pixel clearing
-            # icon_size = (icon_size[0] - self.bg_border_width - 1, icon_size[0] - self.bg_border_width - 1)
-            ICON = transform.scale(ICON_IMG, icon_size)
-
-            ICON_BG_SURF.blit(ICON, icon_size)
-            self.ICON = ICON_BG_SURF
+            # self.icon_size = ((self.icon_size[0] - self.bg_border_width), (self.icon_size[1] - self.bg_border_width))
+            self.ICON_BG = ICON_BG_SURF
+            self.icon_bg_rect = ICON_BG_SURF.get_rect()
         else:
-            self.ICON = transform.scale(ICON_IMG, icon_size)
+            self.ICON_BG = None
 
+        self.ICON = transform.scale(ICON_IMG, self.icon_size)
         self.icon_rect = self.ICON.get_rect()
 
+        # replace super root surf with the extended one
         new_root_width = (self.rect.w + self.rect.h + self.icon_offset)
         new_root_height = self.rect.h
-
-        # replace super root surf with the extended one
         self.ROOT_SURF = Surface((new_root_width, new_root_height)).convert_alpha()
         self.ROOT_SURF.fill((0, 0, 0, 0))
 
@@ -201,31 +199,22 @@ class UI_Icon_Bar(UI_Bar):
 
         # reposition rects
         self.bg_surf_rect.left += (self.icon_rect.w + self.icon_offset)
-        self.bar_surf_rect.left += (self.icon_rect.w + self.icon_offset)
-        self.icon_rect.topleft = self.rect.topleft
+        self.bar_surf_rect.left += (self.icon_rect.w + self.icon_offset + self.bg_border_width + self.internal_padding_y)
+        self.bar_surf_rect.top += (self.bg_border_width + self.internal_padding_y)
+        # self.icon_rect.topleft = self.rect.topleft
 
         # update subsurfaces from super
         self.BG_SURF = self.ROOT_SURF.subsurface(self.bg_surf_rect)
         self.BAR_SURF = self.ROOT_SURF.subsurface(self.bar_surf_rect)
         self.ICON_SURF = self.ROOT_SURF.subsurface(self.icon_rect)
 
-        if (self.copy_super_bg):
-            self.ROOT_SURF.fill(self.bg_color, self.BG_SURF.get_rect())
-
-        if (self.bg_border_width):
-            topright_pos = self.ROOT_SURF.get_rect().topright
-            draw_rect(
-                self.ROOT_SURF,
-                self.bg_border_color, 
-                self.BG_SURF.get_rect(topright=topright_pos),
-                width=self.bg_border_width
-            )
-
         self.rect.topleft = self.position
         self.image = self.ROOT_SURF
 
     def draw_horizontal_bar(self, fill_weight: float):
         super().draw_horizontal_bar(fill_weight)
+        if (self.ICON_BG):
+            self.ICON_SURF.blit(self.ICON_BG, self.icon_bg_rect)
         self.ICON_SURF.blit(self.ICON, self.icon_rect)
 
 

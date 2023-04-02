@@ -410,7 +410,7 @@ class PG_Map:
         self.create_ui_bar()
 
     def create_ui_bar(self):
-        # self.test_bar_weight = 1.0
+        self.test_bar_weight = 1.0
         # self.TEST_BAR = UI_Auto_Bar(
         #     self.cf_ui_bar_styles['default'],
         #     self.cf_global, "TEST",
@@ -424,24 +424,24 @@ class PG_Map:
         # )
         # self.map_ui_temp.add(self.TEST_BAR)
 
-        self.test_bar_weight = 1.0
-        self.TEST_BAR = UI_Bar(
-            self.cf_ui_bar_styles['default'],
-            self.cf_global,
-            "TEST",
-            (100, 100),
-            (600, 42)
-        )
-        # self.TEST_BAR = UI_Icon_Bar(
+        # self.TEST_BAR = UI_Bar(
         #     self.cf_ui_bar_styles['default'],
         #     self.cf_global,
         #     "TEST",
         #     (100, 100),
-        #     (600, 42),
-        #     'assets/icons/protection.png',
-        #     0,
-        #     True
+        #     (600, 42)
         # )
+
+        self.TEST_BAR = UI_Icon_Bar(
+            self.cf_ui_bar_styles['default'],
+            self.cf_global,
+            "TEST",
+            (100, 100),
+            (420, 28),
+            'assets/icons/protection.png',
+            4,
+            True
+        )
         self.map_ui_temp.add(self.TEST_BAR)
 
     def draw_sprites(self):
@@ -453,7 +453,7 @@ class PG_Map:
             self.player_group.draw(self.surface)
         self.block_group.draw(self.surface)
         # self.map_ui_temp.update()
-        self.test_bar_weight -= 0.001
+        # self.test_bar_weight -= 0.0005
         self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
         self.map_ui_temp.draw(self.surface)
 

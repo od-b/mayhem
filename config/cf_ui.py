@@ -6,14 +6,14 @@ CF_BAR_STYLES = {
         'bg_alpha_key':         int(110),
         'bg_border_color':      RGB['purple'],
         'bg_border_alpha_key':  int(110),
-        'bg_border_width':      int(4),
+        'bg_border_width':      int(1),
         'bar_color':            RGB['peach'],
         'bar_alpha_key':        int(210),
         'bar_border_color':     RGB['white'],
         'bar_border_alpha_key': int(240),
-        'bar_border_width':     int(2),
-        'internal_padding_x':   int(3),
-        'internal_padding_y':   int(3)
+        'bar_border_width':     int(1),
+        'internal_padding_x':   int(1),
+        'internal_padding_y':   int(1)
     }
 }
 

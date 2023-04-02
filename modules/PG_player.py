@@ -159,6 +159,8 @@ class Player(Sprite):
         self.thrusting = True
         self.thrust_begin_curr_lerp_weight = 0.0
 
+        # calculate the frames appropriate to scale up to max thrust acceleration,
+        # depending on the current acceleration and set thrust begin frames
         self.thrust_begin_accel_length = self.acceleration.length()
         weighted_diff = (self.THRUST_MAX_ACCEL - self.thrust_begin_accel_length) / 1.0
         self.thrust_begin_frames_left = int(self.THRUST_BEGIN_FRAMES * weighted_diff)
@@ -180,6 +182,7 @@ class Player(Sprite):
     def init_collision_recoil(self):
         ''' try to push the player back where it came from by inverting velocity '''
 
+        # in case of very low velocity impacts, increase velocity slightly
         if (abs(self.velocity.x < 0.1)):
             if (self.velocity.x > 0):
                 self.velocity.x += 0.1
@@ -198,6 +201,7 @@ class Player(Sprite):
 
         self.velocity *= -self.COLLISION_FORCE
         self.acceleration *= self.COLLISION_FORCE
+        # if the object we crashed into is below is, "reset" the compounding gravity effect
         if (self.velocity.y == -1):
             self.grav_effect *= 0.01
         self.curr_image_src = self.COLLISION_CD_IMAGE
@@ -213,15 +217,18 @@ class Player(Sprite):
             pg_math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_ACCEL)
         )
         self.acceleration *= self.ACCEL_REDUCT
-        if (self.grav_effect < self.TERM_VELO):
-            self.grav_effect = lerp(self.grav_effect + self.GRAVITY_C, self.TERM_VELO, self.GRAVITY_M)
-            self.update_velocity_with_grav_effect()
-            if (self.direction.y == -1.0) and (self.grav_effect >= self.MAX_ACCEL):
-                # this is not a great solution, but apply some additional gravity if accel up
-                self.velocity.y -= 0.5 * (self.acceleration.y / self.MASS)
+
+        # increase gravity and apply its effect to velocity
+        self.grav_effect = lerp(self.grav_effect + self.GRAVITY_C, self.TERM_VELO, self.GRAVITY_M)
+        self.update_velocity_with_grav_effect()
+
+        if (self.direction.y == -1.0) and (self.grav_effect >= self.TERM_VELO):
+            # this is not a great solution, but, it *almost* completely counteracts upwards accel without thrust
+            # TODO: TEST WITH A VARIETY OF MASS; or find a better solution
+            self.velocity.y -= (0.2 * self.grav_effect) * (self.acceleration.y / self.MASS)
 
     def update_velocity_with_grav_effect(self):
-        ''' set velocity. apply the current gravity effect. clamp y-velocity. '''
+        ''' update velocity. apply the current gravity effect. clamp y-velocity. '''
         self.velocity.update(self.acceleration)
         self.velocity.y += (self.MASS * self.grav_effect)
         self.velocity.y = pg_math.clamp(self.velocity.y, -self.MAX_VELO, self.TERM_VELO)
@@ -273,6 +280,9 @@ class Player(Sprite):
         self.temp_max_accel = lerp(self.MAX_ACCEL, self.THRUST_MAX_ACCEL, (self.thrust_end_curr_lerp_weight))
         self.acceleration.clamp_magnitude_ip(0.1, self.temp_max_accel)
         self.thrust_end_curr_lerp_weight -= self.THRUST_END_LERP_DECREASE
+
+        if (self.grav_effect < self.TERM_VELO):
+            self.grav_effect = lerp(self.grav_effect + self.GRAVITY_C, self.TERM_VELO, self.GRAVITY_M)
 
         # apply gravity
         self.update_velocity_with_grav_effect()
