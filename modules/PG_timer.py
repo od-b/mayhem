@@ -28,14 +28,18 @@ class PG_Timer(Timer):
         else:
             self.tick_func: Callable = self.clock_tick
 
-    def start_first_segment(self, ref: int | None):
+    def new_segment(self, ref: int | None, archive_active_segment: bool):
         ''' overwrites parent method.
             * since this subclass has an internal clock, handles time parameters
         '''
-        self.first_init_done = True
-        self.tick_func()
-        curr_time = time.get_ticks()
-        super().start_first_segment(curr_time, ref)
+        if (self.first_init_done):
+            super().new_segment(ref, archive_active_segment)
+        else:
+            self.first_init_done = True
+            # tick to allow getting the current time from time.get_ticks()
+            self.tick_func()
+            curr_time = time.get_ticks()
+            super().start_first_segment(curr_time, ref)
 
     def get_custom_events(self):
         return self.custom_events

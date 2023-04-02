@@ -20,6 +20,13 @@ CF_MAPS = {
             'edge_outline':         CF_BLOCKS['small_gray_block'],
             'obstacle':             CF_BLOCKS['pastel_block'],
             'obstacle_outline':     CF_BLOCKS['adaptive_block'],
+        },
+        # time between sprite updates, per type. Values are millisecs between updates
+        # these values will in reality typically have a variance of 0.5%
+        'upd_interval': {
+            'ui_core':  int(100),
+            'ui_temp':   int(100),
+            'terrain':   int(100),
         }
     }
 }

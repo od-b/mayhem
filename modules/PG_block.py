@@ -24,7 +24,8 @@ class Block(Sprite):
             cf_global: dict,
             pallette: list[tuple],
             size: tuple[int, int],
-            position: tuple[int, int]
+            position: tuple[int, int],
+            update_interval: int
         ):
 
         Sprite.__init__(self)
@@ -32,7 +33,7 @@ class Block(Sprite):
         # store references to the config dicts
         self.cf_global  = cf_global
         self.cf_block   = cf_block
-        self.UPDATE_INTERVAL = int(self.cf_global['update_intervals']['blocks'])
+        self.UPDATE_INTERVAL = update_interval
 
         self.pallette   = pallette
         ''' list of one or more tuples. May be RGB, RGBA, or even a mix '''

@@ -1,7 +1,8 @@
 from random import randint
 
 # installed library imports
-from pygame import Color, Surface, Rect
+import pygame as pg
+from pygame import Color, Surface, Rect, display, event
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
@@ -10,6 +11,7 @@ from pygame.mask import Mask
 ## general classes
 from .general.exceptions import ConfigError
 ## pygame specific classes
+from .PG_window import PG_Window
 from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
@@ -19,77 +21,76 @@ from .PG_ui_bar import UI_Bar, UI_Auto_Bar, UI_Icon_Bar
 
 class PG_Map:
     ''' current map setup used by the the app '''
-    def __init__(self,
-            cf_global: dict,
-            cf_map: dict,
-            cf_ui_bar_styles: dict,
-            cf_ui_containers : dict,
-            surface: Surface,
-            timer: PG_Timer
-        ):
+    def __init__(self, PARENT, cf_map: dict, subsurface: Surface):
+        self.PARENT = PARENT
+        self.cf_map: dict = cf_map
+        self.surface = subsurface
 
-        # self.cf_global = cf_global
-        self.cf_global = cf_global
-        self.cf_map = cf_map
-        self.cf_ui_bar_styles = cf_ui_bar_styles
-        self.cf_ui_containers = cf_ui_containers 
+        # store needed parent attributes
+        self.timer: PG_Timer        = PARENT.timer
+        self.cf_global: dict        = PARENT.cf_global
+        self.cf_ui_containers: dict = PARENT.cf_ui_containers   # TODO: map ui config file
+        self.cf_ui_bar_styles: dict = PARENT.cf_ui_bar_styles   # TODO: map ui config file
+        self.cf_player: dict        = cf_map['player']
+        self.cf_blocks: dict        = cf_map['blocks']
 
-        self.surface = surface
-        self.timer = timer
-
-        self.LOOP_LIMIT = int(cf_global['loop_limit'])
-        self.DEBUG_COLOR = Color(cf_global['debug_color'])
-        self.DEBUG_COLOR_2 = Color(cf_global['debug_color_2'])
+        # globals
+        self.LOOP_LIMIT         = int(self.cf_global['loop_limit'])
+        self.DEBUG_COLOR        = Color(self.cf_global['debug_color'])
+        self.DEBUG_COLOR_2      = Color(self.cf_global['debug_color_2'])
 
         # store dict settings
-        self.name = str(cf_map['name'])
-        self.available_time = int(cf_map['available_time'])
-        self.fill_color = Color(cf_map['fill_color'])
-        self.n_obstacles = int(cf_map['n_obstacles'])
-        self.gravity_m = float(cf_map['gravity_m'])
-        self.gravity_c = float(cf_map['gravity_c'])
-        self.mask_blit_color = self.fill_color
+        self.name               = str(cf_map['name'])
+        self.available_time     = int(cf_map['available_time'])
+        self.fill_color         = Color(cf_map['fill_color'])
+        self.n_obstacles        = int(cf_map['n_obstacles'])
+        self.gravity_m          = float(cf_map['gravity_m'])
+        self.gravity_c          = float(cf_map['gravity_c'])
 
-        # store nested dict settings
-        self.cf_player: dict = cf_map['player']
-        self.cf_blocks: dict = cf_map['blocks']
+        #### SPRITE GROUPS ####
 
-        self.rect = self.surface.get_rect()
-        ''' rect of the map surface '''
-
-        # self.surface.fill(self.fill_color)
-        # self.CLEAR_SURF = Surface((self.rect.w, self.rect.h)).convert_alpha()
-        # self.CLEAR_SURF.fill(self.fill_color)
-
-        # combined groups
         self.block_group = Group()
         ''' combined group of constant, map-anchored rectangular sprites '''
-        # specific groups
-        self.obstacle_group = Group()
+        self.obstacle_group = Group()   # NOT SURE IF NEEDED, LEAVING FOR NOW
         ''' group specifically containing the randomly placed obstacle core blocks '''
-        self.map_edge_group = Group()
+        self.map_edge_group = Group()   # NOT SURE IF NEEDED, LEAVING FOR NOW
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
+        self.ui_core_group = Group()
+        self.ui_temp_group = Group()
 
-        self.map_ui_temp = Group()
-        self.DEBUG_DRAW_PLAYER = False
+        # misc
+        self.mask_overlap_color = self.fill_color
+        self.rect               = self.surface.get_rect()
+        ''' rect of the map surface '''
+        self.debug_player_visuals = False
+        self.looping = False
 
-    def get_player_controls(self) -> dict[str, int]:
-        ''' return a dict containing the player control keys '''
-        return self.cf_player['controls']
+    def set_up_all(self, start_loop: bool):
+        self.set_update_intervals()
+        self.store_player_controls()
+        self.set_up_terrain()
+        self.spawn_player((400, 400))
 
-    def get_rand_x(self, padding: int):
-        ''' get random x-value within map left/right. Padding may be negative. '''
-        return randint((self.rect.left + padding), (self.rect.right - padding))
+        if (start_loop):
+            self.looping = True
+            self.timer.new_segment(self.name, False)
 
-    def get_rand_y(self, padding: int):
-        ''' get random y-value within map top/bottom. Padding may be negative. '''
-        return randint((self.rect.top + padding), (self.rect.bottom - padding))
+    def set_update_intervals(self):
+        self.EVENT_UPDATE_UI_CORE = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_core'], 0)
+        ''' custom pygame event call to update ui '''
+        # self.EVENT_UPDATE_UI_TEMP = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_temp'], 0)
+        # ''' custom pygame event call to update ui '''
+        self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_interval']['terrain'], 0)
+        ''' custom pygame event call to update terrain '''
 
-    def get_rand_pos(self, padding_x: int, padding_y: int):
-        ''' get a random position(x,y) within the map. Padding may be negative. '''
-        return (self.get_rand_x(padding_x), self.get_rand_y(padding_y))
+    def store_player_controls(self) -> dict[str, int]:
+        self.STEER_UP    = int(self.cf_player['controls']['steer_up'])
+        self.STEER_LEFT  = int(self.cf_player['controls']['steer_left'])
+        self.STEER_DOWN  = int(self.cf_player['controls']['steer_down'])
+        self.STEER_RIGHT = int(self.cf_player['controls']['steer_right'])
+        self.THRUST      = int(self.cf_player['controls']['thrust'])
 
     def set_up_terrain(self):
         ''' specialized function for the creating the map terrain '''
@@ -183,7 +184,8 @@ class PG_Map:
                 width = (MAX_X - curr_pos_x)
 
             # assemble the block
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
+                          position, int(self.cf_map['upd_interval']['terrain']))
 
             # adjust position according to facing
             match (facing):
@@ -210,7 +212,8 @@ class PG_Map:
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
 
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
+                          position, int(self.cf_map['upd_interval']['terrain']))
 
             match (facing):
                 case (-1):
@@ -232,7 +235,8 @@ class PG_Map:
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
 
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
+                          position, int(self.cf_map['upd_interval']['terrain']))
             BLOCK.rect.right = curr_pos_x
 
             match (facing):
@@ -255,7 +259,8 @@ class PG_Map:
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
 
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
+                          position, int(self.cf_map['upd_interval']['terrain']))
             BLOCK.rect.bottom = curr_pos_y
 
             match (facing):
@@ -291,7 +296,8 @@ class PG_Map:
             position = self.get_rand_pos(width, height)
 
             # assemble the block
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height), position)
+            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
+                          position, int(self.cf_map['upd_interval']['terrain']))
 
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
@@ -327,11 +333,96 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def rect_offset(self, rect_1: Rect, rect_2: Rect):
-        ''' finds the offset between two sprites rects '''
-        offset_x = (rect_1.x - rect_2.x)
-        offset_y = (rect_1.y - rect_2.y)
-        return (offset_x, offset_y)
+    def check_player_block_collision(self):
+        ''' since collision is based on image masks, call this after draw, but before update
+            * if player collides with a block, init the recoil sequence for the player 
+        '''
+        # case 0: ignore collision if player has no mass or cooldown frames
+        if self.player.collision_cooldown_frames_left:
+            # blit the visual overlap
+            self.blit_block_player_overlap()
+        elif spritecollideany(self.player, self.block_group):
+            # if player rect collides with any block rects, check detailed mask collision
+            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            if collidelist:
+                # if masks collide, init player recoil phase
+                self.player.init_phase_collision_recoil()
+                # highlight blocks that player collided with
+                for BLOCK in collidelist:
+                    BLOCK.init_timed_highlight()
+
+    def draw_sprites(self):
+        # ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
+        self.surface.fill(self.fill_color)
+        if (self.debug_player_visuals):
+            self.debug__draw_player_all_info()
+        else:
+            self.player_group.draw(self.surface)
+        self.block_group.draw(self.surface)
+        # self.ui_core_group.update()
+        # self.test_bar_weight -= 0.0005
+        # self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
+        # self.ui_temp_group.draw(self.surface)
+
+    def loop(self):
+        # if a map was initiated by the menu, launch the main loop
+        while (self.looping):
+            # self.window.fill_surface()
+            self.draw_sprites()
+            self.check_player_block_collision()
+            # loop through events before the display update
+            self.check_events()
+            display.update()
+
+            self.player_group.update()
+            # update the timer. Also limits the framerate if set to do so
+            self.timer.update()
+
+    def check_events(self):
+        for ev in pg.event.get():
+            # check if event type matches any triggers
+            match (ev.type):
+                case pg.KEYDOWN:
+                    match (ev.key):
+                        case self.STEER_UP:
+                            self.player.direction.y -= 1.0
+                        case self.STEER_DOWN:
+                            self.player.direction.y += 1.0
+                        case self.STEER_LEFT:
+                            self.player.direction.x -= 1.0
+                        case self.STEER_RIGHT:
+                            self.player.direction.x += 1.0
+                        case self.THRUST:
+                            self.player.init_phase_thrust_begin()
+                        case _:
+                            pass
+                case pg.KEYUP:
+                    # essentially reverts actions upon key up
+                    match (ev.key):
+                        case self.STEER_UP:
+                            self.player.direction.y += 1.0
+                        case self.STEER_DOWN:
+                            self.player.direction.y -= 1.0
+                        case self.STEER_LEFT:
+                            self.player.direction.x += 1.0
+                        case self.STEER_RIGHT:
+                            self.player.direction.x -= 1.0
+                        case self.THRUST:
+                            self.player.init_phase_thrust_end()
+                        case _:
+                            pass
+                case pg.QUIT:
+                    self.looping = False
+                    self.PARENT.looping = False
+                case self.EVENT_UPDATE_UI_CORE:
+                    self.ui_core_group.update()
+                case self.EVENT_UPDATE_TERRAIN:
+                    self.block_group.update()
+                case _:
+                    pass
+
+
+    #### MASK RELATED STUFF ####
 
     def largest_mask_component_bounds(self, mask: Mask):
         ''' get the bounding rect of the largest connected component within the mask '''
@@ -359,8 +450,13 @@ class PG_Map:
         ''' returns a new mask covering the overlapping area of two sprites
             * returns a new mask covering only the overlapping area
         '''
-        offset = self.rect_offset(sprite_1.rect, sprite_2.rect)
+        
+        # find the offset between two sprites rects
+        offset_x = (sprite_1.rect.x - sprite_2.rect.x)
+        offset_y = (sprite_1.rect.y - sprite_2.rect.y)
+        offset = (offset_x, offset_y)
         overlap_mask = sprite_2.mask.overlap_mask(sprite_1.mask, offset)
+
         return overlap_mask
 
     def collision_center(self, sprite_1, sprite_2):
@@ -376,7 +472,7 @@ class PG_Map:
     def blit_overlap_mask(self, sprite_1, sprite_2):
         dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
         overlap_mask = self.sprite_mask_overlap(sprite_1, sprite_2)
-        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.mask_blit_color)
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.mask_overlap_color)
         self.surface.blit(MASK_SURF, dest_pos)
 
     def blit_block_player_overlap(self):
@@ -387,75 +483,21 @@ class PG_Map:
             for BLOCK in collidelist:
                 self.blit_overlap_mask(self.player, BLOCK)
 
-    def check_player_block_collision(self):
-        ''' since collision is based on image masks, call this after draw, but before update
-            * if player collides with a block, init the recoil sequence for the player 
-        '''
 
-        # case 0: ignore collision if player has no mass or cooldown frames
-        if self.player.collision_cooldown_frames_left:
-            # blit the visual overlap
-            self.blit_block_player_overlap()
-        elif spritecollideany(self.player, self.block_group):
-            # if player rect collides with any block rects, check detailed mask collision
-            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-            if collidelist:
-                # if masks collide, init player recoil phase
-                self.player.init_collision_recoil()
-                # highlight blocks that player collided with
-                for BLOCK in collidelist:
-                    BLOCK.init_timed_highlight()
+    #### MISC GETTERS ####
 
-    def set_up_ui(self):
-        self.create_ui_bar()
+    def get_rand_x(self, padding: int):
+        ''' get random x-value within map left/right. Padding may be negative. '''
+        return randint((self.rect.left + padding), (self.rect.right - padding))
 
-    def create_ui_bar(self):
-        self.test_bar_weight = 1.0
-        # self.TEST_BAR = UI_Auto_Bar(
-        #     self.cf_ui_bar_styles['default'],
-        #     self.cf_global, "TEST",
-        #     (100, 100),
-        #     (600, 42),
-        #     0.0,
-        #     1.0,
-        #     self.player.get_grav_effect,
-        #     'horizontal',
-        #     True
-        # )
-        # self.map_ui_temp.add(self.TEST_BAR)
+    def get_rand_y(self, padding: int):
+        ''' get random y-value within map top/bottom. Padding may be negative. '''
+        return randint((self.rect.top + padding), (self.rect.bottom - padding))
 
-        # self.TEST_BAR = UI_Bar(
-        #     self.cf_ui_bar_styles['default'],
-        #     self.cf_global,
-        #     "TEST",
-        #     (100, 100),
-        #     (600, 42)
-        # )
+    def get_rand_pos(self, padding_x: int, padding_y: int):
+        ''' get a random position(x,y) within the map. Padding may be negative. '''
+        return (self.get_rand_x(padding_x), self.get_rand_y(padding_y))
 
-        self.TEST_BAR = UI_Icon_Bar(
-            self.cf_ui_bar_styles['default'],
-            self.cf_global,
-            "TEST",
-            (100, 100),
-            (420, 28),
-            'assets/icons/protection.png',
-            4,
-            True
-        )
-        self.map_ui_temp.add(self.TEST_BAR)
-
-    def draw_sprites(self):
-        # ''' fill map surface. draw all sprites. check if drawing resulted in collisions. '''
-        self.surface.fill(self.fill_color)
-        if (self.DEBUG_DRAW_PLAYER):
-            self.debug__draw_player_all_info()
-        else:
-            self.player_group.draw(self.surface)
-        self.block_group.draw(self.surface)
-        # self.map_ui_temp.update()
-        # self.test_bar_weight -= 0.0005
-        self.TEST_BAR.draw_horizontal_bar(self.test_bar_weight)
-        self.map_ui_temp.draw(self.surface)
 
     #### DEBUGGING METHODS ####
 
