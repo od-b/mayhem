@@ -88,17 +88,17 @@ class Player(Sprite):
         self.collision_cooldown_frames_left:   int = int(0)
 
         # attributes related to player key-actions
-        self.key_thrusting:   bool = False
+        self.key_thrusting:  bool = False
         ''' whether the thrust key is currently held '''
-        self.key_direction:   Vec2 = Vec2(0.0, 0.0)
+        self.key_direction:  Vec2 = Vec2(0.0, 0.0)
         ''' 8-directional vector for reading key controls '''
 
         # initialize physics and angle - related attributes
-        self.position:        Vec2 = Vec2(self.SPAWN_POS)
+        self.position:       Vec2 = Vec2(self.SPAWN_POS)
         ''' position within the map '''
-        self.acceleration:    Vec2 = Vec2(0.001, 0.00001)
+        self.acceleration:   Vec2 = Vec2(0.001, 0.00001)
         ''' determines direction and directional change of velocity '''
-        self.velocity:        Vec2 = Vec2(0.0, 0.0)
+        self.velocity:       Vec2 = Vec2(0.0, 0.0)
         ''' direction and speed '''
         self.angle:          float = 0.0
         ''' angle in degrees '''
@@ -185,18 +185,22 @@ class Player(Sprite):
             loss_weight = (impact_velo / self.THRUST_MAGNITUDE)
             health_loss = lerp(self.MIN_COLL_HP_LOSS, self.MAX_COLL_HP_LOSS, loss_weight)
 
-        # print(f'health_loss={health_loss}')
-        self.health -= health_loss
-        if (self.health <= 0.0):
-            # print('death')
-            pass
-
         # end any thrust end frames that might be active
         self.thrust_end_frames_left = 0
 
         # reset thrust phase if currently in a thrust phase
         if (self.key_thrusting):
             self.init_phase_thrust_begin()
+
+        # print(f'health_loss={health_loss}')
+        self.health -= health_loss
+        if (self.health <= 0.0):
+            return self.collision_cooldown_frames_left
+            # print('death')
+            # return None
+            # RETURN DEATH TO MAP HERE
+        else:
+            return self.collision_cooldown_frames_left
 
     def init_phase_thrust_begin(self):
         ''' call to begin thrust phase, gradually increasing acceleration and its limit
@@ -281,7 +285,6 @@ class Player(Sprite):
         self.temp_max_accel = lerp(self.MAX_ACCEL, self.THRUST_MAGNITUDE, (self.thrust_end_curr_lerp_weight))
         self.acceleration.clamp_magnitude_ip(0.1, self.temp_max_accel)
         self.thrust_end_curr_lerp_weight -= self.THRUST_END_LERP_DECREASE
-
 
         # increase compounding gravity
         self.grav_force = lerp((self.grav_force + self.MAP_GRAV_C), self.TERMINAL_VELO, self.MAP_GRAV_M)
@@ -373,6 +376,9 @@ class Player(Sprite):
 
     #### ORDINARY GETTERS ####
 
+    def get_collision_cooldown_frames(self):
+        return self.collision_cooldown_frames_left
+
     def get_curr_health(self):
         return self.health
 
@@ -387,12 +393,6 @@ class Player(Sprite):
 
 
 ''' TODO
-* physics:
-    - improve how gravity is distributed when not thrusting and accelerating north
-
-* gameplay:
-    - reduce health -> 
-    - reduce fuel ->
 
 * visualizing information:
     - animate thrust -> 

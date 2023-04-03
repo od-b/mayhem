@@ -38,7 +38,7 @@ UI_BARS = {
         'copy_super_bg': UI_BAR_ICON_BG,
     },
     'shield': {
-        'cf_bar': CF_BARS['blue'],
+        'cf_bar': CF_BARS['green'],
         'icon': os_path_join('assets','images','protection.png'),
         'ref_id': ["BAR", "TEMP", "SHIELD"],
         'remove_when_empty': True,

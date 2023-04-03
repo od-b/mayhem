@@ -359,8 +359,9 @@ class PG_Map:
             # if player rect collides with any block rects, check detailed mask collision
             collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
             if collidelist:
-                # if masks collide, init player recoil phase
-                self.player.init_phase_collision_recoil()
+                # if masks collide, init player recoil phase and get the cd frame count for shield bar
+                cd_frames = self.player.init_phase_collision_recoil()
+                self.activate_shield_bar(cd_frames)
                 # highlight blocks that player collided with
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
@@ -404,9 +405,14 @@ class PG_Map:
         )
         self.SHIELD_BAR = self.create_horizontal_icon_bar(
             'shield',
-            self.player.get_curr_fuel,
-            self.player.MAX_FUEL,
+            self.player.get_collision_cooldown_frames,
+            0.0
         )
+
+    def activate_shield_bar(self, shield_duration: float):
+        ''' activate the shield bar. it will remove itself when empty '''
+        self.SHIELD_BAR.max_val = shield_duration
+        self.BAR_CONTAINER.add_child(self.SHIELD_BAR)
 
     def loop(self):
         # if a map was initiated by the menu, launch the main loop

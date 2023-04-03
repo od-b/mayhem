@@ -261,7 +261,7 @@ class UI_Sprite_Container(UI_Container):
             child.kill()
 
     def add_child(self, child):
-        self.child_fits_self(child)
+        # self.child_fits_self(child)
         self.children.add(child)
 
     def add_children(self, list: list[Sprite]):
