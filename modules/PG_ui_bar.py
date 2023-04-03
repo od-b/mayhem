@@ -1,11 +1,10 @@
 from typing import Callable
 
 ## import needed pygame modules
-from pygame import Surface, Rect, Color, SRCALPHA, transform, image
-from pygame.math import lerp, clamp
-from pygame.sprite import Sprite, Group
+from pygame import Surface, Rect, Color, transform, image
+from pygame.math import lerp
+from pygame.sprite import Sprite
 from pygame.draw import rect as draw_rect
-from pygame.draw import line as draw_line, lines as draw_lines
 
 
 class UI_Bar(Sprite):
@@ -25,13 +24,13 @@ class UI_Bar(Sprite):
         self.size = size
 
         self.bg_color               = Color(cf_bar_style['bg_color'])
-        self.bg_alpha_key           = int(cf_bar_style['bg_alpha_key'])
+        self.BG_ALPHA_KEY           = int(cf_bar_style['bg_alpha_key'])
         self.bg_border_color        = Color(cf_bar_style['bg_border_color'])
         self.bg_border_alpha_key    = int(cf_bar_style['bg_border_alpha_key'])
         self.bg_border_width        = int(cf_bar_style['bg_border_width'])
 
         self.bar_color              = Color(cf_bar_style['bar_color'])
-        self.bar_alpha_key          = int(cf_bar_style['bar_alpha_key'])
+        self.BAR_ALPHA_KEY          = int(cf_bar_style['bar_alpha_key'])
         self.bar_border_color       = Color(cf_bar_style['bar_border_color'])
         self.bar_border_alpha_key   = int(cf_bar_style['bar_border_alpha_key'])
         self.bar_border_width       = int(cf_bar_style['bar_border_width'])
@@ -66,18 +65,25 @@ class UI_Bar(Sprite):
         self.BG_SURF = self.ROOT_SURF.subsurface(self.ROOT_RECT)
         self.BAR_SURF = self.ROOT_SURF.subsurface(bar_surf_rect)
 
-        self.bg_surf_rect = self.BG_SURF.get_rect()
-        self.bar_surf_rect = self.BAR_SURF.get_rect()
+        self.BG_SURF_RECT = self.BG_SURF.get_rect()
+        self.BAR_SURF_RECT = self.BAR_SURF.get_rect()
 
         # set image to the root surface
         self.image = self.ROOT_SURF
         self.rect = self.ROOT_RECT
         self.rect.topleft = position
+        
+        if (self.BG_ALPHA_KEY != 255):
+            self.FILL_WITH_ALPHA = True
+        else:
+            self.FILL_WITH_ALPHA = False
+        
+        self.FULL_ALPHA = Color(0,0,0,0)
 
     def convert_color_alpha(self):
         ''' convert all colors to rgba '''
-        self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.bg_alpha_key))
-        self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.bar_alpha_key))
+        self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.BG_ALPHA_KEY))
+        self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.BAR_ALPHA_KEY))
         self.bg_border_color = Color((self.bg_border_color.r, self.bg_border_color.g,
                                        self.bg_border_color.b, self.bar_border_alpha_key))
         self.bar_border_color = Color((self.bar_border_color.r, self.bar_border_color.g,
@@ -85,60 +91,56 @@ class UI_Bar(Sprite):
 
     def draw_horizontal_bar(self, fill_weight: float):
         # clear the background
-        if (self.bg_alpha_key != 255):
-            self.ROOT_SURF.fill((0, 0, 0, 0))
+        if (self.FILL_WITH_ALPHA):
+            self.ROOT_SURF.fill(self.FULL_ALPHA)
         self.BG_SURF.blit(self.BG_IMAGE, (0, 0))
 
-        if (fill_weight <= 0.0):
-            # if there's no bar to draw, return (also avoids negative lerp)
-            # if (fill_weight < 0.0):
-            #     print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} < 0.0. returning.')
-            return
-        elif (fill_weight > 1.0):
-            # print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
-            fill_weight = 1.0
+        # if (fill_weight <= 0.0):
+        #     # if there's no bar to draw, return (also avoids negative lerp)
+        #     if (fill_weight < 0.0):
+        #         print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} < 0.0. returning.')
+        #     return
+        # elif (fill_weight > 1.0):
+        #     print(f'{self}[draw_horizontal_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
+        #     fill_weight = 1.0
 
         # create the bar rect using a midpoint value through lerp. this is faster than python math.
-        bar_width = lerp(0, self.bar_surf_rect.w, fill_weight)
-        bar_rect = Rect(0, 0, bar_width, self.bar_surf_rect.h)
+        BAR_WIDTH = lerp(0, self.BAR_SURF_RECT.w, fill_weight)
+        BAR_RECT = Rect(0, 0, BAR_WIDTH, self.BAR_SURF_RECT.h)
 
-        self.BAR_SURF.fill(self.bar_color, bar_rect)
+        self.BAR_SURF.fill(self.bar_color, BAR_RECT)
 
         if (self.bar_border_width):
-            # bar_rect.inflate(-self.bar_border_width, -self.bar_border_width)
-            # draw_lines(self.BAR_SURF, self.bar_border_color, False, coords, self.bar_border_width)
-            draw_rect(self.BAR_SURF, self.bar_border_color, bar_rect, width=self.bar_border_width)
+            draw_rect(self.BAR_SURF, self.bar_border_color, BAR_RECT, width=self.bar_border_width)
 
     def draw_vertical_bar(self, fill_weight: float):
         ''' vertical bar fill. top to bottom '''
         # clear the background
-        if (self.bg_alpha_key != 255):
-            self.ROOT_SURF.fill((0, 0, 0, 0))
+        if (self.FILL_WITH_ALPHA):
+            self.ROOT_SURF.fill(self.FULL_ALPHA)
         self.BG_SURF.blit(self.BG_IMAGE, (0, 0))
 
-        if (fill_weight <= 0.0):
-            # if there's no bar to draw, return (also avoids negative lerp)
-            if (fill_weight < 0.0):
-                print(f'{self}[draw_vertical_bar]: fill_weight={fill_weight} < 0.0. returning.')
-            return
-        elif (fill_weight > 1.0):
-            print(f'{self}[draw_vertical_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
-            fill_weight = 1.0
+        # if (fill_weight <= 0.0):
+        #     # if there's no bar to draw, return (also avoids negative lerp)
+        #     if (fill_weight < 0.0):
+        #         print(f'{self}[draw_vertical_bar]: fill_weight={fill_weight} < 0.0. returning.')
+        #     return
+        # elif (fill_weight > 1.0):
+        #     print(f'{self}[draw_vertical_bar]: fill_weight={fill_weight} > 1.0. treating as 1.0.')
+        #     fill_weight = 1.0
 
 
         # create the bar rect using a midpoint value through lerp. this is faster than python math.
-        bar_height = lerp(0, self.bar_surf_rect.h, fill_weight)
-        bar_rect = Rect(
-            0, (self.bar_surf_rect.h - bar_height),
-            self.bar_surf_rect.w, bar_height
+        BAR_HEIGHT = lerp(0, self.BAR_SURF_RECT.h, fill_weight)
+        BAR_RECT = Rect(
+            0, (self.BAR_SURF_RECT.h - BAR_HEIGHT),
+            self.BAR_SURF_RECT.w, BAR_HEIGHT
         )
 
-        self.BAR_SURF.fill(self.bar_color, bar_rect)
+        self.BAR_SURF.fill(self.bar_color, BAR_RECT)
 
         if (self.bar_border_width):
-            # coords = [bar_rect.topleft, bar_rect.topright, bar_rect.bottomright, bar_rect.bottomleft]
-            # draw_lines(self.BAR_SURF, self.bar_border_color, False, coords, self.bar_border_width)
-            draw_rect(self.BAR_SURF, self.bar_border_color, bar_rect, width=self.bar_border_width)
+            draw_rect(self.BAR_SURF, self.bar_border_color, BAR_RECT, width=self.bar_border_width)
     
     def update(self):
         pass
@@ -149,7 +151,39 @@ class UI_Bar(Sprite):
         return msg
 
 
-class UI_Icon_Bar(UI_Bar):
+class UI_Auto_Bar_Horizontal(UI_Bar):
+    def __init__(self,
+            cf_bar_style: dict,
+            cf_global: dict,
+            ref_id,
+            position: tuple[int, int],
+            size: tuple[int, int],
+            max_val: float,
+            getter_func: Callable[[None], float],
+            remove_when_empty: bool
+        ):
+        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
+        self.max_val = max_val
+
+        self.GETTER_FUNC = getter_func
+        self.remove_when_empty = remove_when_empty
+
+    def update(self):
+        weight = (self.GETTER_FUNC() / self.max_val)
+
+        if (weight <= 0.0):
+            if (self.remove_when_empty):
+                self.kill()
+            else:
+                self.bar_draw_func(0.0)
+        elif (weight > 1.0):
+            self.max_val = self.GETTER_FUNC()
+            self.bar_draw_func(1.0)
+        else:
+            super().draw_horizontal_bar(weight)
+
+
+class UI_Icon_Bar_Horizontal(UI_Bar):
     def __init__(self,
             cf_bar_style: dict,
             cf_global: dict,
@@ -181,12 +215,12 @@ class UI_Icon_Bar(UI_Bar):
             # scale down icon by border width and a pixel clearing
             # self.icon_size = ((self.icon_size[0] - self.bg_border_width), (self.icon_size[1] - self.bg_border_width))
             self.ICON_BG = ICON_BG_SURF
-            self.icon_bg_rect = ICON_BG_SURF.get_rect()
+            self.ICON_BG_RECT = ICON_BG_SURF.get_rect()
         else:
             self.ICON_BG = None
 
         self.ICON = transform.scale(ICON_IMG, self.icon_size)
-        self.icon_rect = self.ICON.get_rect()
+        self.ICON_RECT = self.ICON.get_rect()
 
         # replace super root surf with the extended one
         new_root_width = (self.rect.w + self.rect.h + self.icon_offset)
@@ -197,15 +231,15 @@ class UI_Icon_Bar(UI_Bar):
         self.rect = self.ROOT_SURF.get_rect()
 
         # reposition rects
-        self.bg_surf_rect.left += (self.icon_rect.w + self.icon_offset)
-        self.bar_surf_rect.left += (self.icon_rect.w + self.icon_offset + self.bg_border_width + self.internal_padding_y)
-        self.bar_surf_rect.top += (self.bg_border_width + self.internal_padding_y)
-        # self.icon_rect.topleft = self.rect.topleft
+        self.BG_SURF_RECT.left += (self.ICON_RECT.w + self.icon_offset)
+        self.BAR_SURF_RECT.left += (self.ICON_RECT.w + self.icon_offset + self.bg_border_width + self.internal_padding_y)
+        self.BAR_SURF_RECT.top += (self.bg_border_width + self.internal_padding_y)
+        # self.ICON_RECT.topleft = self.rect.topleft
 
         # update subsurfaces from super
-        self.BG_SURF = self.ROOT_SURF.subsurface(self.bg_surf_rect)
-        self.BAR_SURF = self.ROOT_SURF.subsurface(self.bar_surf_rect)
-        self.ICON_SURF = self.ROOT_SURF.subsurface(self.icon_rect)
+        self.BG_SURF = self.ROOT_SURF.subsurface(self.BG_SURF_RECT)
+        self.BAR_SURF = self.ROOT_SURF.subsurface(self.BAR_SURF_RECT)
+        self.ICON_SURF = self.ROOT_SURF.subsurface(self.ICON_RECT)
 
         self.rect.topleft = self.position
         self.image = self.ROOT_SURF
@@ -213,11 +247,11 @@ class UI_Icon_Bar(UI_Bar):
     def draw_horizontal_bar(self, fill_weight: float):
         super().draw_horizontal_bar(fill_weight)
         if (self.ICON_BG):
-            self.ICON_SURF.blit(self.ICON_BG, self.icon_bg_rect)
-        self.ICON_SURF.blit(self.ICON, self.icon_rect)
+            self.ICON_SURF.blit(self.ICON_BG, self.ICON_BG_RECT)
+        self.ICON_SURF.blit(self.ICON, self.ICON_RECT)
 
 
-class UI_Icon_Auto_Bar(UI_Icon_Bar):
+class UI_Auto_Icon_Bar_Horizontal(UI_Icon_Bar_Horizontal):
     def __init__(self,
             cf_bar_style: dict,
             cf_global: dict,
@@ -227,71 +261,30 @@ class UI_Icon_Auto_Bar(UI_Icon_Bar):
             icon_path: str,
             icon_offset: int,
             copy_super_bg: bool,
-
-            min_val: float,
             max_val: float,
             getter_func: Callable[[None], float],
-            fill_direction: str
+            remove_when_empty: bool,
         ):
 
         # bar_width = size[0] - icon_offset - size[1]
         super().__init__(cf_bar_style, cf_global, ref_id, position, bar_size, icon_path, icon_offset, copy_super_bg)
 
-        self.min_val = min_val
         self.max_val = max_val
-
-        self.getter_func = getter_func
-        self.fill_direction = fill_direction
-
-        if (fill_direction == 'horizontal'):
-            self.bar_draw_func = super().draw_horizontal_bar
-        elif (fill_direction == 'vertical'):
-            self.bar_draw_func = super().draw_vertical_bar
-        else:
-            raise ValueError(f'"horizontal" or "vertical". Found "{fill_direction}"')
+        self.GETTER_FUNC = getter_func
+        self.remove_when_empty = remove_when_empty
 
     def update(self):
-        fill_val = self.getter_func()
-        print(fill_val, self.max_val)
-        if (fill_val > self.min_val):
-            if (fill_val > self.max_val):
-                self.max_val = fill_val
-            fill_weight = (fill_val/self.max_val)
-            self.bar_draw_func(lerp(self.min_val, self.max_val, fill_weight))
+        NEW_VAL = self.GETTER_FUNC()
+        weight = (NEW_VAL / self.max_val)
 
+        if (weight <= 0.0):
+            if (self.remove_when_empty):
+                self.kill()
+                return
+            else:
+                weight = 0.0
+        elif (weight > 1.0):
+            self.max_val = self.GETTER_FUNC()
+            weight = 1.0
 
-class UI_Auto_Bar(UI_Bar):
-    def __init__(self,
-            cf_bar_style: dict,
-            cf_global: dict,
-            ref_id,
-            position: tuple[int, int],
-            size: tuple[int, int],
-            min_val: float,
-            max_val: float,
-            getter_func: Callable[[None], float],
-            fill_direction: str
-        ):
-        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
-
-        self.min_val = min_val
-        self.max_val = max_val
-
-        self.getter_func = getter_func
-        self.fill_direction = fill_direction
-
-        if (fill_direction == 'horizontal'):
-            self.bar_draw_func = super().draw_horizontal_bar
-        elif (fill_direction == 'vertical'):
-            self.bar_draw_func = super().draw_vertical_bar
-        else:
-            raise ValueError(f'"horizontal" or "vertical". Found "{fill_direction}"')
-
-    def update(self):
-        fill_val = self.getter_func()
-        print(fill_val, self.max_val)
-        if (fill_val > self.min_val):
-            if (fill_val > self.max_val):
-                self.max_val = fill_val
-            fill_weight = (fill_val/self.max_val)
-            self.bar_draw_func(lerp(self.min_val, self.max_val, fill_weight))
+        super().draw_horizontal_bar(weight)

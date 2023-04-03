@@ -34,8 +34,8 @@ class Player(Sprite):
         #### CONSTANTS ####
 
         # gameplay weights
-        self.MAX_HEALTH         = int(cf_gameplay['max_health'])
-        self.MAX_MANA           = int(cf_gameplay['max_mana'])
+        self.MAX_HEALTH         = float(cf_gameplay['max_health'])
+        self.MAX_FUEL           = float(cf_gameplay['max_fuel'])
 
         # acceleration weights
         self.ACCEL_REDUCT       = float(cf_weights['acceleration_multiplier'])
@@ -102,8 +102,8 @@ class Player(Sprite):
         ''' temporary max acceleration '''
 
         # misc
-        self.health: int    = self.MAX_HEALTH
-        self.mana: int      = self.MAX_MANA
+        self.health = self.MAX_HEALTH
+        self.fuel   = self.MAX_FUEL
 
         # setup
         self.DEFAULT_IMAGE = self.set_up_image(cf_colors['default'])
@@ -350,6 +350,12 @@ class Player(Sprite):
 
     #### ORDINARY GETTERS ####
 
+    def get_curr_health(self):
+        return self.health
+
+    def get_curr_fuel(self):
+        return self.fuel
+
     def get_max_grav_effect(self):
         print(self.MAX_GRAV * self.MASS)
         return self.MAX_GRAV
@@ -364,7 +370,7 @@ class Player(Sprite):
 
 * gameplay:
     - reduce health -> 
-    - reduce mana ->
+    - reduce fuel ->
 
 * visualizing information:
     - cooldown phase -> swap to an alt image with 50% transparancy for the duration

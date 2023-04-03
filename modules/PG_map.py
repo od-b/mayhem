@@ -1,4 +1,5 @@
 from random import randint
+from typing import Callable
 
 # installed library imports
 import pygame as pg
@@ -8,6 +9,9 @@ from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rec
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
 from pygame.mask import Mask
 
+# from pygame.image import save as image_save
+# image_save(self.surface, "screenshot.png")
+
 ## general classes
 from .general.exceptions import ConfigError
 ## pygame specific classes
@@ -16,7 +20,7 @@ from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
 from .PG_ui_container import UI_Container
-from .PG_ui_bar import UI_Bar, UI_Auto_Bar, UI_Icon_Bar, UI_Icon_Auto_Bar
+from .PG_ui_bar import UI_Bar, UI_Auto_Bar_Horizontal, UI_Icon_Bar_Horizontal, UI_Auto_Icon_Bar_Horizontal
 
 
 class PG_Map:
@@ -29,9 +33,12 @@ class PG_Map:
         # store needed parent attributes
         self.timer: PG_Timer        = PARENT.timer
         self.cf_global: dict        = PARENT.cf_global
-        self.cf_containers: dict    = cf_map['containers']
+
+        self.cf_intervals: dict     = cf_map['upd_interval']
         self.cf_player: dict        = cf_map['player']
         self.cf_blocks: dict        = cf_map['blocks']
+        self.cf_ui_containers: dict = cf_map['ui_containers']
+        self.cf_ui_bars: dict       = cf_map['ui_bars']
 
         # globals
         self.LOOP_LIMIT         = int(self.cf_global['loop_limit'])
@@ -46,6 +53,12 @@ class PG_Map:
         self.gravity_m          = float(cf_map['gravity_m'])
         self.gravity_c          = float(cf_map['gravity_c'])
 
+        # misc
+        self.mask_overlap_color = self.fill_color
+        self.rect = self.surface.get_rect()
+        self.debug_player_visuals = False
+        self.looping = False
+
         #### SPRITE GROUPS ####
 
         self.block_group = Group()
@@ -56,33 +69,33 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
-        self.container_group = Group()
+    
+        self.ui_container_group = Group()
         self.temp_ui_group = Group()
 
-        # misc
-        self.mask_overlap_color = self.fill_color
-        self.rect               = self.surface.get_rect()
-        ''' rect of the map surface '''
-        self.debug_player_visuals = False
-        self.looping = False
+        self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
+        self.BAR_CONTAINER = UI_Container(
+            self.cf_ui_containers['bar_container'],
+            (int(self.rect.left + 26), int(self.rect.top + 14)),
+            None,
+            "bottom",
+            "top_bottom"
+        )
+        self.ui_container_group.add(self.BAR_CONTAINER)
 
     def set_up_all(self, start_loop: bool):
         self.set_update_intervals()
         self.store_player_controls()
         self.set_up_terrain()
         self.spawn_player((400, 400))
+        self.set_up_ui_bars()
+        self.BAR_CONTAINER.add_children([self.HEALTH_BAR, self.FUEL_BAR])
 
         if (start_loop):
             self.looping = True
             self.timer.new_segment(self.name, False)
-        
-        self.set_up_ui()
 
     def set_update_intervals(self):
-        # self.EVENT_UPDATE_UI_CORE = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_core'], 0)
-        # ''' custom pygame event call to update ui '''
-        # self.EVENT_UPDATE_UI_TEMP = self.timer.create_event_timer(self.cf_map['upd_interval']['ui_temp'], 0)
-        # ''' custom pygame event call to update ui '''
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_interval']['terrain'], 0)
         ''' custom pygame event call to update terrain '''
 
@@ -352,67 +365,48 @@ class PG_Map:
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
 
-    def set_up_ui(self):
-        # create bar container
-        width = 400
-        height = 300
-        bottom_padding = 100
-        pos_x = int(self.rect.centerx - (width/2))
-        pos_y = int(self.rect.bottom - height - bottom_padding)
+    def create_horizontal_icon_bar(self, cf_key: str, getter_func: Callable, max: float | int):
+        CF = self.cf_ui_bars[cf_key]
+        cf_bar = CF['cf_bar']
+        ref_id = CF['ref_id']
+        size = CF['size']
+        icon_path = CF['icon']
+        icon_offset = CF['icon_offset']
+        copy_super_bg = CF['copy_super_bg']
+        remove_when_empty = CF['remove_when_empty']
 
-        self.CONT_BOTTOM_CENTER = UI_Container(
-            self.cf_containers['bottom_center'],
-            (pos_x, pos_y),
-            (width, height),
-            "bottom",
-            "top_bottom"
-        )
-        self.container_group.add(self.CONT_BOTTOM_CENTER)
-
-        cf_bar = self.CONT_BOTTOM_CENTER.get_child_cf("bar")
-        child_pos = self.CONT_BOTTOM_CENTER.rect.topleft
-        self.test_bar_weight = 1.0
-        self.TEST_BAR = UI_Auto_Bar(
-            cf_bar,
-            self.cf_global, "TEST",
-            child_pos,
-            (300, 28),
-            0.0,
-            self.player.get_max_grav_effect(),
-            self.player.get_grav_effect,
-            'horizontal'
-        )
-        self.TEST_BAR_2 = UI_Auto_Bar(
-            cf_bar,
-            self.cf_global, "TEST",
-            child_pos,
-            (300, 28),
-            0.0,
-            self.player.get_max_grav_effect(),
-            self.player.get_grav_effect,
-            'horizontal'
-        )
-
-        self.TEST_BAR_3 = UI_Icon_Auto_Bar(
+        BAR = UI_Auto_Icon_Bar_Horizontal(
             cf_bar,
             self.cf_global,
-            "TEST",
-            child_pos,
-            (300, 28),
-            'assets/icons/protection.png',
-            4,
-            True,
-            0.0,
-            self.player.get_max_grav_effect(),
-            self.player.get_grav_effect,
-            'horizontal'
+            ref_id,
+            (0, 0),
+            size,
+            icon_path,
+            icon_offset,
+            copy_super_bg,
+            float(max),
+            getter_func,
+            remove_when_empty
         )
+        self.UI_AUTO_BARS.append(BAR)
+        return BAR
 
-        # self.test_group = Group()
-        self.CONT_BOTTOM_CENTER.add_child(self.TEST_BAR)
-        self.CONT_BOTTOM_CENTER.add_child(self.TEST_BAR_2)
-        self.CONT_BOTTOM_CENTER.add_child(self.TEST_BAR_3)
-        # self.test_group.add(self.TEST_BAR_3)
+    def set_up_ui_bars(self):
+        self.HEALTH_BAR = self.create_horizontal_icon_bar(
+            'health',
+            self.player.get_curr_health,
+            self.player.MAX_HEALTH,
+        )
+        self.FUEL_BAR = self.create_horizontal_icon_bar(
+            'fuel',
+            self.player.get_curr_fuel,
+            self.player.MAX_FUEL,
+        )
+        self.SHIELD_BAR = self.create_horizontal_icon_bar(
+            'shield',
+            self.player.get_curr_fuel,
+            self.player.MAX_FUEL,
+        )
 
     def loop(self):
         # if a map was initiated by the menu, launch the main loop
@@ -430,9 +424,11 @@ class PG_Map:
 
             # self.test_group.update()
             # self.test_group.draw(self.surface)
-            self.container_group.update(self.surface)
+            self.ui_container_group.update(self.surface)
 
             display.update()
+            self.player.health -= 0.01
+            self.player.fuel -= 0.01
 
             self.player_group.update()
             self.timer.update()
@@ -466,7 +462,6 @@ class PG_Map:
                             self.player.direction.x += 1.0
                         case self.STEER_RIGHT:
                             self.player.direction.x -= 1.0
-                            self.TEST_BAR.kill()
                         case self.THRUST:
                             self.player.init_phase_thrust_end()
                         case _:

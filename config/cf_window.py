@@ -10,12 +10,10 @@ CF_WINDOW = {
     # map_bounds:
     #   size of the surface dedicated to the map
     #   defined using positive padding values with reference to the width/height set above
-    #   e.g. all valyes set to 0 will create a map as large as the entire window surface
-    #   (this will not leave any room for the UI, which currently requires 'max_y'-padding >= 40)
     'map_bounds': {
-        'min_x': int(20),
-        'max_x': int(20),
-        'min_y': int(20),
-        'max_y': int(60),
+        'min_x': int(6),
+        'max_x': int(6),
+        'min_y': int(6),
+        'max_y': int(6),
     },
 }

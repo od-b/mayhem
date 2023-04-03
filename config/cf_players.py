@@ -16,8 +16,8 @@ CF_PLAYERS = {
             }
         },
         'gameplay': {
-            'max_health': int(150),       # maximum and initial health
-            'max_mana':   int(150),       # maximum and initial mana
+            'max_health': float(150),       # maximum and initial health
+            'max_fuel':   float(150),       # maximum and initial mana
         },
         # weights that will affect physics and/or steering capability
         # general gravity is also affected by the map, see .cf_maps.py

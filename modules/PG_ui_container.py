@@ -1,10 +1,6 @@
-from typing import Callable
-
 ## import needed pygame modules
-from pygame import Surface, Rect, Color, SRCALPHA
+from pygame import Surface, Rect, Color
 from pygame.sprite import Sprite, Group
-from pygame.draw import rect as draw_rect
-from pygame.draw import line as draw_line
 
 
 class UI_Container(Sprite):
@@ -38,8 +34,12 @@ class UI_Container(Sprite):
         self.child_align    = child_align
 
         # store dict settings
-        self.cf_children_styles: dict = cf_container['children_styles']
-        self.child_padding    = int(cf_container['children_padding'])
+        self.child_padding  = int(cf_container['children_padding'])
+        
+        if (self.position == None):
+            self.position = (int(0), int(0))
+        if (self.size == None):
+            self.size = cf_container['size']
 
         # create a per pixel alpha surface
         self.ALPHA_COLOR = Color(0,0,0,0)
@@ -124,25 +124,6 @@ class UI_Container(Sprite):
 
     #### CALLABLE METHODS ####
 
-    def get_child_cf(self, key: str):
-        for _key, val in self.cf_children_styles.items():
-            if (str(_key) == key):
-                cf_style: dict = val
-                return cf_style
-        print(f'{self}[get_child_cf_style]: key={key} not in cf_children_styles.')
-        return None
-
-    def child_fits_self(self, child: Sprite) -> bool:
-        ''' simple check for verifying that child can fit inside this container '''
-        if ((child.rect.h > self.rect.h) or (child.rect.w > self.rect.w)):
-            print(f'{self}[child_fits_self]: {child} does not fit as a child')
-            return False
-        return True
-
-    def add_child(self, child: Sprite):
-        self.child_fits_self(child)
-        self.children.add(child)
-
     def get_children_by_ref_id(self, ref_id):
         ''' get children by ref_id. 
             * returns a list of children with the given ref_id
@@ -172,14 +153,34 @@ class UI_Container(Sprite):
         ''' returns the current number of children '''
         return len(self.children.sprites())
 
-    def remove_all_children(self) -> int:
+    def kill_all_children(self) -> int:
         ''' removes all children from self.children '''
         self.children.empty()
+
+    def kill_children_by_ref_id(self, ref_id):
+        kill_list = self.get_children_by_ref_id(ref_id)
+        for child in kill_list:
+            child.kill()
+
+    def child_fits_self(self, child: Sprite) -> bool:
+        ''' simple check for verifying that child can fit inside this container '''
+        if ((child.rect.h > self.rect.h) or (child.rect.w > self.rect.w)):
+            print(f'{self}[child_fits_self]: {child} does not fit as a child')
+            return False
+        return True
+
+    def add_child(self, child: Sprite):
+        self.child_fits_self(child)
+        self.children.add(child)
+
+    def add_children(self, list: list[Sprite]):
+        for elem in list:
+            self.add_child(elem)
 
     def update(self, surface: Surface):
         ''' update children. position children. '''
         # call update on all children
-        self.image.fill(self.ALPHA_COLOR)
+        # self.image.fill(self.ALPHA_COLOR)
         self._position_children()
         surface.blit(self.image, self.position)
         self.children.draw(surface)
@@ -190,3 +191,4 @@ class UI_Container(Sprite):
         msg += f'rect="{self.rect}", n_children={self.get_n_children()}, '
         msg += f'child_flow="{self.child_flow}", child_align="{self.child_align}"]'
         return msg
+

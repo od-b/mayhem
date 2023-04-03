@@ -19,7 +19,6 @@ from modules.PG_ui_text_box import UI_Text_Box
 from config.cf_global import CF_GLOBAL
 from config.cf_window import CF_WINDOW
 from config.cf_maps import CF_MAPS
-from config.cf_ui import CF_CONTAINERS
 
 
 class PG_App:
@@ -42,20 +41,16 @@ class PG_App:
             config_global: dict,
             config_window: dict,
             config_maps: dict,
-            config_ui_containers: dict
         ):
 
         self.cf_global = config_global
         self.cf_window = config_window
         self.cf_maps = config_maps
-        self.cf_ui_containers = config_ui_containers
 
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
         self.DEBUG_COLOR = Color(self.cf_global['debug_color'])
         self.DEBUG_COLOR_2 = Color(self.cf_global['debug_color_2'])
-
-        # store chosen ui style dicts
 
         # create a list of available map keys
         self.valid_cf_maps_keys = []
@@ -181,7 +176,7 @@ if __name__ == '__main__':
         )
 
     # load the app
-    APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS, CF_CONTAINERS)
+    APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS)
     # cProfile.run('GAME.loop()')
     APP.loop()
     pg.quit()
