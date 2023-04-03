@@ -218,7 +218,21 @@ class UI_Container(Sprite):
 
 
 class UI_Sprite_Container(UI_Container):
-    ''' see UI_Container. For this container, children is a group instead of a list. '''
+    ''' Surface container for children that are sprites. Expanded functionality.
+        * self.children is a group for this container.
+        * update takes in a surface parameter and draws children onto the surface after positioning.
+        ---
+        child_anchor:
+            align-parent for positioning the first child, relative to the inner bounds of self.\n
+            the next children will have the previous child as reference.
+            expects: str in ["top_centerx", "left_centery"]
+
+        child_align:
+            determines where children are aligned/positioned, relative to the root and other children
+            expects: str in ["top", "bottom", "left", "right", "bottomleft", "topleft"]
+
+        * See UI_Container for further info
+        '''
     def __init__(self,
             cf_container: dict,
             position: tuple[int, int] | None,
