@@ -273,6 +273,6 @@ class UI_Sprite_Container(UI_Container):
         # call update on all children
         # self.image.fill(self.ALPHA_COLOR)
         super().update()
-        surface.blit(self.image, self.position)
+        # surface.blit(self.image, self.position)
         self.children.draw(surface)
         self.children.update()

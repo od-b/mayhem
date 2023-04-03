@@ -18,6 +18,7 @@ class Player(Sprite):
         cf_phases:   dict = cf_player['phase_durations']
 
         #### CONSTANTS ####
+        self.SPAWN_POS          = spawn_pos
         self.FPS                = int(cf_global['fps_limit'])
         ''' global fps limit '''
         self.MAP_GRAV_C         = float(cf_map['gravity_c'])
@@ -30,6 +31,10 @@ class Player(Sprite):
         # gameplay
         self.MAX_HEALTH         = float(cf_gameplay['max_health'])
         self.MAX_FUEL           = float(cf_gameplay['max_fuel'])
+        self.MIN_COLL_HP_LOSS   = float(cf_gameplay['min_collision_health_loss'])
+        self.MAX_COLL_HP_LOSS   = float(cf_gameplay['max_collision_health_loss'])
+        self.FUEL_CONSUMPTION   = float(cf_gameplay['fuel_consumption'])
+
         # acceleration
         self.MAX_ACCEL          = float(cf_physics['max_acceleration'])
         self.THRUST_MAGNITUDE   = float(cf_physics['thrust_magnitude'])
@@ -60,8 +65,19 @@ class Player(Sprite):
         self.VEC_CENTER  = Vec2(0.0, 0.0)
         ''' used for relative angle calculation '''
 
-        #### VARIABLES ####
+        self.DEFAULT_IMAGE      = self.set_up_image(cf_surface['colors']['default'])
+        self.COLLISION_CD_IMAGE = self.set_up_image(cf_surface['colors']['collision_cooldown'])
 
+        # initialize all attributes through the reset function
+        self.reset_all_attributes()
+
+        # initialize image, rect and mask through the update function
+        self.update_image()
+
+        self.PHASE_DEBUG_PRINT = False
+
+    def reset_all_attributes(self):
+        ''' reset (or set) all attributes used across all methods '''
         # phase transitions
         self.thrust_begin_frames_left:         int = int(0)
         self.thrust_end_frames_left:           int = int(0)
@@ -78,7 +94,7 @@ class Player(Sprite):
         ''' 8-directional vector for reading key controls '''
 
         # initialize physics and angle - related attributes
-        self.position:        Vec2 = Vec2(spawn_pos)
+        self.position:        Vec2 = Vec2(self.SPAWN_POS)
         ''' position within the map '''
         self.acceleration:    Vec2 = Vec2(0.001, 0.00001)
         ''' determines direction and directional change of velocity '''
@@ -92,16 +108,10 @@ class Player(Sprite):
         ''' temporary max acceleration '''
 
         # misc // setup
-        self.health = self.MAX_HEALTH
-        self.fuel   = self.MAX_FUEL
-        self.DEFAULT_IMAGE      = self.set_up_image(cf_surface['colors']['default'])
-        self.COLLISION_CD_IMAGE = self.set_up_image(cf_surface['colors']['collision_cooldown'])
-        self.curr_image_src     = self.DEFAULT_IMAGE
+        self.health         = self.MAX_HEALTH
+        self.fuel           = self.MAX_FUEL
+        self.curr_image_src = self.DEFAULT_IMAGE
         ''' which of the loaded images is currently in use '''
-
-        # set .image, .rect and .mask through the update function
-        self.update_image()
-        self.PHASE_DEBUG_PRINT = False
 
     def set_up_image(self, color: Color):
         ''' get the the original image used for later transformation
@@ -152,7 +162,8 @@ class Player(Sprite):
                 self.velocity.y = -0.1
 
         # scale recoil frames to how fast the sprite was going
-        self.collision_recoil_frames_left = round(self.velocity.length() * self.COLLISION_FRAMES_M)
+        impact_velo = self.velocity.length()
+        self.collision_recoil_frames_left = round(impact_velo * self.COLLISION_FRAMES_M)
         self.collision_cooldown_frames_left = self.COLLISION_COOLDOWN_FRAMES + self.collision_recoil_frames_left
 
         # invert velocity, reduce acceleration
@@ -165,6 +176,20 @@ class Player(Sprite):
         else:
             self.grav_force *= 0.8
         self.curr_image_src = self.COLLISION_CD_IMAGE
+
+        # calculate health loss based on velocity and the set weights
+        health_loss: float
+        if (impact_velo >= self.THRUST_MAGNITUDE):
+            health_loss = self.MAX_COLL_HP_LOSS
+        else:
+            loss_weight = (impact_velo / self.THRUST_MAGNITUDE)
+            health_loss = lerp(self.MIN_COLL_HP_LOSS, self.MAX_COLL_HP_LOSS, loss_weight)
+
+        # print(f'health_loss={health_loss}')
+        self.health -= health_loss
+        if (self.health <= 0.0):
+            # print('death')
+            pass
 
         # end any thrust end frames that might be active
         self.thrust_end_frames_left = 0
@@ -310,11 +335,18 @@ class Player(Sprite):
 
         if (self.collision_recoil_frames_left):
             self.collision_recoil_frames_left -= 1
-            # self.grav_force *= 0.99
-        elif (self.thrust_begin_frames_left):
-            self.apply_thrust_begin_frame()
+            # essentially; block any other events during collision recoil
         elif (self.key_thrusting):
-            self.thrust_frame()
+            # use some fuel
+            self.fuel -= self.FUEL_CONSUMPTION
+            if (self.fuel <= 0.0):
+                # print('out of fuel')
+                pass
+
+            if (self.thrust_begin_frames_left):
+                self.apply_thrust_begin_frame()
+            else:
+                self.thrust_frame()
         elif (self.thrust_end_frames_left):
             self.apply_thrust_end_frame()
         else:

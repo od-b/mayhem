@@ -18,6 +18,9 @@ CF_PLAYERS = {
         'gameplay': {
             'max_health': float(150),       # maximum and initial health
             'max_fuel':   float(150),       # maximum and initial mana
+            'min_collision_health_loss': float(15),
+            'max_collision_health_loss': float(60),
+            'fuel_consumption': float(0.01)
         },
         # README: physics / phase_durations
         #   Constants that will affect movement, controls, gravity, acceleration, velocity, ..., etc
@@ -26,7 +29,7 @@ CF_PLAYERS = {
         #   W = Weight     -> Typical range in [0.01, 1]. _May_ work for values > 1. Never == 0.
         #   M = Multiplier -> Relative to 1
         #   R = Raw value  -> may be pixels per frame, or similar
-        #   S = Seconds    -> Real time +- 0.005ms (if busy loop)
+        #   S = Seconds    -> Real time +- 0.005ms (if busy loop). Minval is one frame equivalent + epsilon
         'physics': {
             'mass':                     float(1.25),  # M;  more mass => more gravity, faster
             'handling':                 float(0.022), # W;  how responsive steering will be

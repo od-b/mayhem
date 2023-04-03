@@ -427,8 +427,6 @@ class PG_Map:
             self.ui_container_group.update(self.surface)
 
             display.update()
-            self.player.health -= 0.01
-            self.player.fuel -= 0.01
 
             self.player_group.update()
             self.timer.update()
