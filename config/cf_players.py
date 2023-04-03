@@ -19,27 +19,29 @@ CF_PLAYERS = {
             'max_health': float(150),       # maximum and initial health
             'max_fuel':   float(150),       # maximum and initial mana
         },
-        # weights that will affect physics and/or steering capability
-        # general gravity is also affected by the map, see .cf_maps.py
-        'weights': {
-            'mass':                     float(1.4),     # more mass == more gravity. The player must have some mass, or code breaks.
-            'handling':                 float(0.025),   # how responsive steering will be
-            'thrust_handling_m':          float(2.0),    # handling multiplier during thrust
-            'collision_cooldown_handling_m': float(1.0),    # handling multiplier during collision cooldown
-            'max_acceleration':         float(0.7),     # regular max acceleration
-            'thrust_acceleration':      float(1.4),     # magnitude of acceleration during thrust
-            'acceleration_multiplier':  float(0.985),   # multiplier for to acceleration, per frame when not thrusting
-            'max_velocity':             float(0.7),     # general max velocity
-            'terminal_velocity':        float(1.0),     # max velocity towards the positive y-axis
-            'collision_recoil_force':   float(0.3),     # max velocity towards the positive y-axis
+        # README: physics / phase_durations
+        #   Constants that will affect movement, controls, gravity, acceleration, velocity, ..., etc
+        #   the values below should allround be set very low rather than to 0. Avoids div by zero, etc.
+        #   general gravity is also affected by the map, see .cf_maps.py
+        #   W = Weight     -> Typical range in [0.01, 1]. _May_ work for values > 1. Never == 0.
+        #   M = Multiplier -> Relative to 1
+        #   R = Raw value  -> may be pixels per frame, or similar
+        #   S = Seconds    -> Real time +- 0.005ms (if busy loop)
+        'physics': {
+            'mass':                     float(1.25),  # M;  more mass => more gravity, faster
+            'handling':                 float(0.022), # W;  how responsive steering will be
+            'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
+            'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
+            'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
+            'max_velocity':             float(0.7),   # R;  general max velocity
+            'terminal_velocity':        float(1.0),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
+            'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
-        # WARNING: the values below must not be set too low without adding a bunch of if-conditions
-        # try and see.
         'phase_durations': {
-            'collision_recoil':         float(0.3),     # weight<0,1]; links crash velocity, fps and n. recoil frames. 0 == death
-            'thrust_begin':             float(0.6),     # weight<0,1]; links startin accel, fps and max accel. 0 == instant thrust
-            'thrust_end':               float(1.0),     # seconds; transition between thrust and normal accel
-            'collision_cooldown':       float(1.0),    # seconds; min time between terrain collision
+            'thrust_begin':             float(0.6), # M(S); links startin accel, fps and max accel. (longer time to reach max thrust)
+            'thrust_end':               float(2.0), # S;    transition between thrust and normal accel (retain thrust longer)
+            'collision_recoil_m':       float(0.3), # S(S); links crash velocity, fps and n. recoil frames. (longer impearment)
+            'collision_cooldown':       float(1.0), # S;    min time between terrain collision (longer crash immunity)
         },
         # keyboard controls
         'controls': {

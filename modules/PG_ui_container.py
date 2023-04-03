@@ -3,7 +3,6 @@ from pygame import Surface, Rect, Color
 from pygame.sprite import Sprite, Group
 
 
-
 class UI_Container(Sprite):
     ''' Surface container. Automatically handles positioning of rects within self.\n
         The general idea here is creating a framework that is easy to modify and 
@@ -59,6 +58,7 @@ class UI_Container(Sprite):
 
         # create a per pixel alpha surface
         self.ALPHA_COLOR = Color(0,0,0,0)
+
         self.image = Surface(self.size).convert_alpha()
         self.image.fill(self.ALPHA_COLOR)
         self.rect = self.image.get_rect(topleft=self.position)
@@ -67,40 +67,6 @@ class UI_Container(Sprite):
 
         self.set_align_func(child_align)
         self.set_anchor_rect(child_anchor)
-
-    def set_align_func(self, child_align):
-        self.child_align = child_align
-        # set the correct align_func for children in self
-        match self.child_align:
-            case 'left':
-                self.ALIGN_FUNC = self._align_to_left_of
-            case 'right':
-                self.ALIGN_FUNC = self._align_to_right_of
-            case 'top':
-                self.ALIGN_FUNC = self._align_to_top_of
-            case 'bottom':
-                self.ALIGN_FUNC = self._align_to_bottom_of
-            case 'bottomleft':
-                self.ALIGN_FUNC = self._align_to_topleft_of
-            case 'topleft':
-                self.ALIGN_FUNC = self._align_to_bottomleft_of
-            case _:
-                EXPECTED = ["top", "bottom", "left", "right", "bottomleft", "topleft"]
-                raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_align}"')
-
-    def set_anchor_rect(self, child_anchor):
-        self.child_anchor = child_anchor
-        # get a copy of self rect, to be used as root, for placing the first child
-        self.ANCHOR_RECT = self.rect.copy()
-        # set the correct size/pos for the root parent, depending in parameters
-        match self.child_anchor:
-            case 'top_centerx':
-                self.ANCHOR_RECT.height = 0
-            case 'left_centery':
-                self.ANCHOR_RECT.width = 0
-            case _:
-                EXPECTED = ["top_centerx", "left_centery"]
-                raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_anchor}"')
 
     def _align_to_left_of(self, child: Rect, parent: Rect):
         # move_ip()
@@ -126,6 +92,43 @@ class UI_Container(Sprite):
         child.topleft = (parent.bottomleft[0], parent.bottomleft[1] + self.CHILD_PADDING)
 
     #### CALLABLE METHODS ####
+
+    def set_align_func(self, child_align):
+        ''' updates the internally used self.ALIGN_FUNC '''
+        self.child_align = child_align
+        # set the correct align_func for children in self
+        match self.child_align:
+            case 'left':
+                self.ALIGN_FUNC = self._align_to_left_of
+            case 'right':
+                self.ALIGN_FUNC = self._align_to_right_of
+            case 'top':
+                self.ALIGN_FUNC = self._align_to_top_of
+            case 'bottom':
+                self.ALIGN_FUNC = self._align_to_bottom_of
+            case 'bottomleft':
+                self.ALIGN_FUNC = self._align_to_topleft_of
+            case 'topleft':
+                self.ALIGN_FUNC = self._align_to_bottomleft_of
+            case _:
+                EXPECTED = ["top", "bottom", "left", "right", "bottomleft", "topleft"]
+                raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_align}"')
+
+    def set_anchor_rect(self, new_child_anchor: str | None):
+        ''' uses the existing self.child_anchor if new_child_anchor=None '''
+        if (new_child_anchor):
+            self.child_anchor = new_child_anchor
+        # get a copy of self rect, to be used as root, for placing the first child
+        self.ANCHOR_RECT = self.rect.copy()
+        # set the correct size/pos for the root parent, depending in parameters
+        match self.child_anchor:
+            case 'top_centerx':
+                self.ANCHOR_RECT.height = 0
+            case 'left_centery':
+                self.ANCHOR_RECT.width = 0
+            case _:
+                EXPECTED = ["top_centerx", "left_centery"]
+                raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_anchor}"')
 
     def get_children_by_ref_id(self, ref_id):
         ''' get all children whose ref id / ids is or includes the given ref_id. 

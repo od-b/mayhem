@@ -440,13 +440,13 @@ class PG_Map:
                 case pg.KEYDOWN:
                     match (event.key):
                         case self.STEER_UP:
-                            self.player.direction.y -= 1.0
+                            self.player.key_direction.y -= 1.0
                         case self.STEER_DOWN:
-                            self.player.direction.y += 1.0
+                            self.player.key_direction.y += 1.0
                         case self.STEER_LEFT:
-                            self.player.direction.x -= 1.0
+                            self.player.key_direction.x -= 1.0
                         case self.STEER_RIGHT:
-                            self.player.direction.x += 1.0
+                            self.player.key_direction.x += 1.0
                         case self.THRUST:
                             self.player.init_phase_thrust_begin()
                         case _:
@@ -455,13 +455,13 @@ class PG_Map:
                     # essentially reverts actions upon key up
                     match (event.key):
                         case self.STEER_UP:
-                            self.player.direction.y += 1.0
+                            self.player.key_direction.y += 1.0
                         case self.STEER_DOWN:
-                            self.player.direction.y -= 1.0
+                            self.player.key_direction.y -= 1.0
                         case self.STEER_LEFT:
-                            self.player.direction.x += 1.0
+                            self.player.key_direction.x += 1.0
                         case self.STEER_RIGHT:
-                            self.player.direction.x -= 1.0
+                            self.player.key_direction.x -= 1.0
                         case self.THRUST:
                             self.player.init_phase_thrust_end()
                         case _:
@@ -473,7 +473,6 @@ class PG_Map:
                     self.block_group.update()
                 case _:
                     pass
-
 
     #### MASK RELATED METHODS ####
 
