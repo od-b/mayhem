@@ -3,8 +3,9 @@ from pygame import Surface, Rect, Color
 from pygame.sprite import Sprite, Group
 
 
+
 class UI_Container(Sprite):
-    ''' Surface container. Automatically handles positioning of sprites' rects within self.\n
+    ''' Surface container. Automatically handles positioning of rects within self.\n
         The general idea here is creating a framework that is easy to modify and 
         configure to meet any need without having to modify this class. 
         ---
@@ -61,8 +62,8 @@ class UI_Container(Sprite):
         self.image = Surface(self.size).convert_alpha()
         self.image.fill(self.ALPHA_COLOR)
         self.rect = self.image.get_rect(topleft=self.position)
-        self.children = Group()
-        ''' group of sprites that depend on the container for updates/positioning '''
+        self.children = []
+        ''' group of children with rects, that depend on the container for updates/positioning '''
 
         self.set_align_func(child_align)
         self.set_anchor_rect(child_anchor)
@@ -124,14 +125,6 @@ class UI_Container(Sprite):
     def _align_to_bottomleft_of(self, child: Rect, parent: Rect):
         child.topleft = (parent.bottomleft[0], parent.bottomleft[1] + self.CHILD_PADDING)
 
-    def _position_children(self):
-        ''' positions children according to the align_func '''
-        parent = self.ANCHOR_RECT
-        for child in self.children:
-            RE = child.rect
-            self.ALIGN_FUNC(RE, parent)
-            parent = RE
-
     #### CALLABLE METHODS ####
 
     def get_children_by_ref_id(self, ref_id):
@@ -158,7 +151,7 @@ class UI_Container(Sprite):
 
         return matching_children
 
-    def get_children_by_ref_id_intersection(self, ref_id_filter):
+    def get_children_by_ref_id_intersection(self, ref_ids_iterable):
         ''' return a list of children that contain ALL the given ref_ids.
             * example usage:
             list = self.BAR_CONTAINER.get_children_by_ref_id_intersection(("BAR", "CORE"))
@@ -169,7 +162,7 @@ class UI_Container(Sprite):
         for child in self.children:
             if (type(child.ref_id) == list):
                 # check if list contains all items
-                if all(ref_id in child.ref_id for ref_id in ref_id_filter):
+                if all(ref_id in child.ref_id for ref_id in ref_ids_iterable):
                     matching_children.append(child)
 
         return matching_children
@@ -181,19 +174,70 @@ class UI_Container(Sprite):
             return False
         return True
 
-    def get_children(self) -> list[Sprite]:
-        ''' returns a list containing the children sprites '''
-        return self.children.sprites()
-
     def get_n_children(self) -> int:
         ''' returns the current number of children '''
         return len(self.children)
+
+    def get_children(self) -> list[Sprite]:
+        return self.children
+
+    def kill_all_children(self) -> int:
+        self.children = []
+
+    def kill_children_by_ref_id(self, ref_id):
+        kill_list = self.get_children_by_ref_id(ref_id)
+        for child in kill_list:
+            self.children.remove(child)
+
+    def add_child(self, child):
+        self.child_fits_self(child)
+        self.children.append(child)
+
+    def add_children(self, child_list: list):
+        for elem in child_list:
+            self.add_child(elem)
+
+    def update(self):
+        ''' positions children according to the align_func '''
+        parent = self.ANCHOR_RECT
+        for child in self.children:
+            RE = child.rect
+            self.ALIGN_FUNC(RE, parent)
+            parent = RE
+
+    def __str__(self):
+        msg = f'[{super().__str__()} : Rect="{self.rect}", '
+        msg += f'child_anchor="{self.child_anchor}", child_align="{self.child_align}"]. Children:\n'
+        i = 0
+        for child in self.children:
+            msg += f'child #{i} = [{child}]\n'
+            i += 1
+        if (i == 0):
+            msg += "<no children>"
+        return msg
+
+
+class UI_Sprite_Container(UI_Container):
+    ''' see UI_Container. For this container, children is a group instead of a list. '''
+    def __init__(self,
+            cf_container: dict,
+            position: tuple[int, int] | None,
+            size: tuple[int, int] | None,
+            child_anchor: str,
+            child_align: str
+        ):
+        super().__init__(cf_container, position, size, child_anchor, child_align)
+        self.children = Group()
+
+    def get_children(self) -> list[Sprite]:
+        ''' returns a list containing the children sprites '''
+        return self.children.sprites()
 
     def kill_all_children(self) -> int:
         ''' removes all children from self.children '''
         self.children.empty()
 
-    def kill_children_with_ref_id(self, ref_id):
+    def kill_children_by_ref_id(self, ref_id):
         ''' kills any/all children whose ref_id is or includes the given ref_id '''
         kill_list = self.get_children_by_ref_id(ref_id)
         for child in kill_list:
@@ -208,17 +252,10 @@ class UI_Container(Sprite):
             self.add_child(elem)
 
     def update(self, surface: Surface):
-        ''' update children. position children. '''
+        ''' update childrens positions. draw children to the given surface '''
         # call update on all children
         # self.image.fill(self.ALPHA_COLOR)
-        self._position_children()
+        super().update()
         surface.blit(self.image, self.position)
         self.children.draw(surface)
         self.children.update()
-
-    def __str__(self):
-        msg = f'[{super().__str__()} : '
-        msg += f'rect="{self.rect}", n_children={self.get_n_children()}, '
-        msg += f'child_anchor="{self.child_anchor}", child_align="{self.child_align}"]'
-        return msg
-

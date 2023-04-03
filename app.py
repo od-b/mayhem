@@ -110,7 +110,7 @@ class PG_App:
         self.window.set_extended_caption(self.map.name)
 
         if (self.print_misc_info):
-            print(f'> succesfully created and set up map. Returning to loop>')
+            print(f'> succesfully created and set up map. Returning to loop')
 
         self.map_object_loaded = True
 

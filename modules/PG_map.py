@@ -19,7 +19,7 @@ from .PG_window import PG_Window
 from .PG_player import Player
 from .PG_block import Block
 from .PG_timer import PG_Timer
-from .PG_ui_container import UI_Container
+from .PG_ui_container import UI_Sprite_Container
 from .PG_ui_bar import UI_Bar, UI_Auto_Bar_Horizontal, UI_Icon_Bar_Horizontal, UI_Auto_Icon_Bar_Horizontal
 
 
@@ -74,7 +74,7 @@ class PG_Map:
         self.temp_ui_group = Group()
 
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
-        self.BAR_CONTAINER = UI_Container(
+        self.BAR_CONTAINER = UI_Sprite_Container(
             self.cf_ui_containers['bar_container'],
             (int(self.rect.left + 26), int(self.rect.top + 14)),
             None,
@@ -434,11 +434,11 @@ class PG_Map:
             self.timer.update()
 
     def check_events(self):
-        for ev in pg.event.get():
-            # check if event type matches any triggers
-            match (ev.type):
+        for event in pg.event.get():
+            # check if the event type matches any relevant types
+            match (event.type):
                 case pg.KEYDOWN:
-                    match (ev.key):
+                    match (event.key):
                         case self.STEER_UP:
                             self.player.direction.y -= 1.0
                         case self.STEER_DOWN:
@@ -453,7 +453,7 @@ class PG_Map:
                             pass
                 case pg.KEYUP:
                     # essentially reverts actions upon key up
-                    match (ev.key):
+                    match (event.key):
                         case self.STEER_UP:
                             self.player.direction.y += 1.0
                         case self.STEER_DOWN:
@@ -475,7 +475,7 @@ class PG_Map:
                     pass
 
 
-    #### MASK RELATED STUFF ####
+    #### MASK RELATED METHODS ####
 
     def largest_mask_component_bounds(self, mask: Mask):
         ''' get the bounding rect of the largest connected component within the mask '''
@@ -620,7 +620,4 @@ class PG_Map:
         draw_line(self.player.image, self.DEBUG_COLOR_2, line_4_p1, line_4_p2, width=1)
 
     def __str__(self):
-        msg = f'< Map with name="{self.name}"\n'
-        msg += f'topleft[x,y] = {self.rect.topleft}\n'
-        msg += f'size[w,h] = [{self.rect.w}, {self.rect.h} >\n'
-        return msg
+        return f'PG_Map with name="{self.name}, Rect={self.rect}'
