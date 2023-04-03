@@ -4,37 +4,52 @@ from pygame.sprite import Sprite, Group
 
 
 class UI_Container(Sprite):
-    ''' Sprite serving as a surface container for easy position of child sprites
-
-        * surface is passed to create a subsurface internally
-        * children_align expects: "top", "bottom",\
-            "left", "right", "bottomleft" or "topleft"
-        * child_flow expects: "top_bottom", "left_right"
-        * note: combinations like "bottomleft"+"top_bottom" do not exactly look pretty
-            (might not even work idk)
-        * update() serves as a all-in-one clear, update children and draw children
-
+    ''' Surface container. Automatically handles positioning of sprites' rects within self.\n
         The general idea here is creating a framework that is easy to modify and 
-        configure to meet any need without having to modify any previous code
+        configure to meet any need without having to modify this class. 
+        ---
+        parameters
+        ---
+        child_anchor:
+            align-parent for positioning the first child, relative to the inner bounds of self.\n
+            the next children will have the previous child as reference.
+            expects: str in ["top_centerx", "left_centery"]
+
+        child_align:
+            determines where children are aligned/positioned, relative to the root and other children
+            expects: str in ["top", "bottom", "left", "right", "bottomleft", "topleft"]
+        ---
+        readme
+        ---
+        if the container is moved:
+            => update the anchor by calling:\n\t\t  .set_anchor_rect(new <child_anchor> | None=self.child_anchor)\n
+            i.e., set_anchor_rect(None) will update the position of the anchor, but not its setting
+            child_align (internally: self.ALIGN_FUNC) is unchanged by this action.
+        ---
+        the alignment may be changed at any point after container creation:
+            => update the alignment setting by calling:\n\t\t  .set_align_func(<child_align>)\n
+            child_anchor (internally: self.ANCHOR_RECT) is unchanged by this action.
+        ---
+        
+        * ALL CHILDREN SHOULD HAVE AN ATTRIBUTED 'ref_id'. Can be anything, including None.
+            In order to use this classes methods, use a list to contain multiple ref_id's, if iterable
     '''
 
     def __init__(self,
             cf_container: dict,
-            position: tuple[int, int],
-            size: tuple[int, int],
-            child_align: str,
-            child_flow: str,
+            position: tuple[int, int] | None,
+            size: tuple[int, int] | None,
+            child_anchor: str,
+            child_align: str
         ):
-        Sprite.__init__(self)
 
+        Sprite.__init__(self)
         self.cf_container   = cf_container
         self.size           = size
         self.position       = position
-        self.child_flow     = child_flow
-        self.child_align    = child_align
+        self.CHILD_PADDING  = int(cf_container['child_padding'])
 
         # store dict settings
-        self.child_padding  = int(cf_container['children_padding'])
         
         if (self.position == None):
             self.position = (int(0), int(0))
@@ -46,20 +61,16 @@ class UI_Container(Sprite):
         self.image = Surface(self.size).convert_alpha()
         self.image.fill(self.ALPHA_COLOR)
         self.rect = self.image.get_rect(topleft=self.position)
-
         self.children = Group()
         ''' group of sprites that depend on the container for updates/positioning '''
-        self._set_internal_references()
 
-    def _set_internal_references(self):
-        ''' sets internally used references based on configuration
-            * self.ALIGN_FUNC refers to one of the internal 'self.align_to_<...>' methods
-            * also sets self.ALIGN_PARENT, a rect used by the first child for each positioning
+        self.set_align_func(child_align)
+        self.set_anchor_rect(child_anchor)
 
-            by using references we only have to perform checks once, as opposed to on ever single update.
-        '''
-
-        match (self.child_align):
+    def set_align_func(self, child_align):
+        self.child_align = child_align
+        # set the correct align_func for children in self
+        match self.child_align:
             case 'left':
                 self.ALIGN_FUNC = self._align_to_left_of
             case 'right':
@@ -73,50 +84,49 @@ class UI_Container(Sprite):
             case 'topleft':
                 self.ALIGN_FUNC = self._align_to_bottomleft_of
             case _:
-                raise ValueError(f'\
-                    children_align expected: "top", "bottom",\
-                    "left", "right", "bottomleft" or "topleft".\n\
-                    Found "{self.child_align}"')
+                EXPECTED = ["top", "bottom", "left", "right", "bottomleft", "topleft"]
+                raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_align}"')
 
-        match (self.child_flow):
-            case 'top_bottom':
-                # align-parent for positioning the first child
-                # the next children will have the previous child as reference
-                self.ALIGN_PARENT = self.rect.copy()
-                self.ALIGN_PARENT.height = 0
-            case 'left_right':
-                self.ALIGN_PARENT = self.rect.copy()
-                self.ALIGN_PARENT.width = 0
+    def set_anchor_rect(self, child_anchor):
+        self.child_anchor = child_anchor
+        # get a copy of self rect, to be used as root, for placing the first child
+        self.ANCHOR_RECT = self.rect.copy()
+        # set the correct size/pos for the root parent, depending in parameters
+        match self.child_anchor:
+            case 'top_centerx':
+                self.ANCHOR_RECT.height = 0
+            case 'left_centery':
+                self.ANCHOR_RECT.width = 0
             case _:
-                raise ValueError(f'\
-                    child_flow expected: "top_bottom" or "left_right"\n\
-                    Found: {self.child_flow}')
+                EXPECTED = ["top_centerx", "left_centery"]
+                raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_anchor}"')
 
     def _align_to_left_of(self, child: Rect, parent: Rect):
-        child.right = parent.left - self.child_padding
+        # move_ip()
+        child.right = (parent.left - self.CHILD_PADDING)
         child.centery = parent.centery
 
     def _align_to_right_of(self, child: Rect, parent: Rect):
-        child.left = parent.right + self.child_padding
+        child.left = (parent.right + self.CHILD_PADDING)
         child.centery = parent.centery
 
     def _align_to_top_of(self, child: Rect, parent: Rect):
-        child.bottom = parent.top - self.child_padding
+        child.bottom = (parent.top - self.CHILD_PADDING)
         child.centerx = parent.centerx
 
     def _align_to_bottom_of(self, child: Rect, parent: Rect):
-        child.top = parent.bottom + self.child_padding
+        child.top = (parent.bottom + self.CHILD_PADDING)
         child.centerx = parent.centerx
 
     def _align_to_topleft_of(self, child: Rect, parent: Rect):
-        child.bottomleft = (parent.topleft[0], parent.topleft[1] - self.child_padding)
+        child.bottomleft = (parent.topleft[0], parent.topleft[1] - self.CHILD_PADDING)
 
     def _align_to_bottomleft_of(self, child: Rect, parent: Rect):
-        child.topleft = (parent.bottomleft[0], parent.bottomleft[1] + self.child_padding)
+        child.topleft = (parent.bottomleft[0], parent.bottomleft[1] + self.CHILD_PADDING)
 
     def _position_children(self):
         ''' positions children according to the align_func '''
-        parent = self.ALIGN_PARENT
+        parent = self.ANCHOR_RECT
         for child in self.children:
             RE = child.rect
             self.ALIGN_FUNC(RE, parent)
@@ -125,8 +135,8 @@ class UI_Container(Sprite):
     #### CALLABLE METHODS ####
 
     def get_children_by_ref_id(self, ref_id):
-        ''' get children by ref_id. 
-            * returns a list of children with the given ref_id
+        ''' get all children whose ref id / ids is or includes the given ref_id. 
+            * None will return children with 'None' in or as their ref id.
 
             Example usage:
             for child in MY_CONTAINER.get_children_by_ref_id("APP"):
@@ -134,33 +144,35 @@ class UI_Container(Sprite):
         '''
         matching_children = []
         for child in self.children:
-            if type(child.ref_id) == list:
+            # check if child has multiple ref id's
+            if (type(child.ref_id) == list):
                 for elem in child.ref_id:
                     if ref_id == elem:
                         matching_children.append(child)
+                        # if a child matches, break so we don't add it twice.
                         break
             else:
+                # there's only one ref_id. check if it matches
                 if ref_id == child.ref_id:
                     matching_children.append(child)
 
         return matching_children
 
-    def get_children(self) -> list[Sprite]:
-        ''' returns a list containing the children sprites '''
-        return self.children.sprites()
+    def get_children_by_ref_id_intersection(self, ref_id_filter):
+        ''' return a list of children that contain ALL the given ref_ids.
+            * example usage:
+            list = self.BAR_CONTAINER.get_children_by_ref_id_intersection(("BAR", "CORE"))
+            for child in list:
+                child.kill()
+        '''
+        matching_children = []
+        for child in self.children:
+            if (type(child.ref_id) == list):
+                # check if list contains all items
+                if all(ref_id in child.ref_id for ref_id in ref_id_filter):
+                    matching_children.append(child)
 
-    def get_n_children(self) -> int:
-        ''' returns the current number of children '''
-        return len(self.children.sprites())
-
-    def kill_all_children(self) -> int:
-        ''' removes all children from self.children '''
-        self.children.empty()
-
-    def kill_children_by_ref_id(self, ref_id):
-        kill_list = self.get_children_by_ref_id(ref_id)
-        for child in kill_list:
-            child.kill()
+        return matching_children
 
     def child_fits_self(self, child: Sprite) -> bool:
         ''' simple check for verifying that child can fit inside this container '''
@@ -169,7 +181,25 @@ class UI_Container(Sprite):
             return False
         return True
 
-    def add_child(self, child: Sprite):
+    def get_children(self) -> list[Sprite]:
+        ''' returns a list containing the children sprites '''
+        return self.children.sprites()
+
+    def get_n_children(self) -> int:
+        ''' returns the current number of children '''
+        return len(self.children)
+
+    def kill_all_children(self) -> int:
+        ''' removes all children from self.children '''
+        self.children.empty()
+
+    def kill_children_with_ref_id(self, ref_id):
+        ''' kills any/all children whose ref_id is or includes the given ref_id '''
+        kill_list = self.get_children_by_ref_id(ref_id)
+        for child in kill_list:
+            child.kill()
+
+    def add_child(self, child):
         self.child_fits_self(child)
         self.children.add(child)
 
@@ -189,6 +219,6 @@ class UI_Container(Sprite):
     def __str__(self):
         msg = f'[{super().__str__()} : '
         msg += f'rect="{self.rect}", n_children={self.get_n_children()}, '
-        msg += f'child_flow="{self.child_flow}", child_align="{self.child_align}"]'
+        msg += f'child_anchor="{self.child_anchor}", child_align="{self.child_align}"]'
         return msg
 

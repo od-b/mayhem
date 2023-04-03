@@ -10,26 +10,16 @@ UPDATE_INTERVALS = {
 }
 
 
-UI_BAR_WIDTH = int(260)
+UI_BAR_WIDTH = int(260)     # width of the bar, not including icon
 UI_BAR_HEIGHT = int(32)     # this also determines the size of the icons, as they scale with height
 UI_BAR_SIZE = (UI_BAR_WIDTH, UI_BAR_HEIGHT)
 UI_BAR_ICON_OFFSET = int(3)
 UI_BAR_ICON_BG = True
 
-BAR_CONTAINER_WIDTH = UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10
-BAR_CONTAINER_HEIGHT = 300
-
-CONTAINERS = {
-    'bar_container': {
-        'size': (int(BAR_CONTAINER_WIDTH), int(BAR_CONTAINER_HEIGHT)),
-        'children_padding': int(10), # pixels of padding added between the containers children, bars in this case
-    }
-}
-
 UI_BARS = {
     'health': {
         'cf_bar': CF_BARS['red'],
-        'icon': os_path_join('assets','icons','heart_3_lowres.png'),
+        'icon': os_path_join('assets','images','heart_3_lowres.png'),
         'ref_id': ["BAR", "CORE", "HEALTH"],
         'remove_when_empty': False,
         # defaults:
@@ -39,7 +29,7 @@ UI_BARS = {
     },
     'fuel': {
         'cf_bar': CF_BARS['blue'],
-        'icon': os_path_join('assets','icons','fuel_can_1_lowres.png'),
+        'icon': os_path_join('assets','images','fuel_can_1_lowres.png'),
         'ref_id': ["BAR", "CORE", "FUEL"],
         'remove_when_empty': False,
         # defaults:
@@ -49,7 +39,7 @@ UI_BARS = {
     },
     'shield': {
         'cf_bar': CF_BARS['blue'],
-        'icon': os_path_join('assets','icons','protection.png'),
+        'icon': os_path_join('assets','images','protection.png'),
         'ref_id': ["BAR", "TEMP", "SHIELD"],
         'remove_when_empty': True,
         # defaults:
@@ -57,6 +47,17 @@ UI_BARS = {
         'size': UI_BAR_SIZE,
         'copy_super_bg': UI_BAR_ICON_BG,
     },
+}
+
+BAR_CONTAINER_WIDTH = UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10
+BAR_CONTAINER_HEIGHT = 300
+
+CONTAINERS = {
+    'bar_container': {
+        'size': (int(BAR_CONTAINER_WIDTH), int(BAR_CONTAINER_HEIGHT)),
+        ''
+        'child_padding': int(10), # pixels of padding added between the containers children, bars in this case
+    }
 }
 
 CF_MAPS = {

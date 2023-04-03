@@ -78,8 +78,8 @@ class PG_Map:
             self.cf_ui_containers['bar_container'],
             (int(self.rect.left + 26), int(self.rect.top + 14)),
             None,
-            "bottom",
-            "top_bottom"
+            "top_centerx",
+            "bottom"
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
 
@@ -469,8 +469,6 @@ class PG_Map:
                 case pg.QUIT:
                     self.looping = False
                     self.PARENT.looping = False
-                # case self.EVENT_UPDATE_UI_CORE:
-                #     self.ui_core_group.update()
                 case self.EVENT_UPDATE_TERRAIN:
                     self.block_group.update()
                 case _:
