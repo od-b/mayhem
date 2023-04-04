@@ -85,7 +85,7 @@ class UI_Bar(Sprite):
         self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.BG_ALPHA_KEY))
         self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.BAR_ALPHA_KEY))
         self.bg_border_color = Color((self.bg_border_color.r, self.bg_border_color.g,
-                                       self.bg_border_color.b, self.bar_border_alpha_key))
+                                       self.bg_border_color.b, self.bg_border_alpha_key))
         self.bar_border_color = Color((self.bar_border_color.r, self.bar_border_color.g,
                                        self.bar_border_color.b, self.bar_border_alpha_key))
 

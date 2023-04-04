@@ -175,7 +175,6 @@ class Player(Sprite):
             self.grav_force *= 0.01
         else:
             self.grav_force *= 0.8
-        self.curr_image_src = self.COLLISION_CD_IMAGE
 
         # calculate health loss based on velocity and the set weights
         health_loss: float
@@ -195,12 +194,10 @@ class Player(Sprite):
         # print(f'health_loss={health_loss}')
         self.health -= health_loss
         if (self.health <= 0.0):
-            return self.collision_cooldown_frames_left
-            # print('death')
-            # return None
-            # RETURN DEATH TO MAP HERE
-        else:
-            return self.collision_cooldown_frames_left
+            return None
+
+        self.curr_image_src = self.COLLISION_CD_IMAGE
+        return self.collision_cooldown_frames_left
 
     def init_phase_thrust_begin(self):
         ''' call to begin thrust phase, gradually increasing acceleration and its limit
@@ -330,22 +327,15 @@ class Player(Sprite):
         self.rect = self.image.get_rect(center=self.position)
 
     def update(self):
-        if (self.collision_cooldown_frames_left):
-            # collision cooldown frames co-occur with other frames, so check every update
-            self.collision_cooldown_frames_left -= 1
-            if (self.collision_cooldown_frames_left == 0):
-                self.curr_image_src = self.DEFAULT_IMAGE
+
+        # note: map handles collision cooldown frames
 
         if (self.collision_recoil_frames_left):
             self.collision_recoil_frames_left -= 1
             # essentially; block any other events during collision recoil
-        elif (self.key_thrusting):
+        elif (self.key_thrusting) and (self.fuel > 0.0):
             # use some fuel
             self.fuel -= self.FUEL_CONSUMPTION
-            if (self.fuel <= 0.0):
-                # print('out of fuel')
-                pass
-
             if (self.thrust_begin_frames_left):
                 self.apply_thrust_begin_frame()
             else:
@@ -376,7 +366,7 @@ class Player(Sprite):
 
     #### ORDINARY GETTERS ####
 
-    def get_collision_cooldown_frames(self):
+    def get_collision_cooldown_frames_left(self):
         return self.collision_cooldown_frames_left
 
     def get_curr_health(self):

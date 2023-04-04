@@ -3,7 +3,7 @@ from typing import Callable
 
 # installed library imports
 import pygame as pg
-from pygame import Color, Surface, Rect, display, event
+from pygame import Color, Surface, Rect, display, SRCALPHA, transform
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
@@ -16,11 +16,12 @@ from pygame.mask import Mask
 from .general.exceptions import ConfigError
 ## pygame specific classes
 from .PG_window import PG_Window
-from .PG_player import Player
-from .PG_block import Block
 from .PG_timer import PG_Timer
+from .PG_block import Block
+from .PG_player import Player
+from .PG_coin import Coin
 from .PG_ui_container import UI_Sprite_Container
-from .PG_ui_bar import UI_Bar, UI_Auto_Bar_Horizontal, UI_Icon_Bar_Horizontal, UI_Auto_Icon_Bar_Horizontal
+from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
 
 
 class PG_Map:
@@ -34,11 +35,13 @@ class PG_Map:
         self.timer: PG_Timer        = PARENT.timer
         self.cf_global: dict        = PARENT.cf_global
 
-        self.cf_intervals: dict     = cf_map['upd_interval']
-        self.cf_player: dict        = cf_map['player']
-        self.cf_blocks: dict        = cf_map['blocks']
-        self.cf_ui_containers: dict = cf_map['ui_containers']
-        self.cf_ui_bars: dict       = cf_map['ui_bars']
+        self.cf_game_sprites: dict  = cf_map['game_sprites']
+        self.cf_ui_sprites: dict    = cf_map['ui_sprites']
+
+        self.cf_player: dict        = self.cf_game_sprites['player']
+        self.cf_blocks: dict        = self.cf_game_sprites['blocks']
+        self.cf_ui_containers: dict = self.cf_ui_sprites['containers']
+        self.cf_ui_bars: dict       = self.cf_ui_sprites['bars']
 
         # globals
         self.LOOP_LIMIT         = int(self.cf_global['loop_limit'])
@@ -69,10 +72,9 @@ class PG_Map:
         ''' group specifically containing the map surface outline blocks '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
+        self.coin_group = Group()
     
         self.ui_container_group = Group()
-        self.temp_ui_group = Group()
-
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         self.BAR_CONTAINER = UI_Sprite_Container(
             self.cf_ui_containers['bar_container'],
@@ -82,12 +84,16 @@ class PG_Map:
             "bottom"
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
+        self.CHEAT_MODE = True
+
+    #### NON-RECURRING SETUP METHODS ####
 
     def set_up_all(self, start_loop: bool):
         self.set_update_intervals()
         self.store_player_controls()
         self.set_up_terrain()
-        self.spawn_player((400, 400))
+        self.spawn_coins()
+        self.create_player((400, 400))
         self.set_up_ui_bars()
         self.BAR_CONTAINER.add_children([self.HEALTH_BAR, self.FUEL_BAR])
 
@@ -96,7 +102,7 @@ class PG_Map:
             self.timer.new_segment(self.name, False)
 
     def set_update_intervals(self):
-        self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_interval']['terrain'], 0)
+        self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_intervals']['terrain'], 0)
         ''' custom pygame event call to update terrain '''
 
     def store_player_controls(self) -> dict[str, int]:
@@ -137,15 +143,6 @@ class PG_Map:
 
         # add obstacle blocks and their outline blocks to the general map group
         self.block_group.add(self.obstacle_group)
-
-    def spawn_player(self, spawn_pos: tuple[int, int]):
-        ''' create and spawn a player sprite
-            * if a player already exists, replaces and removes it
-            * updates the self.player reference
-        '''
-        # create the player sprite, then update player_group
-        self.player = Player(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
-        self.player_group.add(self.player)
 
     def spawn_block_outline(self, cf_block: dict, group: Group, bounds: Rect,
                               facing: int, alt_pallette: None | list[Color]):
@@ -199,7 +196,7 @@ class PG_Map:
 
             # assemble the block
             BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_interval']['terrain']))
+                          position, int(self.cf_map['upd_intervals']['terrain']))
 
             # adjust position according to facing
             match (facing):
@@ -227,7 +224,7 @@ class PG_Map:
                 height = MAX_Y - curr_pos_y
 
             BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_interval']['terrain']))
+                          position, int(self.cf_map['upd_intervals']['terrain']))
 
             match (facing):
                 case (-1):
@@ -250,7 +247,7 @@ class PG_Map:
                 width = abs(MIN_X - curr_pos_x)
 
             BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_interval']['terrain']))
+                          position, int(self.cf_map['upd_intervals']['terrain']))
             BLOCK.rect.right = curr_pos_x
 
             match (facing):
@@ -274,7 +271,7 @@ class PG_Map:
                 height = abs(MIN_Y - curr_pos_y)
 
             BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_interval']['terrain']))
+                          position, int(self.cf_map['upd_intervals']['terrain']))
             BLOCK.rect.bottom = curr_pos_y
 
             match (facing):
@@ -311,7 +308,7 @@ class PG_Map:
 
             # assemble the block
             BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_interval']['terrain']))
+                          position, int(self.cf_map['upd_intervals']['terrain']))
 
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
@@ -347,24 +344,14 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def check_player_block_collision(self):
-        ''' since collision is based on image masks, call this after draw, but before update
-            * if player collides with a block, init the recoil sequence for the player 
+    def create_player(self, spawn_pos: tuple[int, int]):
+        ''' create and spawn a player sprite
+            * if a player already exists, replaces and removes it
+            * updates the self.player reference
         '''
-        # case 0: ignore collision if player has no mass or cooldown frames
-        if self.player.collision_cooldown_frames_left:
-            # blit the visual overlap
-            self.blit_block_player_overlap()
-        elif spritecollideany(self.player, self.block_group):
-            # if player rect collides with any block rects, check detailed mask collision
-            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
-            if collidelist:
-                # if masks collide, init player recoil phase and get the cd frame count for shield bar
-                cd_frames = self.player.init_phase_collision_recoil()
-                self.activate_shield_bar(cd_frames)
-                # highlight blocks that player collided with
-                for BLOCK in collidelist:
-                    BLOCK.init_timed_highlight()
+        # create the player sprite, then update player_group
+        self.player = Player(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
+        self.player_group.add(self.player)
 
     def create_horizontal_icon_bar(self, cf_key: str, getter_func: Callable, max: float | int):
         CF = self.cf_ui_bars[cf_key]
@@ -403,16 +390,108 @@ class PG_Map:
             self.player.get_curr_fuel,
             self.player.MAX_FUEL,
         )
+        self.GHOST_BAR = self.create_horizontal_icon_bar(
+            'ghost',
+            self.player.get_collision_cooldown_frames_left,
+            0.0
+        )
         self.SHIELD_BAR = self.create_horizontal_icon_bar(
             'shield',
-            self.player.get_collision_cooldown_frames,
+            self.player.get_collision_cooldown_frames_left,
             0.0
         )
 
-    def activate_shield_bar(self, shield_duration: float):
-        ''' activate the shield bar. it will remove itself when empty '''
-        self.SHIELD_BAR.max_val = shield_duration
+    def partition_spritesheet(self, spritesheet: Surface, n_images: int, scale: float) -> tuple[Surface, ...]:
+        ''' partition a horizontal spritesheet into equal sized segments '''
+        images = []
+        rect = spritesheet.get_rect()
+        img_height = int(rect.h)
+        img_width = int(rect.w / n_images)
+
+        for x in range(0, rect.w, img_width):
+            SURF = Surface((img_width, img_height), flags=SRCALPHA)
+            area_rect = Rect(x, 0, x+img_width, img_height)
+            SURF.blit(spritesheet, SURF.get_rect(), area_rect)
+            # pygame.transform.smoothscale()
+            IMG = transform.scale_by(SURF, scale)
+            images.append(IMG)
+
+        return tuple(images)
+
+    def spawn_coins(self):
+        
+        n_coins = self.cf_map['n_coins']
+        cf_coin = self.cf_game_sprites['coin']
+
+        spritesheet_path = cf_coin['spritesheet_path']
+        spritesheet_variants = int(cf_coin['image_variants'])
+        scalar = float(cf_coin['image_scalar'])
+
+        COIN_SPRITESHEET_IMG = pg.image.load(spritesheet_path)
+        IMAGES = self.partition_spritesheet(COIN_SPRITESHEET_IMG, spritesheet_variants, scalar)
+
+        placed_coins = 0
+        EDGE_PADDING = int(60)
+
+        while (placed_coins != n_coins):
+            position = self.get_rand_pos(EDGE_PADDING, EDGE_PADDING)
+            self.TEST_COIN = Coin(cf_coin, self.cf_global, IMAGES, position)
+            self.coin_group.add(self.TEST_COIN)
+            placed_coins += 1
+
+    #### RECURRING METHODS ####
+
+    def init_player_death_event(self):
+        if (self.CHEAT_MODE):
+            self.player.health = self.player.MAX_HEALTH
+            self.player.fuel = self.player.MAX_FUEL
+            self.player.curr_image_src = self.player.COLLISION_CD_IMAGE
+            return
+
+        self.player.fuel = 0.0
+        self.player.velocity.y = self.player.TERMINAL_VELO
+        self.player.collision_recoil_frames_left = 10000
+        self.player.collision_cooldown_frames_left = 10000
+        # TODO: SCORE + START AGAIN POPUP
+
+    def activate_ghost_bar(self, duration: float):
+        ''' activate the ghost bar. it will kill itself when empty '''
+        self.GHOST_BAR.max_val = duration
+        self.BAR_CONTAINER.add_child(self.GHOST_BAR)
+
+    def activate_shield_bar(self, duration: float):
+        ''' activate the shield bar. it will kill itself when empty '''
+        self.SHIELD_BAR.max_val = duration
         self.BAR_CONTAINER.add_child(self.SHIELD_BAR)
+
+    def check_player_block_collision(self):
+        ''' since collision is based on image masks, call this after draw, but before update
+            * if player collides with a block, init the recoil sequence for the player 
+        '''
+        # ignore collision if player has cooldown frames
+        if self.player.collision_cooldown_frames_left:
+            # blit the visual overlap
+            self.blit_block_player_overlap()
+            # collision cooldown frames co-occur with other frames, so check is done at map-level
+            self.player.collision_cooldown_frames_left -= 1
+            # check if its time to swap the player image back
+            if (self.player.collision_cooldown_frames_left == 0):
+                self.player.curr_image_src = self.player.DEFAULT_IMAGE
+        elif spritecollideany(self.player, self.block_group):
+            # if player rect collides with any block rects, check detailed mask collision
+            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            if collidelist:
+                # if masks collide, init player recoil phase and get the cd frame count for ghost bar
+                cd_frames = self.player.init_phase_collision_recoil()
+                if (cd_frames):
+                    self.activate_ghost_bar(cd_frames)
+                else:
+                    self.init_player_death_event()
+                # highlight blocks that player collided with
+                for BLOCK in collidelist:
+                    BLOCK.init_timed_highlight()
+
+    #### LOOP ####
 
     def loop(self):
         # if a map was initiated by the menu, launch the main loop
@@ -424,16 +503,14 @@ class PG_Map:
             else:
                 self.player_group.draw(self.surface)
             self.block_group.draw(self.surface)
-
+            self.coin_group.draw(self.surface)
             self.check_player_block_collision()
             self.check_events()
-
-            # self.test_group.update()
-            # self.test_group.draw(self.surface)
             self.ui_container_group.update(self.surface)
 
             display.update()
 
+            self.coin_group.update()
             self.player_group.update()
             self.timer.update()
 

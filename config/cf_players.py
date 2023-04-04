@@ -1,6 +1,5 @@
 from .colors import RGB, RGBA
-import pygame as pg     # to access defined constants such as keyboard input keys
-
+from pygame import K_w, K_a, K_s, K_d, K_SPACE
 ## key cheatsheet docref: https://www.pygame.org/docs/ref/key.html
 CF_PLAYERS = {
     'polygon': {
@@ -12,7 +11,7 @@ CF_PLAYERS = {
             # alpha colors must not have an alpha key below 127 without increasing maskcollide threshhold
             'colors': {
                 'default':            RGB['P_yellow_vibrant'],
-                'collision_cooldown': RGBA['P_yellow_vibrant_128'],
+                'collision_cooldown': RGBA['blue_gray_128'],
             }
         },
         'gameplay': {
@@ -20,7 +19,7 @@ CF_PLAYERS = {
             'max_fuel':   float(150),       # maximum and initial mana
             'min_collision_health_loss': float(15),
             'max_collision_health_loss': float(60),
-            'fuel_consumption': float(0.01)
+            'fuel_consumption': float(0.02)
         },
         # README: physics / phase_durations
         #   Constants that will affect movement, controls, gravity, acceleration, velocity, ..., etc
@@ -48,11 +47,11 @@ CF_PLAYERS = {
         },
         # keyboard controls
         'controls': {
-            'steer_up':     pg.K_w,
-            'steer_left':   pg.K_a,
-            'steer_down':   pg.K_s,
-            'steer_right':  pg.K_d,
-            'thrust':       pg.K_SPACE,
+            'steer_up':     K_w,
+            'steer_left':   K_a,
+            'steer_down':   K_s,
+            'steer_right':  K_d,
+            'thrust':       K_SPACE,
         },
     },
 }

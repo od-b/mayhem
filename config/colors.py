@@ -7,8 +7,9 @@ RGB: dict[str, tuple[int, int, int]] = {
     'dutchwhite':       (244, 228, 186),
     'signal_red':       (252, 41, 71),
     'marygold':         (240, 162, 2),
-    'orange':           (255, 123, 84),
-    'orange_1':         (255, 111, 60),
+    'beige':            (255, 165, 89),
+    'orange':           (255, 96, 0),
+    'orange_1':         (255, 123, 84),
     'orange_2':         (255, 154, 60),
     'orange_3':         (255, 201, 60),
     'peach':            (255, 178, 107),
@@ -61,7 +62,9 @@ RGB: dict[str, tuple[int, int, int]] = {
 
 RGBA: dict[str, tuple[int, int, int, int]] = {
     'alpha_0':              (0, 0, 0, 0),
-    'P_yellow_vibrant_128': (255, 217, 102, 128)
+    'P_yellow_vibrant_128': (255, 217, 102, 128),
+    'blue_light_128':       (186, 215, 233, 128),
+    'blue_gray_128':        (246, 241, 241, 128),
 }
 ''' RGBAlpha color tuples '''
 
