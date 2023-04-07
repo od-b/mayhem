@@ -73,6 +73,7 @@ class PG_Map:
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
         self.coin_group = Group()
+        self.collision_group = Group()
     
         self.ui_container_group = Group()
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
@@ -89,6 +90,7 @@ class PG_Map:
     #### NON-RECURRING SETUP METHODS ####
 
     def set_up_all(self, start_loop: bool):
+        ''' bundle of function calls to set up the map '''
         self.set_update_intervals()
         self.store_player_controls()
         self.set_up_terrain()
@@ -143,6 +145,7 @@ class PG_Map:
 
         # add obstacle blocks and their outline blocks to the general map group
         self.block_group.add(self.obstacle_group)
+        self.collision_group.add(self.block_group)
 
     def spawn_block_outline(self, cf_block: dict, group: Group, bounds: Rect,
                               facing: int, alt_pallette: None | list[Color]):
@@ -409,35 +412,75 @@ class PG_Map:
         img_width = int(rect.w / n_images)
 
         for x in range(0, rect.w, img_width):
+            # create a new surface
             SURF = Surface((img_width, img_height), flags=SRCALPHA)
+            # create a rect of the spritesheet area we want
             area_rect = Rect(x, 0, x+img_width, img_height)
+            # blit that area from the sheet onto the surface, then scale
             SURF.blit(spritesheet, SURF.get_rect(), area_rect)
-            # pygame.transform.smoothscale()
             IMG = transform.scale_by(SURF, scale)
             images.append(IMG)
 
+        # return list as a tuple
         return tuple(images)
 
     def spawn_coins(self):
-        
-        n_coins = self.cf_map['n_coins']
+        ''' create and position the coin sprite various places around the screen '''
+        n_coins = int(self.cf_map['n_coins'])
         cf_coin = self.cf_game_sprites['coin']
 
         spritesheet_path = cf_coin['spritesheet_path']
         spritesheet_variants = int(cf_coin['image_variants'])
         scalar = float(cf_coin['image_scalar'])
 
+        # all the coins share a single tuple containing their images
         COIN_SPRITESHEET_IMG = pg.image.load(spritesheet_path)
         IMAGES = self.partition_spritesheet(COIN_SPRITESHEET_IMG, spritesheet_variants, scalar)
 
-        placed_coins = 0
-        EDGE_PADDING = int(60)
+        # place the coins according to settings
+        min_offset = int(self.cf_map['min_coin_offset'])
+        min_spread = int(self.cf_map['min_coin_spread'])
+        
+        COIN_RECT = IMAGES[0].get_rect()
 
+        # create two rects for placement collision purposes
+        offset_rect = COIN_RECT.copy().inflate(min_offset, min_offset)
+        spread_rect = COIN_RECT.copy().inflate(min_spread, min_spread)
+
+
+        # coin positioning procedure
+        placed_coins = 0
+        failed_attempts = 0
         while (placed_coins != n_coins):
-            position = self.get_rand_pos(EDGE_PADDING, EDGE_PADDING)
-            self.TEST_COIN = Coin(cf_coin, self.cf_global, IMAGES, position)
-            self.coin_group.add(self.TEST_COIN)
-            placed_coins += 1
+            rand_pos = self.get_rand_pos(min_offset, min_offset)
+            offset_rect.center = rand_pos
+            spread_rect.center = rand_pos
+
+            terrain_collision = False
+            coin_collision = False
+
+            # check terrain collision
+            for obj in self.collision_group:
+                if (offset_rect.colliderect(obj.rect)):
+                    terrain_collision = True
+                    break
+
+            # check coin collision if terrain collision is ok
+            if not (terrain_collision):
+                for coin in self.coin_group:
+                    if (spread_rect.colliderect(coin.rect)):
+                        coin_collision = True
+                        break
+
+                if not (coin_collision):
+                    NEW_COIN = Coin(cf_coin, self.cf_global, IMAGES, rand_pos)
+                    self.coin_group.add(NEW_COIN)
+                    placed_coins += 1
+
+            if coin_collision or terrain_collision:
+                failed_attempts += 1
+                if (failed_attempts >= self.LOOP_LIMIT):
+                    raise ValueError('cant place coins using these settings')
 
     #### RECURRING METHODS ####
 

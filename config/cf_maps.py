@@ -17,9 +17,11 @@ CF_MAPS = {
         # gravitational constants. gravity_c must not be 0, or division by zero may occur.
         'gravity_m':            float(0.004),      # gravity multiplier. range = [1.0, 2.0]
         'gravity_c':            float(0.003),      # gravitational constant. 0 = no gravity
+        # misc difficulty related settings:
         'n_obstacles':          int(13),
         'n_coins':              int(20),
-        'min_coin_padding':     int(50),
+        'min_coin_offset':     int(6),      # min. offset to terrain
+        'min_coin_spread':     int(0),    # min. distance to another coin
         # sprite settings:
         'upd_intervals': UPDATE_INTERVALS,
         'game_sprites': {
