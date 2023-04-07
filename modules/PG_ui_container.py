@@ -261,13 +261,24 @@ class UI_Sprite_Container(UI_Container):
         self.children.add(child)
 
     def add_children_by_ref_id(self, ref_id, child_iterable):
-        matching_children = self.get_children_by_ref_id(ref_id, child_iterable)
-        self.add_child(matching_children)
+        ''' * if ref_id is a list, adds any child from the list that contains all ref_id's
+            * else, adds any child from the list with / containing the given ref id
+            * returns all/any matches as a list, after adding to self. (the list may be empty)
+        '''
+
+        matching_children: list | Sprite
+        if type(ref_id) == list:
+            matching_children = self.get_children_by_ref_id_intersection(ref_id, child_iterable)
+        else:
+            matching_children = self.get_children_by_ref_id(ref_id, child_iterable)
+
+        if (matching_children):
+            self.add_child(matching_children)
+
         return matching_children
 
     def update(self, surface: Surface):
         ''' update childrens positions. draw children to the given surface '''
-        # call update on all children
         # self.image.fill(self.ALPHA_COLOR)
         super().update()
         # surface.blit(self.image, self.position)

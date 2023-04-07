@@ -487,12 +487,17 @@ class PG_Map:
         self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_AUTO_BARS)
 
     def activate_temp_bar(self, ref_id, min_val, max_val):
+        if type(ref_id) != list:
+            ref_id = [ref_id, "BAR"]
+        else:
+            ref_id.append("BAR")
+
         MATCHING_BARS = self.BAR_CONTAINER.add_children_by_ref_id(ref_id, self.UI_AUTO_BARS)
         for BAR in MATCHING_BARS:
             if (min_val):
-                BAR.min_val = min_val
+                BAR.min_val = float(min_val)
             if (max_val):
-                BAR.max_val = max_val
+                BAR.max_val = float(max_val)
 
     def init_player_death_event(self):
         if (self.CHEAT_MODE):
@@ -527,7 +532,7 @@ class PG_Map:
                 # if masks collide, init player recoil phase and get the cd frame count for ghost bar
                 cd_frames = self.player.init_phase_collision_recoil()
                 if (cd_frames):
-                    self.activate_temp_bar('GHOST', 0.0, cd_frames)
+                    self.activate_temp_bar('GHOST', 0, cd_frames)
                 else:
                     self.init_player_death_event()
                 # highlight blocks that player collided with
