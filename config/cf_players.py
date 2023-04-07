@@ -18,8 +18,7 @@ CF_PLAYERS = {
             'max_health': float(150),       # maximum and initial health
             'max_fuel':   float(150),       # maximum and initial mana
             'min_collision_health_loss': float(15),
-            'max_collision_health_loss': float(60),
-            'fuel_consumption': float(0.02)
+            'max_collision_health_loss': float(60)
         },
         # README: physics / phase_durations
         #   Constants that will affect movement, controls, gravity, acceleration, velocity, ..., etc

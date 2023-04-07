@@ -16,6 +16,8 @@ class Player(Sprite):
         cf_physics:  dict = cf_player['physics']
         cf_gameplay: dict = cf_player['gameplay']
         cf_phases:   dict = cf_player['phase_durations']
+        
+        
 
         #### CONSTANTS ####
         self.SPAWN_POS          = spawn_pos
@@ -23,8 +25,10 @@ class Player(Sprite):
         ''' global fps limit '''
         self.MAP_GRAV_C         = float(cf_map['gravity_c'])
         ''' map gravity constant '''
-        self.MAP_GRAV_M         = float(cf_map['gravity_m'])
+        self.MAP_GRAV_W         = float(cf_map['gravity_w'])
         ''' map gravity multiplier '''
+        self.FUEL_CONSUMPTION   = float(cf_map['player_fuel_consumption'])
+
         # surface settings
         self.IMAGE_WIDTH        = int(cf_surface['width'])
         self.IMAGE_HEIGHT       = int(cf_surface['height'])
@@ -33,7 +37,6 @@ class Player(Sprite):
         self.MAX_FUEL           = float(cf_gameplay['max_fuel'])
         self.MIN_COLL_HP_LOSS   = float(cf_gameplay['min_collision_health_loss'])
         self.MAX_COLL_HP_LOSS   = float(cf_gameplay['max_collision_health_loss'])
-        self.FUEL_CONSUMPTION   = float(cf_gameplay['fuel_consumption'])
 
         # acceleration
         self.MAX_ACCEL          = float(cf_physics['max_acceleration'])
@@ -284,7 +287,7 @@ class Player(Sprite):
         self.thrust_end_curr_lerp_weight -= self.THRUST_END_LERP_DECREASE
 
         # increase compounding gravity
-        self.grav_force = lerp((self.grav_force + self.MAP_GRAV_C), self.TERMINAL_VELO, self.MAP_GRAV_M)
+        self.grav_force = lerp((self.grav_force + self.MAP_GRAV_C), self.TERMINAL_VELO, self.MAP_GRAV_W)
 
         # update velocity. apply the current gravity effect.
         self.velocity.update(self.acceleration)
@@ -300,7 +303,7 @@ class Player(Sprite):
         # self.acceleration *= self.ACCEL_FALLOFF
 
         # increase compounding gravity and add constant
-        self.grav_force = lerp(self.grav_force, self.TERMINAL_VELO, self.MAP_GRAV_M) + self.MAP_GRAV_C
+        self.grav_force = lerp(self.grav_force, self.TERMINAL_VELO, self.MAP_GRAV_W) + self.MAP_GRAV_C
 
         # update velocity. apply the current gravity effect.
         self.velocity.update(self.acceleration)

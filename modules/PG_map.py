@@ -53,8 +53,6 @@ class PG_Map:
         self.available_time     = int(cf_map['available_time'])
         self.fill_color         = Color(cf_map['fill_color'])
         self.n_obstacles        = int(cf_map['n_obstacles'])
-        self.gravity_m          = float(cf_map['gravity_m'])
-        self.gravity_c          = float(cf_map['gravity_c'])
 
         # misc
         self.mask_overlap_color = self.fill_color
@@ -479,6 +477,7 @@ class PG_Map:
 
             if coin_collision or terrain_collision:
                 failed_attempts += 1
+                # print(f'failed_attempts = {failed_attempts}')
                 if (failed_attempts >= self.LOOP_LIMIT):
                     raise ValueError('cant place coins using these settings')
 
@@ -534,6 +533,13 @@ class PG_Map:
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
 
+    def check_player_coin_collision(self):
+        # check rect collide
+        if spritecollideany(self.player, self.coin_group):
+            # if rect collide, check mask collide
+            collidelist = spritecollide(self.player, self.coin_group, True, collided=collide_mask)
+
+
     #### LOOP ####
 
     def loop(self):
@@ -547,7 +553,9 @@ class PG_Map:
                 self.player_group.draw(self.surface)
             self.block_group.draw(self.surface)
             self.coin_group.draw(self.surface)
+
             self.check_player_block_collision()
+            self.check_player_coin_collision()
             self.check_events()
             self.ui_container_group.update(self.surface)
 
