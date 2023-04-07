@@ -1,9 +1,6 @@
-from os.path import join as os_path_join
-
 from .colors import RGB
-from .cf_players import CF_PLAYERS
-from .cf_blocks import CF_BLOCKS
-from .cf_maps_common import UPDATE_INTERVALS, CONTAINERS, BARS, CF_COIN
+from .map_sprites import CF_PLAYERS, CF_BLOCKS, CF_COINS
+from .map_common import MAP_UPDATE_INTERVALS, MAP_CONTAINERS, MAP_BARS
 
 
 CF_MAPS = {
@@ -22,7 +19,7 @@ CF_MAPS = {
         'min_coin_offset': int(11),      # min. offset to terrain
         'min_coin_spread': int(120),    # min. distance to another coin
         # nested configs; sets the config dicts of "children". can be shared or unique
-        'upd_intervals': UPDATE_INTERVALS,
+        'upd_intervals': MAP_UPDATE_INTERVALS,
         'game_sprites': {
             'player': CF_PLAYERS['polygon'],
             'blocks': {
@@ -30,11 +27,11 @@ CF_MAPS = {
                 'obstacle':         CF_BLOCKS['pastel_block'],
                 'obstacle_outline': CF_BLOCKS['adaptive_block'],
             },
-            'coin': CF_COIN
+            'coin': CF_COINS['default']
         },
         'ui_sprites': {
-            'containers': CONTAINERS,
-            'bars': BARS
+            'containers': MAP_CONTAINERS,
+            'bars': MAP_BARS
         }
         # time between sprite updates, per type. Values are millisecs between updates
         # these values will typically have an applied variance of 0.5%

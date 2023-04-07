@@ -78,11 +78,13 @@ class PG_Map:
     
         # create a list to hold all created bars. can be needed for search after .kill()
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
+        
+        cf_bar_container = self.cf_ui_containers['bar_container']
         self.BAR_CONTAINER = UI_Sprite_Container(
-            self.cf_ui_containers['bar_container'],
+            cf_bar_container,
             (int(self.rect.left + 26), int(self.rect.top + 14)),
             None,
-            "top_centerx",
+            cf_bar_container['child_anchor'],
             "bottom"
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
@@ -94,9 +96,13 @@ class PG_Map:
         ''' bundle of function calls to set up the map '''
         self.set_update_intervals()
         self.store_player_controls()
+
+        # sprite creation
         self.spawn_terrain_blocks()
         self.spawn_coins()
         self.create_player((400, 400))
+
+        # UI creation
         self.create_all_ui_bars()
         self.activate_const_bars()
 
@@ -384,22 +390,22 @@ class PG_Map:
 
     def create_all_ui_bars(self):
         self.create_horizontal_icon_bar(
-            'health',
+            'icon_bar_health',
             self.player.get_curr_health,
             self.player.MAX_HEALTH,
         )
         self.create_horizontal_icon_bar(
-            'fuel',
+            'icon_bar_fuel',
             self.player.get_curr_fuel,
             self.player.MAX_FUEL,
         )
         self.create_horizontal_icon_bar(
-            'ghost',
+            'icon_bar_ghost',
             self.player.get_collision_cooldown_frames_left,
             0.0
         )
         self.create_horizontal_icon_bar(
-            'shield',
+            'icon_bar_shield',
             self.player.get_collision_cooldown_frames_left,
             0.0
         )
@@ -544,7 +550,6 @@ class PG_Map:
         if spritecollideany(self.player, self.coin_group):
             # if rect collide, check mask collide
             collidelist = spritecollide(self.player, self.coin_group, True, collided=collide_mask)
-
 
     #### LOOP ####
 

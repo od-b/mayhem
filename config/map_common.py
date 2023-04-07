@@ -1,39 +1,26 @@
 #### MAP CONFIG SHARED BETWEEN ALL MAPS ####
 from os.path import join as os_path_join
-from pygame import Surface, init as pg_init
-from .cf_ui import CF_BARS
+from .ui_components import CF_BARS
 
 
 #### MISC ####
 
-UPDATE_INTERVALS = {
+MAP_UPDATE_INTERVALS = {
     'terrain': int(100),
-}
-
-
-#### GENERIC SPRITES ####
-
-CF_COIN = {
-    'spritesheet_path': os_path_join('assets','spritesheets','coin_1.png'),
-    'image_variants': int(9),
-    'image_scalar': float(0.1),
-    'min_img_iter_frequency': float(0.11),
-    'max_img_iter_frequency': float(0.13),
-    'width': int(60),
-    'height': int(60)
 }
 
 
 #### UI CONFIG #####
 
+# BARS -- SHARED
 UI_BAR_WIDTH = int(260)     # width of the bar, not including icon
 UI_BAR_HEIGHT = int(32)     # this also determines the size of the icons, as they scale with height
 UI_BAR_SIZE = (UI_BAR_WIDTH, UI_BAR_HEIGHT)
 UI_BAR_ICON_OFFSET = int(3)
 UI_BAR_ICON_BG = True
 
-BARS = {
-    'health': {
+MAP_BARS = {
+    'icon_bar_health': {
         'cf_bar': CF_BARS['red'],
         'icon': os_path_join('assets','images','heart_1.png'),
         'ref_id': ["BAR", "CONST", "HEALTH"],
@@ -43,7 +30,7 @@ BARS = {
         'size': UI_BAR_SIZE,
         'copy_super_bg': UI_BAR_ICON_BG,
     },
-    'fuel': {
+    'icon_bar_fuel': {
         'cf_bar': CF_BARS['beige_orange'],
         'icon': os_path_join('assets','images','fuel_can_1_lowres.png'),
         'ref_id': ["BAR", "CONST", "FUEL"],
@@ -53,7 +40,7 @@ BARS = {
         'size': UI_BAR_SIZE,
         'copy_super_bg': UI_BAR_ICON_BG,
     },
-    'shield': {
+    'icon_bar_shield': {
         'cf_bar': CF_BARS['green'],
         'icon': os_path_join('assets','images','protection.png'),
         'ref_id': ["BAR", "TEMP", "SHIELD"],
@@ -63,7 +50,7 @@ BARS = {
         'size': UI_BAR_SIZE,
         'copy_super_bg': UI_BAR_ICON_BG,
     },
-    'ghost': {
+    'icon_bar_ghost': {
         'cf_bar': CF_BARS['light_blue'],
         'icon': os_path_join('assets','images','ghost_modif.png'),
         'ref_id': ["BAR", "TEMP", "GHOST"],
@@ -75,13 +62,19 @@ BARS = {
     },
 }
 
-BAR_CONTAINER_WIDTH = UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10
-BAR_CONTAINER_HEIGHT = 300
+# size the bar containers width to fit bars, plus a margin of 10
+bar_container_width = int(UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10)
+# its height doesnt really matter as long as it can fit all the bars
+bar_container_height = int(300)
 
-CONTAINERS = {
+MAP_CONTAINERS = {
     'bar_container': {
-        'size': (int(BAR_CONTAINER_WIDTH), int(BAR_CONTAINER_HEIGHT)),
-        ''
+        'size':          (int(bar_container_width), int(bar_container_height)),
         'child_padding': int(10), # pixels of padding added between the containers children, bars in this case
+        'child_anchor':  str("top_centerx"),
+        'child_align':   str("bottom")
+    },
+    'text_box_container': {
+        
     }
 }

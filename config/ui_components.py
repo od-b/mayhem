@@ -1,6 +1,7 @@
 from os.path import join as os_path_join
 from .colors import RGB
 
+# bar styles
 CF_BARS = {
     'green': {
         'bg_color':             RGB['sage'],
@@ -60,9 +61,9 @@ CF_BARS = {
     },
 }
 
+# text box styles
 CF_TEXT_BOXES = {
-    'default': {
-        # default textbox style
+    'semibold_bone_offblack': {
         'text_bg_color':  RGB['offblack'],
         'font_size':      int(24),
         'font_path':      os_path_join('assets','fonts','JetBrainsMono-SemiBold.ttf'),

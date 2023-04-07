@@ -27,14 +27,6 @@ CF_GLOBAL = {
     #   (i'm not entirely sure why this happens, but it's not really an issue.)
     #   fps limit must be set to a value for sprites to behave properly
     'fps_limit': int(125),      # default: 125
-    # accurate_timing:
-    #   how strict the time tick function should be.
-    #   Uses more resources if set to true
-    #   docref: https://www.pygame.org/docs/ref/time.html#pygame.time.Clock.tick_busy_loop
-    'accurate_timing':  True,                # default: True
-    # UI settings
-    'textbox_style': str('default'),      # refer to a key string in ui_sprites
-    'container_style': str('default'),      # refer to a key string in ui_sprites
     'menu_controls': {
         'up':       pg.K_w,
         'left':     pg.K_a,

@@ -1,8 +1,11 @@
 from typing import Callable
 from pygame import time, event
+from pygame.sprite import Sprite, Group
 from pygame.event import Event
-from .general.timer import Timer
 
+from .general.timer import Timer
+from .PG_ui_text_box import UI_Text_Box
+from .PG_ui_container import UI_Sprite_Container
 
 class PG_Timer(Timer):
     ''' Segment based time tracking. Extends .general/Timer
@@ -13,14 +16,19 @@ class PG_Timer(Timer):
         * the timer also has methods to customize events
     '''
 
-    def __init__(self, fps_limit: int, busy_loop: bool):
+    def __init__(self, cf_global: dict, cf_timer: dict):
         super().__init__()
-        self.FPS_LIMIT = int(fps_limit)
-        self.busy_loop = busy_loop
+        
+        self.cf_global = cf_global
+        self.cf_timer = cf_timer
+
+        self.FPS_LIMIT = int(self.cf_global['fps_limit'])
+        self.busy_loop = self.cf_timer['accurate_timing']
         self.clock = time.Clock()
         self.first_init_done: bool = False
         self.custom_events = []
         self.blocked_events = []
+        # self.text_container = 
 
         # create a function pointer instead of checking conditions every frame
         if (self.busy_loop):

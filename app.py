@@ -18,6 +18,7 @@ from modules.PG_ui_text_box import UI_Text_Box
 from config.cf_global import CF_GLOBAL
 from config.cf_window import CF_WINDOW
 from config.cf_maps import CF_MAPS
+from config.cf_timer import CF_TIMER
 
 
 class PG_App:
@@ -37,14 +38,16 @@ class PG_App:
     '''
 
     def __init__(self, 
-            config_global: dict,
-            config_window: dict,
-            config_maps: dict,
+            cf_global: dict,
+            cf_window: dict,
+            cf_timer: dict,
+            cf_maps: dict
         ):
 
-        self.cf_global = config_global
-        self.cf_window = config_window
-        self.cf_maps = config_maps
+        self.cf_global = cf_global
+        self.cf_window = cf_window
+        self.cf_maps = cf_maps
+        self.cf_timer = cf_timer
 
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
@@ -62,7 +65,7 @@ class PG_App:
         ''' object containing main surface window and bounds '''
 
         # create the timer
-        self.timer = PG_Timer(self.cf_global['fps_limit'], self.cf_global['accurate_timing'])
+        self.timer = PG_Timer(self.cf_global, self.cf_timer)
         ''' pygame specific timer object '''
 
         self.menu_ui_group = Group()
@@ -100,16 +103,18 @@ class PG_App:
         if not (str(cf_maps_key) in self.valid_cf_maps_keys):
             raise ValueError(f'> key error: "{cf_maps_key}" not found in config/cf_maps/CF_MAPS')
 
+        # create the map object as an attribute of self
         self.map = PG_Map(self, self.cf_maps[cf_maps_key], self.window.map_surface)
 
         if (self.print_misc_info):
-            print(f'> Map object "{self.map.name}" created from config! Setting up map assets ... ')
+            print(f'> Map object "{self.map.name}" created from config! Setting up map assets ...')
 
+        # set up the map
         self.map.set_up_all(True)
         self.window.set_extended_caption(self.map.name)
 
         if (self.print_misc_info):
-            print(f'> succesfully created and set up map. Returning to loop')
+            print(f'> succesfully created and set up map. Returning ...')
 
         self.map_object_loaded = True
 
@@ -176,6 +181,6 @@ if __name__ == '__main__':
         )
 
     # load the app
-    APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS)
+    APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MAPS)
     APP.loop()
     # pg.quit()

@@ -51,14 +51,14 @@ class PG_Window:
 
         # map subsurface topleft[x,y] position, relative to the main surface
         map_topleft_pos = (
-            int(cf_window['map_bounds']['min_x']),
-            int(cf_window['map_bounds']['min_y'])
+            int(cf_window['map_surface_offset']['min_x']),
+            int(cf_window['map_surface_offset']['min_y'])
         )
 
         # map size[w,h]
         map_size = (
-            int(self.width - cf_window['map_bounds']['max_x'] - cf_window['map_bounds']['min_x']), 
-            int(self.height - cf_window['map_bounds']['max_y'] - cf_window['map_bounds']['min_y'])
+            int(self.width - cf_window['map_surface_offset']['max_x'] - cf_window['map_surface_offset']['min_x']), 
+            int(self.height - cf_window['map_surface_offset']['max_y'] - cf_window['map_surface_offset']['min_y'])
         )
 
         self.map_rect = Rect(
@@ -86,6 +86,9 @@ class PG_Window:
 
     def fill_surface(self):
         self.surface.fill(self.fill_color)
+
+    def update(self):
+        display.update()
 
     def __str__(self):
         msg = f'< PG_Window: width={self.width}, height={self.height}'
