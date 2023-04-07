@@ -1,5 +1,4 @@
 # import cProfile
-from copy import deepcopy
 
 # installed library imports
 import pygame as pg
@@ -151,6 +150,7 @@ class PG_App:
                 self.map.looping = True
 
             if (self.map_object_loaded):
+                # cProfile.run('APP.map.loop()')
                 self.map.loop()
             else:
                 self.window.fill_surface()
@@ -177,6 +177,5 @@ if __name__ == '__main__':
 
     # load the app
     APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_MAPS)
-    # cProfile.run('GAME.loop()')
     APP.loop()
-    pg.quit()
+    # pg.quit()

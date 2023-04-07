@@ -10,7 +10,6 @@ CF_MAPS = {
     # a map is a setup config for the active part of the game surface
     'map_1': {
         'name':            str('Map 1'),
-        'available_time':  int(0),     # time before map is failed, in milliseconds
         'fill_color':      RGB['offblack'],
         # gravitational constants. gravity_w must not be 0.
         # gravity_w stops being applied when terminal velocity is reached. gravity_c is always added.

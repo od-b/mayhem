@@ -130,16 +130,17 @@ class UI_Container(Sprite):
                 EXPECTED = ["top_centerx", "left_centery"]
                 raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_anchor}"')
 
-    def get_children_by_ref_id(self, ref_id):
+    def get_children_by_ref_id(self, ref_id, child_iter):
         ''' get all children whose ref id / ids is or includes the given ref_id. 
             * None will return children with 'None' in or as their ref id.
+            * ref_id can be a list or single reference
 
             Example usage:
             for child in MY_CONTAINER.get_children_by_ref_id("APP"):
                 print(child)
         '''
         matching_children = []
-        for child in self.children:
+        for child in child_iter:
             # check if child has multiple ref id's
             if (type(child.ref_id) == list):
                 for elem in child.ref_id:
@@ -154,7 +155,7 @@ class UI_Container(Sprite):
 
         return matching_children
 
-    def get_children_by_ref_id_intersection(self, ref_ids_iterable):
+    def get_children_by_ref_id_intersection(self, ref_ids_iterable, child_iter):
         ''' return a list of children that contain ALL the given ref_ids.
             * example usage:
             list = self.BAR_CONTAINER.get_children_by_ref_id_intersection(("BAR", "CORE"))
@@ -162,7 +163,7 @@ class UI_Container(Sprite):
                 child.kill()
         '''
         matching_children = []
-        for child in self.children:
+        for child in child_iter:
             if (type(child.ref_id) == list):
                 # check if list contains all items
                 if all(ref_id in child.ref_id for ref_id in ref_ids_iterable):
@@ -195,10 +196,6 @@ class UI_Container(Sprite):
     def add_child(self, child):
         self.child_fits_self(child)
         self.children.append(child)
-
-    def add_children(self, child_list: list):
-        for elem in child_list:
-            self.add_child(elem)
 
     def update(self):
         ''' positions children according to the align_func '''
@@ -260,13 +257,13 @@ class UI_Sprite_Container(UI_Container):
         for child in kill_list:
             child.kill()
 
-    def add_child(self, child):
-        # self.child_fits_self(child)
+    def add_child(self, child: Sprite | list[Sprite]):
         self.children.add(child)
 
-    def add_children(self, list: list[Sprite]):
-        for elem in list:
-            self.add_child(elem)
+    def add_children_by_ref_id(self, ref_id, child_iterable):
+        matching_children = self.get_children_by_ref_id(ref_id, child_iterable)
+        self.add_child(matching_children)
+        return matching_children
 
     def update(self, surface: Surface):
         ''' update childrens positions. draw children to the given surface '''

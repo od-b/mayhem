@@ -36,7 +36,7 @@ BARS = {
     'health': {
         'cf_bar': CF_BARS['red'],
         'icon': os_path_join('assets','images','heart_1.png'),
-        'ref_id': ["BAR", "CORE", "HEALTH"],
+        'ref_id': ["BAR", "CONST", "HEALTH"],
         'remove_when_empty': False,
         # defaults:
         'icon_offset': UI_BAR_ICON_OFFSET,
@@ -46,7 +46,7 @@ BARS = {
     'fuel': {
         'cf_bar': CF_BARS['beige_orange'],
         'icon': os_path_join('assets','images','fuel_can_1_lowres.png'),
-        'ref_id': ["BAR", "CORE", "FUEL"],
+        'ref_id': ["BAR", "CONST", "FUEL"],
         'remove_when_empty': False,
         # defaults:
         'icon_offset': UI_BAR_ICON_OFFSET,
