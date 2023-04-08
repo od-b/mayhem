@@ -5,7 +5,10 @@ CF_GLOBAL = {
     # req_pygame_version:
     #   the required pygame version for the app. will be verified on init.
     #   set this value to your installed version if you would like to try running anyways
-    'req_pg_version': str('2.3.0'),
+    'req_pg_version': {
+        'vernum': (2, 3, 0),
+        'string': "2.3.0"
+    },
     # loop_limit:
     #   General loop limit, mainly for debugging and configuration purposes.
     #   In effect, set how many failed attempts to allow when performing pseudorandom

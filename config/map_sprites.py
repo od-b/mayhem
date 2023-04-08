@@ -1,4 +1,4 @@
-from pygame import K_w, K_a, K_s, K_d, K_SPACE
+import pygame as pg
 from os.path import join as os_path_join
 
 from .colors import RGB, RGBA, PALLETTES
@@ -108,7 +108,7 @@ CF_PLAYERS = {
         #   R = Raw value  -> may be pixels per frame, or similar
         #   S = Seconds    -> Real time +- 0.005ms (if busy loop). Minval is one frame equivalent + epsilon
         'physics': {
-            'mass':                     float(1.25),  # M;  more mass => more gravity, faster
+            'mass':                     float(1.15),  # M;  more mass => more gravity, faster
             'handling':                 float(0.022), # W;  how responsive steering will be
             'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
@@ -125,11 +125,11 @@ CF_PLAYERS = {
         },
         # keyboard controls
         'controls': {
-            'steer_up':     K_w,
-            'steer_left':   K_a,
-            'steer_down':   K_s,
-            'steer_right':  K_d,
-            'thrust':       K_SPACE,
+            'steer_up':     pg.K_w,
+            'steer_left':   pg.K_a,
+            'steer_down':   pg.K_s,
+            'steer_right':  pg.K_d,
+            'thrust':       pg.K_SPACE,
         },
     },
 }

@@ -1,18 +1,16 @@
 # import cProfile
+from warnings import warn as warnings_warn
 
 # installed library imports
 import pygame as pg
 ## simplify some imports for readability:
 from pygame import Color
-from pygame.sprite import Group
+from pygame.sprite import Group, GroupSingle
 
 ### local dir imports
-from modules.general.exceptions import VersionError
 from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
-from modules.PG_ui_container import UI_Container
-from modules.PG_ui_text_box import UI_Text_Box
 
 # import config dicts
 from config.cf_global import CF_GLOBAL
@@ -68,12 +66,11 @@ class PG_App:
         self.timer = PG_Timer(self.cf_global, self.cf_timer)
         ''' pygame specific timer object '''
 
-        self.menu_ui_group = Group()
-        ''' group of ui sprites that may be run at any point '''
-
-        # init core app features
         self.timer.block_events(self.cf_global['blocked_events'])
         self.fetch_menu_controls()
+
+        self.menu_root_group = GroupSingle()
+        ''' group of ui sprites that may be run at any point '''
 
         self.looping = True
         self.map_object_loaded = False
@@ -104,7 +101,7 @@ class PG_App:
             raise ValueError(f'> key error: "{cf_maps_key}" not found in config/cf_maps/CF_MAPS')
 
         # create the map object as an attribute of self
-        self.map = PG_Map(self, self.cf_maps[cf_maps_key], self.window.map_surface)
+        self.map = PG_Map(self.cf_global, self.cf_maps[cf_maps_key], self.timer, self.window.map_surface)
 
         if (self.print_misc_info):
             print(f'> Map object "{self.map.name}" created from config! Setting up map assets ...')
@@ -121,12 +118,8 @@ class PG_App:
     def check_events(self):
         for event in pg.event.get():
             match (event.type):
-                case pg.QUIT:
-                   self.looping = False
-                case pg.MOUSEBUTTONDOWN:
-                    print(pg.mouse.get_pos())
                 case pg.KEYDOWN:
-                    # match keydown event to an action
+                    # TODO: MENU CONTROLS
                     match (event.key):
                         case self.MENU_UP:
                             pass
@@ -137,11 +130,13 @@ class PG_App:
                         case self.MENU_RIGHT:
                             pass
                         case self.MENU_CONFIRM:
-                            self.init_map('map_1', (400, 400))
+                            pass
                         case self.MENU_BACK:
                             pass
                         case _:
                             pass
+                case pg.QUIT:
+                   self.looping = False
                 case _:
                     pass
 
@@ -149,6 +144,11 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
 
         while (self.looping):
+            self.window.fill_surface()
+            self.menu_root_group.update()
+            self.check_events()
+            pg.display.update()
+
             if (self.run_map_on_launch):
                 self.run_map_on_launch = False
                 self.init_map(self.valid_cf_maps_keys[0])
@@ -157,30 +157,33 @@ class PG_App:
             if (self.map_object_loaded):
                 # cProfile.run('APP.map.loop()')
                 self.map.loop()
-            else:
-                self.window.fill_surface()
-                self.menu_ui_group.update()
-                pg.display.update()
+                if (self.map.done_looping):
+                    self.looping = False
+                    pass
+                else:
+                    # MENU CALL
+                    pass
 
-                # loop through menu/app events
-                self.check_events()
-        
+
         if (self.print_misc_info):
-            print('[APP][loop] App closing through main loop')
-
+            print('[APP][loop] App exiting through main loop')
 
 if __name__ == '__main__':
     # initialize pygame and verify the version before anything else
     pg.init()
+    run_app = True
+    if (pg.version.vernum < CF_GLOBAL['req_pg_version']['vernum']):
+        msg = f'\nExpected pygame version {CF_GLOBAL["req_pg_version"]["string"]} or newer. '
+        msg += '(if using pip, "pip install pygame --upgrade" will upgrade pygame)'
+        warnings_warn(msg, stacklevel=2, source=None)
 
-    if (pg.__version__ != CF_GLOBAL['req_pg_version']):
-        msg = 'run "pip install pygame --upgrade" to upgrade, or change the  '
-        msg += 'config (_global.py) to your installed version to try anyway.'
-        raise VersionError("Pygame", pg.__version__,
-            CF_GLOBAL['req_pg_version'], msg
-        )
+        if not str(input("> Try running app anyway? (y/n): ")) in ['y', 'yes', 'Y']:
+            run_app = False
+            print('Exiting ...')
 
-    # load the app
-    APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MAPS)
-    APP.loop()
-    # pg.quit()
+    if (run_app):
+        # load the app
+        APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MAPS)
+        APP.loop()
+
+    pg.quit()

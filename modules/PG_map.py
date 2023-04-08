@@ -13,7 +13,7 @@ from pygame.mask import Mask
 # image_save(self.surface, "screenshot.png")
 
 ## general classes
-from .general.exceptions import ConfigError
+from .general.exceptions import ConfigError, LoopError
 ## pygame specific classes
 from .PG_timer import PG_Timer
 from .PG_block import Block
@@ -24,16 +24,15 @@ from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
 
 
 class PG_Map:
-    ''' current map setup used by the the app '''
-    def __init__(self, PARENT, cf_map: dict, subsurface: Surface):
-        self.PARENT = PARENT
-        self.cf_map: dict = cf_map
-        self.surface = subsurface
+    def __init__(self, cf_global: dict, cf_map: dict, timer: PG_Timer, surface: Surface):
+        self.cf_global  = cf_global
+        self.cf_map     = cf_map
+        self.surface    = surface
+        ''' map-designated display subsurface '''
+        self.timer      = timer
+        ''' reference to the app timer '''
 
-        # store needed parent attributes
-        self.timer: PG_Timer        = PARENT.timer
-        self.cf_global: dict        = PARENT.cf_global
-
+        ### CONSTANTS ####
         self.cf_game_sprites: dict  = cf_map['game_sprites']
         self.cf_ui_sprites: dict    = cf_map['ui_sprites']
 
@@ -43,23 +42,19 @@ class PG_Map:
         self.cf_ui_bars: dict       = self.cf_ui_sprites['bars']
 
         # globals
-        self.LOOP_LIMIT         = int(self.cf_global['loop_limit'])
-        self.DEBUG_COLOR        = Color(self.cf_global['debug_color'])
-        self.DEBUG_COLOR_2      = Color(self.cf_global['debug_color_2'])
+        self.LOOP_LIMIT      = int(self.cf_global['loop_limit'])
+        self.DEBUG_COLOR     = Color(self.cf_global['debug_color'])
+        self.DEBUG_COLOR_2   = Color(self.cf_global['debug_color_2'])
 
-        # store dict settings
-        self.name               = str(cf_map['name'])
-        self.fill_color         = Color(cf_map['fill_color'])
-        self.n_obstacles        = int(cf_map['n_obstacles'])
-        self.TARGET_N_COINS     = int(cf_map['n_coins'])
+        # from cf_map settings
+        self.name            = str(cf_map['name'])
+        self.rect            = self.surface.get_rect()
+        self.fill_color      = Color(cf_map['fill_color'])
+        self.overlap_color   = Color(cf_map['overlap_color'])
+        self.N_OBSTACLES     = int(cf_map['n_obstacles'])
+        self.N_COINS         = int(cf_map['n_coins'])
 
-        # misc
-        self.mask_overlap_color = self.fill_color
-        self.rect = self.surface.get_rect()
-        self.debug_player_visuals = False
-        self.looping = False
-
-        #### SPRITE GROUPS ####
+        #### SPRITE GROUPS & LISTS ####
         # groups for setup / spawn purposes
         self.obstacle_group = Group()
         ''' group specifically containing the randomly placed obstacle core blocks '''
@@ -78,19 +73,15 @@ class PG_Map:
         # create a list to hold all created bars. can be needed for search after .kill()
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
-        cf_bar_container = self.cf_ui_containers['bar_container']
-        bar_container_pos = (int(self.rect.left + 26), int(self.rect.top + 14))
-        self.BAR_CONTAINER = UI_Sprite_Container(
-            bar_container_pos,
-            cf_bar_container['size'],
-            cf_bar_container['child_anchor'],
-            cf_bar_container['child_align'],
-            cf_bar_container['child_padding'],
-        )
-        self.ui_container_group.add(self.BAR_CONTAINER)
-        self.CHEAT_MODE = True
-        
+        #### VARIABLES ####
         self.collected_coins = int(0)
+        self.looping         = False
+        self.paused          = False
+
+        # debug // misc toggles
+        self.debug_player_visuals = True
+        self.cheat_mode = True
+
 
     #### NON-RECURRING SETUP METHODS ####
 
@@ -105,12 +96,28 @@ class PG_Map:
         self.create_player((400, 400))
 
         # UI creation
+        self.set_up_ui_containers()
         self.create_all_ui_bars()
-        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_AUTO_BARS)
 
         if (start_loop):
             self.looping = True
             self.timer.new_segment(self.name, False)
+
+    def set_up_ui_containers(self):
+        # set up bar container
+        cf_bar_container = self.cf_ui_containers['bar_container']
+        bar_container_pos = (int(self.rect.left + 26), int(self.rect.top + 14))
+        self.BAR_CONTAINER = UI_Sprite_Container(
+            bar_container_pos,
+            cf_bar_container['size'],
+            cf_bar_container['child_anchor'],
+            cf_bar_container['child_align'],
+            cf_bar_container['child_padding'],
+        )
+        self.ui_container_group.add(self.BAR_CONTAINER)
+        
+        # set up text box container
+        
 
     def set_update_intervals(self):
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_intervals']['terrain'], 0)
@@ -309,7 +316,7 @@ class PG_Map:
         # initiate the loop
         placed_blocks = 0
         failed_attempts = 0
-        while placed_blocks < self.n_obstacles:
+        while placed_blocks < self.N_OBSTACLES:
             # set random height/width from within the ranges
             width = randint(cf_block['min_width'], cf_block['max_width'])
             height = randint(cf_block['min_height'], cf_block['max_height'])
@@ -340,7 +347,7 @@ class PG_Map:
                 group.add(BLOCK)
                 placed_blocks += 1
             else:
-                # otherwise, free (delete) the sprite and try again
+                # otherwise, delete the sprite and try again
                 del BLOCK
                 failed_attempts += 1
                 # check if attempt limit is reached
@@ -349,7 +356,7 @@ class PG_Map:
                         Fail limit of {self.LOOP_LIMIT} attempts reached.\
                         Too many or too large obstacles.\n\
                         block padding set too high can also be the cause.\
-                        Current obstacle count: {placed_blocks} / {self.n_obstacles}'
+                        Current obstacle count: {placed_blocks} / {self.N_OBSTACLES}'
                     raise ConfigError(msg, cf_block)
 
             # make sure the copied temp rect is not saved in memory
@@ -412,6 +419,9 @@ class PG_Map:
             0.0
         )
 
+        # auto add all const bars
+        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_AUTO_BARS)
+
     def partition_spritesheet(self, spritesheet: Surface, n_images: int, scale: float) -> tuple[Surface, ...]:
         ''' partition a horizontal spritesheet into equal sized segments '''
         images = []
@@ -457,7 +467,7 @@ class PG_Map:
         # coin positioning procedure
         placed_coins = 0
         failed_attempts = 0
-        while (placed_coins != self.TARGET_N_COINS):
+        while (placed_coins != self.N_COINS):
             rand_pos = self.get_rand_pos(min_offset, min_offset)
             offset_rect.center = rand_pos
             spread_rect.center = rand_pos
@@ -487,9 +497,13 @@ class PG_Map:
                 failed_attempts += 1
                 # print(f'failed_attempts = {failed_attempts}')
                 if (failed_attempts >= self.LOOP_LIMIT):
-                    raise ValueError('cant place coins using these settings')
+                    msg = 'cannot place coins using the corring config'
+                    raise LoopError(msg, placed_coins, self.N_COINS, self.LOOP_LIMIT)
 
     #### RECURRING METHODS ####
+
+    def pause_loop(self):
+        self.looping = False
 
     def activate_temp_bar(self, ref_id, min_val, max_val):
         if type(ref_id) != list:
@@ -505,7 +519,7 @@ class PG_Map:
                 BAR.max_val = float(max_val)
 
     def init_player_death_event(self):
-        if (self.CHEAT_MODE):
+        if (self.cheat_mode):
             self.player.health = self.player.MAX_HEALTH
             self.player.fuel = self.player.MAX_FUEL
             self.player.curr_image_src = self.player.COLLISION_CD_IMAGE
@@ -551,7 +565,7 @@ class PG_Map:
             collidelist = spritecollide(self.player, self.coin_group, True, collided=collide_mask)
             if (collidelist):
                 self.collected_coins += len(collidelist)
-                if (self.collected_coins == self.TARGET_N_COINS):
+                if (self.collected_coins == self.N_COINS):
                     print("ALL COINS COLLECTED")
                     # TODO: SOMETHING
 
@@ -570,6 +584,7 @@ class PG_Map:
             self.block_group.draw(self.surface)
             self.coin_group.draw(self.surface)
 
+            # collision checks
             self.check_player_block_collision()
             self.check_player_coin_collision()
             self.check_events()
@@ -585,6 +600,9 @@ class PG_Map:
         for event in pg.event.get():
             # check if the event type matches any relevant types
             match (event.type):
+                case self.EVENT_UPDATE_TERRAIN:
+                    # update blocks, swapping back if highlighted and timer is up
+                    self.block_group.update()
                 case pg.KEYDOWN:
                     match (event.key):
                         case self.STEER_UP:
@@ -615,10 +633,9 @@ class PG_Map:
                         case _:
                             pass
                 case pg.QUIT:
+                    # break both loops and quit program
                     self.looping = False
-                    self.PARENT.looping = False
-                case self.EVENT_UPDATE_TERRAIN:
-                    self.block_group.update()
+                    self.done_looping = True
                 case _:
                     pass
 
@@ -672,7 +689,7 @@ class PG_Map:
     def blit_overlap_mask(self, sprite_1, sprite_2):
         dest_pos = (sprite_2.rect.x, sprite_2.rect.y)
         overlap_mask = self.sprite_mask_overlap(sprite_1, sprite_2)
-        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.mask_overlap_color)
+        MASK_SURF = overlap_mask.to_surface(unsetcolor=(0, 0, 0, 0), setcolor=self.overlap_color)
         self.surface.blit(MASK_SURF, dest_pos)
 
     def blit_block_player_overlap(self):
@@ -698,6 +715,40 @@ class PG_Map:
         ''' get a random position(x,y) within the map. Padding may be negative. '''
         return (self.get_rand_x(padding_x), self.get_rand_y(padding_y))
 
+    def get_rand_pos_no_collide(self, rect: Rect, pad_x: int, pad_y: int, collidelist: Group | list | Rect):
+        ''' get a random position within the map, where the given rect won't collide with the given group.
+            x/y padding is added to both rect axis before checks (the original rect will remain unaltered)
+            * returns the topleft position of where the rect should be placed.
+        '''
+        
+        # should absolutely have written this before doing placement of blocks/coins.
+        # might update them to use this method to conserve a bit of space, but the logic would be the same.
+
+        C_RECT = rect.copy()
+        if (pad_x > 0) or (pad_y > 0):
+            C_RECT.inflate_ip((2*pad_x), (2*pad_y))
+
+        failed_attempts = 0
+        while (failed_attempts < self.LOOP_LIMIT):
+            rand_pos = self.get_rand_pos(C_RECT.width, C_RECT.height)
+            C_RECT.topleft = rand_pos
+
+            collision_ok = True
+            for obj in collidelist:
+                if C_RECT.colliderect(obj.rect):
+                    collision_ok = False
+                    break
+
+            if collision_ok:
+                adjusted_pos = ((rand_pos[0]+pad_x), (rand_pos[1]+pad_y))
+                del C_RECT
+                return adjusted_pos
+            else:
+                failed_attempts += 1
+
+        # loop didnt return -> no solution was found
+        msg = f'cannot find a pos without collision between {rect} and {collidelist}'
+        raise LoopError(msg, 0, 1, self.LOOP_LIMIT)
 
     #### DEBUGGING METHODS ####
 

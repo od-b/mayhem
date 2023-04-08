@@ -5,6 +5,9 @@ from pygame import Color
 from pygame.sprite import Sprite
 from pygame.font import Font
 
+from .PG_ui_container import UI_Sprite_Container_Filled
+
+
 class UI_Text_Box(Sprite):
     ''' Created by container as a child
 
@@ -30,7 +33,7 @@ class UI_Text_Box(Sprite):
             ref_id,
             text: str,
             text_getter_func: Callable | None,
-            position: tuple,
+            position: tuple
         ):
 
         Sprite.__init__(self)
@@ -42,11 +45,14 @@ class UI_Text_Box(Sprite):
         self.position = position
 
         # store config settings
-        self.bg_color = Color(cf_textbox['text_bg_color'])
         self.font_path = str(cf_textbox['font_path'])
         self.font_size = int(cf_textbox['font_size'])
-        self.font_color = Color(cf_textbox['font_color'])
         self.font_antialas: bool = cf_textbox['font_antialias']
+        self.font_color = Color(cf_textbox['font_color'])
+        if (cf_textbox['text_bg_color']):
+            self.bg_color = Color(cf_textbox['text_bg_color'])
+        else:
+            self.bg_color = None
 
         # load font
         self.font = Font(self.font_path, self.font_size)
@@ -123,7 +129,7 @@ class UI_Text_Box(Sprite):
             self.text,
             self.font_antialas,
             self.font_color,
-            None
+            self.bg_color
         )
         self.rect = self.image.get_rect()
 
@@ -146,3 +152,29 @@ class UI_Text_Box(Sprite):
         msg += f'text="{self.pre_text}{self.text}", height={self.rect.h}, width={self.rect.w}'
         msg += f'ref_id(s)={self.ref_id}]'
         return msg
+
+
+class UI_Text_Box_Filled(UI_Text_Box):
+    def __init__(self,
+            cf_textbox: dict,
+            cf_global: dict,
+            ref_id,
+            text: str,
+            text_getter_func: Callable | None,
+            position: tuple,
+            fill_color,
+            border_color,
+            border_width,
+            width,
+            height,
+            padding_x,
+            padding_y,
+        ):
+
+        super().__init__(cf_textbox, cf_global, ref_id, text, text_getter_func, position)
+
+        self.fill_color = fill_color
+        self.border_color = border_color
+        self.border_width = border_width
+
+        

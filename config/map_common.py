@@ -12,7 +12,7 @@ MAP_UPDATE_INTERVALS = {
 
 #### UI CONFIG #####
 
-# BARS -- SHARED
+# BARS -- SHARED VALUES
 UI_BAR_WIDTH = int(260)     # width of the bar, not including icon
 UI_BAR_HEIGHT = int(32)     # this also determines the size of the icons, as they scale with height
 UI_BAR_SIZE = (UI_BAR_WIDTH, UI_BAR_HEIGHT)
@@ -66,6 +66,13 @@ MAP_BARS = {
 bar_container_width = int(UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10)
 # its height doesnt really matter as long as it can fit all the bars
 bar_container_height = int(300)
+# bar_container_pos_x = 
+# bar_container_pos_y = 
+
+
+text_box_container_width = int(200)
+text_box_container_height = int(200)
+
 
 MAP_CONTAINERS = {
     'bar_container': {

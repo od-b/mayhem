@@ -39,33 +39,29 @@ class PG_Window:
         self.fullscreen: bool = cf_window['fullscreen']
         self.width = int(cf_window['width'])
         self.height = int(cf_window['height'])
+        print(f'width={self.width}')
+        print(f'height={self.height}')
+
         self.caption = str(cf_window['caption'])
 
         if (self.fullscreen):
             self.surface = display.set_mode((self.width, self.height), vsync=self._vsync, flags=FULLSCREEN)
         else:
             self.surface = display.set_mode((self.width, self.height), vsync=self._vsync)
+        print(f'surface={self.surface}')
 
         self.fill_surface()
         self.set_extended_caption(None)
 
-        # map subsurface topleft[x,y] position, relative to the main surface
-        map_topleft_pos = (
-            int(cf_window['map_surface_offset']['min_x']),
-            int(cf_window['map_surface_offset']['min_y'])
-        )
-
-        # map size[w,h]
-        map_size = (
-            int(self.width - cf_window['map_surface_offset']['max_x'] - cf_window['map_surface_offset']['min_x']), 
-            int(self.height - cf_window['map_surface_offset']['max_y'] - cf_window['map_surface_offset']['min_y'])
-        )
-
+        # map size is calculated at config level to allow other configs to read them pre window-creation
         self.map_rect = Rect(
-            (map_topleft_pos),
-            (map_size)
+            (self.cf_window['map_rect_info']['x'], self.cf_window['map_rect_info']['y']),
+            (self.cf_window['map_rect_info']['w'], self.cf_window['map_rect_info']['h']),
         )
+
         ''' rect of map subsurface. Positioned relative to the entire window surface. '''
+        print(f'map_rect={self.map_rect}')
+        print(f'map_rect.w={self.map_rect.w}')
 
         self.map_surface = self.surface.subsurface(self.map_rect)
         ''' subsurface of the main surface dedicated to the map area '''

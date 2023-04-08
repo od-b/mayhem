@@ -216,6 +216,9 @@ class Player(Sprite):
         self.thrust_begin_accel_length = self.acceleration.length()
         weighted_diff = (self.THRUST_MAGNITUDE - self.thrust_begin_accel_length) / 1.0
         self.thrust_begin_frames_left = int(self.THRUST_BEGIN_FRAMES_M * weighted_diff)
+
+        if (self.thrust_begin_frames_left == 0):
+            self.thrust_begin_frames_left = int(1)
         self.thrust_begin_lerp_increase = 1.0 / self.thrust_begin_frames_left
 
         if (self.PHASE_DEBUG_PRINT):

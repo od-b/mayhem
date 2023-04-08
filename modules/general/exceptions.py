@@ -1,18 +1,14 @@
-class VersionError(Exception):
-    ''' Exception raised for various version errors. '''
-
-    def __init__(self, modulename: str, v_found: str, v_req: str, end_msg: str):
-        self.msg = f'\n< {modulename} version "{v_found}" initialized. Expected: "{v_req}".'
-        self.msg += f'\n  {end_msg} >'
-        super().__init__(self.msg)
 
 
-class LogicError(Exception):
-    ''' Exception raised for logical errors.'''
+class LoopError(Exception):
+    ''' Exception raised when a pseudorandom loop hits the defined attempt limit '''
 
-    def __init__(self, msg: str):
-        self.msg = f'\n< {msg} >'
-        super().__init__(self.msg)
+    def __init__(self, msg: str | None, placed: int, target: int, loop_limit: int):
+        self.msg = f'loop limit of {loop_limit} hit:\n'
+        self.msg += f'  {placed} out of {target} objects placed/checked.\n'
+        if msg:
+            self.msg += f'  info: {msg}'
+        super().__init__(f'< {self.msg} >')
 
 
 class ConfigError(Exception):
@@ -21,17 +17,7 @@ class ConfigError(Exception):
     def __init__(self, msg: str, relevant_config: dict | None):
         self.relevant_config = relevant_config
         # create message, adding relevant config
-        self.msg = f'\n< {msg} '
+        self.msg = msg
         if self.relevant_config:
             self.msg += f'\n[Relevant config dict: {self.relevant_config}]\n'
-        super().__init__(self.msg+'>')
-
-
-class CollisionError(Exception):
-    ''' Exception raised for config errors. pass the relevant config dict to print it. '''
-
-    def __init__(self, msg: str, sprite_a, sprite_b):
-        # create message, adding relevant config
-        self.msg = f'\n< {msg}\nsprite_a = {sprite_a}\nsprite_b = {sprite_b}\n >'
-
-        super().__init__(self.msg+'>')
+        super().__init__(f'< {self.msg} >')

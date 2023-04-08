@@ -1,12 +1,12 @@
-from .cf_window import CF_WINDOW
+from .cf_window import window_width, window_height, MAP_RECT_INFO
 from .ui_components import CF_TEXT_BOXES
 
 
 TEXT_BOX_CONTAINER_WIDTH = int(200)
 TEXT_BOX_CONTAINER_HEIGHT = int(200)
 
-# position the container top left of the window + offset
-TEXT_BOX_CONTAINER_X = int(CF_WINDOW['width'] - TEXT_BOX_CONTAINER_WIDTH - 50)
+# position the container top left of the map surface + some padding
+TEXT_BOX_CONTAINER_X = int(window_width - TEXT_BOX_CONTAINER_WIDTH - 50)
 TEXT_BOX_CONTAINER_Y = int(14)
 
 CF_TIMER = {
@@ -17,8 +17,8 @@ CF_TIMER = {
     'accurate_timing':  True,                # default: True
     'display_fps_text': True,
     'display_segment_time_text': True,
-    'fps_text_style': CF_TEXT_BOXES['semibold_bone_offblack'],
-    'segment_time_text_style': CF_TEXT_BOXES['semibold_bone_offblack'],
+    'fps_text_style': CF_TEXT_BOXES['semibold_bone_nobg'],
+    'segment_time_text_style': CF_TEXT_BOXES['semibold_bone_nobg'],
     'text_box_container': {
         'position':      (TEXT_BOX_CONTAINER_X, TEXT_BOX_CONTAINER_Y),
         'size':          (TEXT_BOX_CONTAINER_WIDTH, TEXT_BOX_CONTAINER_HEIGHT),

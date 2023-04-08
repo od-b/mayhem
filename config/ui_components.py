@@ -63,8 +63,8 @@ CF_BARS = {
 
 # text box styles
 CF_TEXT_BOXES = {
-    'semibold_bone_offblack': {
-        'text_bg_color':  RGB['offblack'],
+    'semibold_bone_nobg': {
+        'text_bg_color':  None,
         'font_size':      int(24),
         'font_path':      os_path_join('assets','fonts','JetBrainsMono-SemiBold.ttf'),
         'font_antialias': True,
