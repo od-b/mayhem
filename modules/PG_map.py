@@ -106,9 +106,8 @@ class PG_Map:
     def set_up_ui_containers(self):
         # set up bar container
         cf_bar_container = self.cf_ui_containers['bar_container']
-        bar_container_pos = (int(self.rect.left + 26), int(self.rect.top + 14))
         self.BAR_CONTAINER = UI_Sprite_Container(
-            bar_container_pos,
+            cf_bar_container['position'],
             cf_bar_container['size'],
             cf_bar_container['child_anchor'],
             cf_bar_container['child_align'],

@@ -1,6 +1,7 @@
 #### MAP CONFIG SHARED BETWEEN ALL MAPS ####
 from os.path import join as os_path_join
 from .ui_components import CF_BARS
+from .cf_window import MAP_TOPLEFT_POS
 
 
 #### MISC ####
@@ -66,9 +67,8 @@ MAP_BARS = {
 bar_container_width = int(UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10)
 # its height doesnt really matter as long as it can fit all the bars
 bar_container_height = int(300)
-# bar_container_pos_x = 
-# bar_container_pos_y = 
-
+bar_container_pos_x = int(MAP_TOPLEFT_POS[0] + 26)
+bar_container_pos_y = int(MAP_TOPLEFT_POS[1] + 11)
 
 text_box_container_width = int(200)
 text_box_container_height = int(200)
@@ -76,7 +76,8 @@ text_box_container_height = int(200)
 
 MAP_CONTAINERS = {
     'bar_container': {
-        'size':          (int(bar_container_width), int(bar_container_height)),
+        'size':          (bar_container_width, bar_container_height),
+        'position':      (bar_container_pos_x, bar_container_pos_y),
         'child_anchor':  str("top"),
         'child_align':   str("bottomleft"),
         'child_padding': int(10), # pixels of padding added between the containers children, bars in this case

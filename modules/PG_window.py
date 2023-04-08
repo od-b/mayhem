@@ -39,16 +39,12 @@ class PG_Window:
         self.fullscreen: bool = cf_window['fullscreen']
         self.width = int(cf_window['width'])
         self.height = int(cf_window['height'])
-        print(f'width={self.width}')
-        print(f'height={self.height}')
-
         self.caption = str(cf_window['caption'])
 
         if (self.fullscreen):
             self.surface = display.set_mode((self.width, self.height), vsync=self._vsync, flags=FULLSCREEN)
         else:
             self.surface = display.set_mode((self.width, self.height), vsync=self._vsync)
-        print(f'surface={self.surface}')
 
         self.fill_surface()
         self.set_extended_caption(None)
@@ -58,14 +54,10 @@ class PG_Window:
             (self.cf_window['map_rect_info']['x'], self.cf_window['map_rect_info']['y']),
             (self.cf_window['map_rect_info']['w'], self.cf_window['map_rect_info']['h']),
         )
-
         ''' rect of map subsurface. Positioned relative to the entire window surface. '''
-        print(f'map_rect={self.map_rect}')
-        print(f'map_rect.w={self.map_rect.w}')
 
         self.map_surface = self.surface.subsurface(self.map_rect)
         ''' subsurface of the main surface dedicated to the map area '''
-        # self.map_surface.set_colorkey(self.fill_color)
 
     def set_extended_caption(self, extension: str | None):
         ''' append a text to the window caption

@@ -1,13 +1,13 @@
-from .cf_window import window_width, window_height, MAP_RECT_INFO
+from .cf_window import MAP_TOPRIGHT_POS
 from .ui_components import CF_TEXT_BOXES
 
 
-TEXT_BOX_CONTAINER_WIDTH = int(200)
-TEXT_BOX_CONTAINER_HEIGHT = int(200)
+text_box_container_width = int(200)
+text_box_container_height = int(200)
 
 # position the container top left of the map surface + some padding
-TEXT_BOX_CONTAINER_X = int(window_width - TEXT_BOX_CONTAINER_WIDTH - 50)
-TEXT_BOX_CONTAINER_Y = int(14)
+text_box_container_pos_x = int(MAP_TOPRIGHT_POS[0] - text_box_container_width - 40)
+text_box_container_pos_y = int(MAP_TOPRIGHT_POS[1] + 8)
 
 CF_TIMER = {
     # accurate_timing:
@@ -20,9 +20,9 @@ CF_TIMER = {
     'fps_text_style': CF_TEXT_BOXES['semibold_bone_nobg'],
     'segment_time_text_style': CF_TEXT_BOXES['semibold_bone_nobg'],
     'text_box_container': {
-        'position':      (TEXT_BOX_CONTAINER_X, TEXT_BOX_CONTAINER_Y),
-        'size':          (TEXT_BOX_CONTAINER_WIDTH, TEXT_BOX_CONTAINER_HEIGHT),
-        'child_padding': int(14),
+        'position':      (text_box_container_pos_x, text_box_container_pos_y),
+        'size':          (text_box_container_width, text_box_container_height),
+        'child_padding': int(14),   # also pads the first child from its anchor
         'child_anchor':  str("top"),
         'child_align':   str("bottomright")
     }
