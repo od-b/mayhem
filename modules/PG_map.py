@@ -15,7 +15,6 @@ from pygame.mask import Mask
 ## general classes
 from .general.exceptions import ConfigError
 ## pygame specific classes
-from .PG_window import PG_Window
 from .PG_timer import PG_Timer
 from .PG_block import Block
 from .PG_player import Player
@@ -80,15 +79,18 @@ class PG_Map:
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
         cf_bar_container = self.cf_ui_containers['bar_container']
+        bar_container_pos = (int(self.rect.left + 26), int(self.rect.top + 14))
         self.BAR_CONTAINER = UI_Sprite_Container(
-            cf_bar_container,
-            (int(self.rect.left + 26), int(self.rect.top + 14)),
-            None,
+            bar_container_pos,
+            cf_bar_container['size'],
             cf_bar_container['child_anchor'],
-            "bottom"
+            cf_bar_container['child_align'],
+            cf_bar_container['child_padding'],
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
         self.CHEAT_MODE = True
+        
+        self.collected_coins = int(0)
 
     #### NON-RECURRING SETUP METHODS ####
 
@@ -104,7 +106,7 @@ class PG_Map:
 
         # UI creation
         self.create_all_ui_bars()
-        self.activate_const_bars()
+        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_AUTO_BARS)
 
         if (start_loop):
             self.looping = True
@@ -489,9 +491,6 @@ class PG_Map:
 
     #### RECURRING METHODS ####
 
-    def activate_const_bars(self):
-        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_AUTO_BARS)
-
     def activate_temp_bar(self, ref_id, min_val, max_val):
         if type(ref_id) != list:
             ref_id = [ref_id, "BAR"]
@@ -548,8 +547,13 @@ class PG_Map:
     def check_player_coin_collision(self):
         # check rect collide
         if spritecollideany(self.player, self.coin_group):
-            # if rect collide, check mask collide
+            # if rect collide, check mask collide, get & kill collected coins, if any
             collidelist = spritecollide(self.player, self.coin_group, True, collided=collide_mask)
+            if (collidelist):
+                self.collected_coins += len(collidelist)
+                if (self.collected_coins == self.TARGET_N_COINS):
+                    print("ALL COINS COLLECTED")
+                    # TODO: SOMETHING
 
     #### LOOP ####
 
@@ -557,6 +561,7 @@ class PG_Map:
         # if a map was initiated by the menu, launch the main loop
         while (self.looping):
             self.surface.fill(self.fill_color)
+            self.timer.draw_ui(self.surface)
 
             if (self.debug_player_visuals):
                 self.debug__draw_player_all_info()

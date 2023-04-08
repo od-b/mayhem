@@ -19,7 +19,6 @@ CF_MAPS = {
         'min_coin_offset': int(11),      # min. offset to terrain
         'min_coin_spread': int(120),    # min. distance to another coin
         # nested configs; sets the config dicts of "children". can be shared or unique
-        'upd_intervals': MAP_UPDATE_INTERVALS,
         'game_sprites': {
             'player': CF_PLAYERS['polygon'],
             'blocks': {
@@ -32,7 +31,8 @@ CF_MAPS = {
         'ui_sprites': {
             'containers': MAP_CONTAINERS,
             'bars': MAP_BARS
-        }
+        },
+        'upd_intervals': MAP_UPDATE_INTERVALS,
         # time between sprite updates, per type. Values are millisecs between updates
         # these values will typically have an applied variance of 0.5%
     }

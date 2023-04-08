@@ -70,11 +70,11 @@ bar_container_height = int(300)
 MAP_CONTAINERS = {
     'bar_container': {
         'size':          (int(bar_container_width), int(bar_container_height)),
+        'child_anchor':  str("top"),
+        'child_align':   str("bottomleft"),
         'child_padding': int(10), # pixels of padding added between the containers children, bars in this case
-        'child_anchor':  str("top_centerx"),
-        'child_align':   str("bottom")
     },
-    'text_box_container': {
+    # 'text_box_container': {
         
-    }
+    # }
 }

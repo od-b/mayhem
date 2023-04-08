@@ -13,11 +13,11 @@ class UI_Container(Sprite):
         child_anchor:
             align-parent for positioning the first child, relative to the inner bounds of self.\n
             the next children will have the previous child as reference.
-            expects: str in ["top_centerx", "left_centery"]
+            expects: str in ["top", "left"]
 
         child_align:
             determines where children are aligned/positioned, relative to the root and other children
-            expects: str in ["top", "bottom", "left", "right", "bottomleft", "topleft"]
+            expects: str in ["top", "bottom", "left", "right", "bottomleft", "bottomright", "topleft"]
         ---
         readme
         ---
@@ -36,25 +36,17 @@ class UI_Container(Sprite):
     '''
 
     def __init__(self,
-            cf_container: dict,
-            position: tuple[int, int] | None,
-            size: tuple[int, int] | None,
+            position: tuple[int, int],
+            size: tuple[int, int],
             child_anchor: str,
-            child_align: str
+            child_align: str,
+            child_padding: int
         ):
 
         Sprite.__init__(self)
-        self.cf_container   = cf_container
         self.size           = size
         self.position       = position
-        self.CHILD_PADDING  = int(cf_container['child_padding'])
-
-        # store dict settings
-        
-        if (self.position == None):
-            self.position = (int(0), int(0))
-        if (self.size == None):
-            self.size = cf_container['size']
+        self.CHILD_PADDING  = child_padding
 
         # create a per pixel alpha surface
         self.ALPHA_COLOR = Color(0,0,0,0)
@@ -91,6 +83,9 @@ class UI_Container(Sprite):
     def _align_to_bottomleft_of(self, child: Rect, parent: Rect):
         child.topleft = (parent.bottomleft[0], parent.bottomleft[1] + self.CHILD_PADDING)
 
+    def _align_to_bottomright_of(self, child: Rect, parent: Rect):
+        child.topright = (parent.bottomright[0], parent.bottomright[1] + self.CHILD_PADDING)
+
     #### CALLABLE METHODS ####
 
     def set_align_func(self, child_align):
@@ -106,12 +101,14 @@ class UI_Container(Sprite):
                 self.ALIGN_FUNC = self._align_to_top_of
             case 'bottom':
                 self.ALIGN_FUNC = self._align_to_bottom_of
-            case 'bottomleft':
-                self.ALIGN_FUNC = self._align_to_topleft_of
             case 'topleft':
+                self.ALIGN_FUNC = self._align_to_topleft_of
+            case 'bottomright':
+                self.ALIGN_FUNC = self._align_to_bottomright_of
+            case 'bottomleft':
                 self.ALIGN_FUNC = self._align_to_bottomleft_of
             case _:
-                EXPECTED = ["top", "bottom", "left", "right", "bottomleft", "topleft"]
+                EXPECTED = ["top", "bottom", "left", "right", "bottomleft", "bottomright", "topleft"]
                 raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_align}"')
 
     def set_anchor_rect(self, new_child_anchor: str | None):
@@ -122,12 +119,12 @@ class UI_Container(Sprite):
         self.ANCHOR_RECT = self.rect.copy()
         # set the correct size/pos for the root parent, depending in parameters
         match self.child_anchor:
-            case 'top_centerx':
+            case 'top':
                 self.ANCHOR_RECT.height = 0
-            case 'left_centery':
+            case 'left':
                 self.ANCHOR_RECT.width = 0
             case _:
-                EXPECTED = ["top_centerx", "left_centery"]
+                EXPECTED = ["top", "left"]
                 raise ValueError(f'self.child_align expected=[{EXPECTED}]; Found="{self.child_anchor}"')
 
     def get_children_by_ref_id(self, ref_id, child_iter):
@@ -234,13 +231,13 @@ class UI_Sprite_Container(UI_Container):
         * See UI_Container for further info
         '''
     def __init__(self,
-            cf_container: dict,
-            position: tuple[int, int] | None,
-            size: tuple[int, int] | None,
+            position: tuple[int, int],
+            size: tuple[int, int],
             child_anchor: str,
-            child_align: str
+            child_align: str,
+            child_padding: int
         ):
-        super().__init__(cf_container, position, size, child_anchor, child_align)
+        super().__init__(position, size, child_anchor, child_align, child_padding)
         self.children = Group()
 
     def get_children(self) -> list[Sprite]:
