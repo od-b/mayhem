@@ -22,8 +22,7 @@ from modules.PG_ui_container import (
     UI_Sprite_Container,
     UI_Container_Wrapper,
     UI_Sprite_Container_Filled,
-    UI_Container_Single,
-    UI_Container_Single_Filled
+    UI_Single_Centered_Container
 )
 from modules.PG_ui_text_box import UI_Text_Box
 
@@ -87,7 +86,7 @@ class PG_App:
 
         self.looping = True
         self.map_object_loaded = False
-        self.run_map_on_launch = True
+        self.run_map_on_launch = False
         self.print_misc_info = True
 
         self.set_up_menu()
@@ -177,6 +176,8 @@ class PG_App:
             cf_wrapper['position'],
             cf_wrapper['size'],
             cf_wrapper['child_anchor'],
+            cf_wrapper['child_anchor_offset_x'],
+            cf_wrapper['child_anchor_offset_y'],
             cf_wrapper['child_align_x'],
             cf_wrapper['child_align_y'],
             cf_wrapper['child_padding_x'],
@@ -195,8 +196,8 @@ class PG_App:
 
         # note: padding is often +1 to account for the fact that the first elem is padded twice (top/bottom)
 
-        # find cumulative padding applied by the wrapper, calculate sizes accordingly
-        wrapper_cum_padding_x = int(cf_wrapper['child_padding_x'] * 2)
+        # find / set cumulative padding applied by the wrapper, calculate sizes accordingly
+        wrapper_cum_padding_x = int(20)
         wrapper_cum_padding_y = int(cf_wrapper['child_padding_y'] * (N_SUBCONTAINERS + 1))
 
         subcontainer_w = int(MENU_WIDTH - wrapper_cum_padding_x)
@@ -208,17 +209,14 @@ class PG_App:
         # list for all subcontainers
         self.menu_subcontainers = []
 
-
-
         ### subcontainer 1 --> menu title ###
         # slim down the title text box by -ish- half the regular height
         title_container_height = int(subcontainer_h / 2)
         unclaimed_height += int(subcontainer_h - title_container_height)
 
         # create text box within a single-container to keep it centered
-        TITLE_CONTAINER = UI_Container_Single(
-            dummy_pos, (subcontainer_w, title_container_height),
-            None, "centerx", "centery", 0, 0,
+        TITLE_CONTAINER = UI_Single_Centered_Container(
+            None, (subcontainer_w, title_container_height), 0, 0,
             UI_Text_Box(
                 cf_fonts['xlarge'], self.cf_global,
                 None, '', self.get_menu_title_text, (0, 0)
@@ -230,10 +228,9 @@ class PG_App:
         ### subcontainer 2 --> subtitle text ###
         subtitle_container_height = int(subcontainer_h / 1.5)
         unclaimed_height += int(subcontainer_h - subtitle_container_height)
-    
-        SUBTITLE_CONTAINER = UI_Container_Single(
-            dummy_pos, (subcontainer_w, subtitle_container_height),
-            None, "centerx", "centery", 0, 0,
+
+        SUBTITLE_CONTAINER = UI_Single_Centered_Container(
+            None, (subcontainer_w, subtitle_container_height), 0, 0,
             UI_Text_Box(
                 cf_fonts['large'], self.cf_global,
                 None, '', self.get_menu_subtitle_text, (0, 0)
@@ -252,7 +249,8 @@ class PG_App:
 
         SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
             dummy_pos, (subcontainer_w, sub_3_height),
-            "left", "right", "centery",
+            "left", 0, 0,
+            "right", "centery",
             btn_padding_x, btn_padding_y, None, None, None
         )
 
@@ -264,9 +262,8 @@ class PG_App:
 
         btn_list = []
         while (n_buttons != 0):
-            BTN = UI_Container_Single(
-                dummy_pos, (btn_width, btn_height),
-                None, "centerx", "centery", 0, 0,
+            BTN = UI_Single_Centered_Container(
+                None, (btn_width, btn_height), 0, 0,
                 UI_Text_Box(
                     cf_fonts['alt_regular'], self.cf_global,
                     None, '', self.get_btn_text, (0, 0)
@@ -287,7 +284,8 @@ class PG_App:
             subcontainer = UI_Sprite_Container(
                 dummy_pos,
                 (subcontainer_w, subcontainer_h),
-                "left", "right", "centery", int(4), int(0)
+                "left", 0, 0,
+                "right", "centery", int(4), int(0)
             )
             self.menu_subcontainers.append(subcontainer)
 

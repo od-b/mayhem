@@ -42,6 +42,8 @@ class PG_Timer(Timer):
             cf_text_container['position'],
             cf_text_container['size'],
             cf_text_container['child_anchor'],
+            cf_text_container['child_anchor_offset_x'],
+            cf_text_container['child_anchor_offset_y'],
             cf_text_container['child_align_x'],
             cf_text_container['child_align_y'],
             cf_text_container['child_padding_x'],

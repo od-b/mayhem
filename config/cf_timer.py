@@ -23,7 +23,9 @@ CF_TIMER = {
         'position':        (text_box_container_pos_x, text_box_container_pos_y),
         'size':            (text_box_container_width, text_box_container_height),
         'child_anchor':    str("top"),
-        'child_align_x':   str("inline_right"),
+        'child_anchor_offset_x': int(0),
+        'child_anchor_offset_y': int(0),
+        'child_align_x':   str("container_right"),
         'child_align_y':   str("bottom"),
         'child_padding_x': int(0),
         'child_padding_y': int(14)

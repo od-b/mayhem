@@ -19,7 +19,7 @@ from .PG_timer import PG_Timer
 from .PG_block import Block
 from .PG_player import Player
 from .PG_coin import Coin
-from .PG_ui_container import UI_Sprite_Container, UI_Container_Single_Filled
+from .PG_ui_container import UI_Sprite_Container
 from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
 from .PG_ui_text_box import UI_Text_Box
 
@@ -111,6 +111,8 @@ class PG_Map:
             cf_bar_container['position'],
             cf_bar_container['size'],
             cf_bar_container['child_anchor'],
+            cf_bar_container['child_anchor_offset_x'],
+            cf_bar_container['child_anchor_offset_y'],
             cf_bar_container['child_align_x'],
             cf_bar_container['child_align_y'],
             cf_bar_container['child_padding_x'],

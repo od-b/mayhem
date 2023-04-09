@@ -18,12 +18,12 @@ class UI_Container(Sprite):
 
         child_align_x/y:
             determines where children are aligned/positioned, relative to the root and other children
-            child_align_x expects one of ["left", "right", "centerx", "inline_left", "inline_right"]
-            child_align_y expects one of ["top", "bottom", "centery", "inline_top", "inline_bottom"]
+            child_align_x expects one of ["left", "right", "centerx", "container_left", "container_right"]
+            child_align_y expects one of ["top", "bottom", "centery", "container_top", "container_bottom"]
         ---
         readme
         ---
-        * inline aligns ignore their respective padding
+        * if inline, the respective padding is only applied to root
 
         if the container is moved:
             => update the anchor by calling:\n\t\t  .set_anchor_rect(new <child_anchor> | None=self.child_anchor)\n
@@ -43,6 +43,8 @@ class UI_Container(Sprite):
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
+            child_anchor_offset_x: int,
+            child_anchor_offset_y: int,
             child_align_x: str,
             child_align_y: str,
             child_padding_x: int,
@@ -54,6 +56,8 @@ class UI_Container(Sprite):
         self.position        = position
         self.CHILD_PADDING_X = child_padding_x
         self.CHILD_PADDING_Y = child_padding_y
+        self.CHILD_ANCHOR_OFFSET_X = child_anchor_offset_x
+        self.CHILD_ANCHOR_OFFSET_Y = child_anchor_offset_y
 
         self.bg_color = None
         self.border_width = None
@@ -70,7 +74,7 @@ class UI_Container(Sprite):
         self.set_anchor_rect(child_anchor)
 
     def _align_x_to_left_of(self, child: Rect, parent: Rect):
-        child.right = parent.left - self.CHILD_PADDING_X
+        child.right = parent.left + self.CHILD_PADDING_X
 
     def _align_x_to_centerx_of(self, child: Rect, parent: Rect):
         child.centerx = parent.centerx + self.CHILD_PADDING_X
@@ -78,14 +82,17 @@ class UI_Container(Sprite):
     def _align_x_to_right_of(self, child: Rect, parent: Rect):
         child.left = parent.right + self.CHILD_PADDING_X
 
-    def _align_x_to_inline_left_of(self, child: Rect, parent: Rect):
-        child.left = parent.left
+    def _align_x_to_container_left(self, child: Rect, parent: Rect):
+        child.left = self.rect.left + self.CHILD_PADDING_X
 
-    def _align_x_to_inline_right_of(self, child: Rect, parent: Rect):
-        child.right = parent.right
+    def _align_x_to_container_right(self, child: Rect, parent: Rect):
+        child.right = self.rect.right + self.CHILD_PADDING_X
+
+    def _align_x_to_container_centerx(self, child: Rect, parent: Rect):
+        child.centerx = self.rect.centerx + self.CHILD_PADDING_X
 
     def _align_y_to_top_of(self, child: Rect, parent: Rect):
-        child.bottom = parent.top - self.CHILD_PADDING_Y
+        child.bottom = parent.top + self.CHILD_PADDING_Y
 
     def _align_y_to_centery_of(self, child: Rect, parent: Rect):
         child.centery = parent.centery + self.CHILD_PADDING_Y
@@ -93,12 +100,14 @@ class UI_Container(Sprite):
     def _align_y_to_bottom_of(self, child: Rect, parent: Rect):
         child.top = parent.bottom + self.CHILD_PADDING_Y
 
-    def _align_y_to_inline_top_of(self, child: Rect, parent: Rect):
-        child.top = parent.top
+    def _align_y_to_container_top(self, child: Rect, parent: Rect):
+        child.top = self.rect.top + self.CHILD_PADDING_Y
 
-    def _align_y_to_inline_bottom_of(self, child: Rect, parent: Rect):
-        child.bottom = parent.bottom
+    def _align_y_to_container_bottom(self, child: Rect, parent: Rect):
+        child.bottom = self.rect.bottom + self.CHILD_PADDING_Y
 
+    def _align_y_to_container_centery(self, child: Rect, parent: Rect):
+        child.centery = self.rect.centery + self.CHILD_PADDING_Y
 
     #### CALLABLE METHODS ####
 
@@ -114,12 +123,14 @@ class UI_Container(Sprite):
                 self.ALIGN_FUNC_X = self._align_x_to_right_of
             case 'centerx':
                 self.ALIGN_FUNC_X = self._align_x_to_centerx_of
-            case 'inline_left':
-                self.ALIGN_FUNC_X = self._align_x_to_inline_left_of
-            case 'inline_right':
-                self.ALIGN_FUNC_X = self._align_x_to_inline_right_of
+            case 'container_left':
+                self.ALIGN_FUNC_X = self._align_x_to_container_left
+            case 'container_right':
+                self.ALIGN_FUNC_X = self._align_x_to_container_right
+            case 'container_centerx':
+                self.ALIGN_FUNC_X = self._align_x_to_container_centerx
             case _:
-                EXPECTED = ["left", "right", "centerx", "inline_left", "inline_right"]
+                EXPECTED = ["left", "right", "centerx", "container_left", "container_right"]
                 raise ValueError(f'child_align_x expected one of [{EXPECTED}]; Found="{self.child_align_x}"')
 
         match self.child_align_y:
@@ -129,12 +140,14 @@ class UI_Container(Sprite):
                 self.ALIGN_FUNC_Y = self._align_y_to_bottom_of
             case 'centery':
                 self.ALIGN_FUNC_Y = self._align_y_to_centery_of
-            case 'inline_top':
-                self.ALIGN_FUNC_X = self._align_y_to_inline_top_of
-            case 'inline_bottom':
-                self.ALIGN_FUNC_X = self._align_y_to_inline_bottom_of
+            case 'container_top':
+                self.ALIGN_FUNC_Y = self._align_y_to_container_top
+            case 'container_bottom':
+                self.ALIGN_FUNC_Y = self._align_y_to_container_bottom
+            case 'container_centery':
+                self.ALIGN_FUNC_Y = self._align_y_to_container_centery
             case _:
-                EXPECTED = ["top", "bottom", "centery", "inline_top", "inline_bottom"]
+                EXPECTED = ["top", "bottom", "centery", "container_top", "container_bottom"]
                 raise ValueError(f'child_align_y expected one of [{EXPECTED}]; Found="{self.child_align_y}"')
 
     def set_anchor_rect(self, new_child_anchor: str | None):
@@ -146,18 +159,22 @@ class UI_Container(Sprite):
         # set the correct size/pos for the root parent, depending in parameters
         match self.child_anchor:
             case 'top':
-                self.ANCHOR_RECT.height = 0
+                self.ANCHOR_RECT.height = int(0)
+                self.ANCHOR_RECT.top = self.rect.top
             case 'bottom':
-                self.ANCHOR_RECT.height = 0
-                self.ANCHOR_RECT.centery = self.rect.centery
+                self.ANCHOR_RECT.height = int(0)
+                self.ANCHOR_RECT.bottom = self.rect.bottom
             case 'left':
-                self.ANCHOR_RECT.width = 0
+                self.ANCHOR_RECT.width = int(0)
+                self.ANCHOR_RECT.left = self.rect.left
             case 'right':
-                self.ANCHOR_RECT.width = 0
-                self.ANCHOR_RECT.centerx = self.rect.centerx
+                self.ANCHOR_RECT.width = int(0)
+                self.ANCHOR_RECT.right = self.rect.right
             case _:
                 EXPECTED = ["top", "bottom", "left", "right"]
                 raise ValueError(f'self.child_align expected one of [{EXPECTED}]; Found="{self.child_anchor}"')
+
+        # if (self.ALIGN_FUNC_Y == self._align_y_to_container_top):
 
     def get_children_by_ref_id(self, ref_id, child_iter):
         ''' get all children whose ref id / ids is or includes the given ref_id. 
@@ -257,12 +274,16 @@ class UI_Sprite_Container(UI_Container):
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
+            child_anchor_offset_x: int,
+            child_anchor_offset_y: int,
             child_align_x: str,
             child_align_y: str,
             child_padding_x: int,
-            child_padding_y: int,
+            child_padding_y: int
         ):
-        super().__init__(position, size, child_anchor, child_align_x, child_align_y, child_padding_x, child_padding_y)
+        super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
+                         child_align_x, child_align_y, child_padding_x, child_padding_y)
+
         self.children = Group()
 
     def get_children(self) -> list[Sprite]:
@@ -306,18 +327,50 @@ class UI_Sprite_Container(UI_Container):
         self.children.update()
 
 
+class UI_Single_Centered_Container(UI_Sprite_Container):
+    ''' replaces the sprite group with a GroupSingle, adding a new sprite removes the old
+        position defaults to (0, 0) if given None.
+        Use exactly like a regular UI_Sprite_Container.
+    '''
+    def __init__(self,
+            position: tuple[int, int] | None,
+            size: tuple[int, int],
+            child_padding_x: int,
+            child_padding_y: int,
+            child: Sprite | None,
+        ):
+
+        given_pos = position
+        if (given_pos == None):
+            given_pos = (int(0), int(0))
+
+        super().__init__(
+            given_pos, size, "top", 0, 0,
+            "container_centerx", "container_centery",
+            child_padding_x, child_padding_y
+        )
+
+        self.children = GroupSingle()
+        if (child):
+            self.children.add(child)
+
 class UI_Sprite_Container_Filled(UI_Sprite_Container):
     def __init__(self,
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
-            child_align: str,
-            child_padding: int,
+            child_anchor_offset_x: int,
+            child_anchor_offset_y: int,
+            child_align_x: str,
+            child_align_y: str,
+            child_padding_x: int,
+            child_padding_y: int,
             bg_color,
             border_color,
             border_width
         ):
-        super().__init__(position, size, child_anchor, child_align, child_padding)
+        super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
+                         child_align_x, child_align_y, child_padding_x, child_padding_y)
 
         self.bg_color = bg_color
         if (self.bg_color != None):
@@ -336,10 +389,15 @@ class UI_Sprite_Container_Filled(UI_Sprite_Container):
 
 
 class UI_Container_Wrapper(UI_Sprite_Container):
+    ''' for containing other containers. do not add non-container sprites.
+        * may have UI_Container_Wrapper as child(ren), if so updates all/any subcontainers + their children.
+    '''
     def __init__(self,
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
+            child_anchor_offset_x: int,
+            child_anchor_offset_y: int,
             child_align_x: str,
             child_align_y: str,
             child_padding_x: int,
@@ -348,7 +406,8 @@ class UI_Container_Wrapper(UI_Sprite_Container):
             border_color,
             border_width
         ):
-        super().__init__(position, size, child_anchor, child_align_x, child_align_y, child_padding_x, child_padding_y)
+        super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
+                         child_align_x, child_align_y, child_padding_x, child_padding_y)
 
         self.bg_color = bg_color
         if (self.bg_color != None):
@@ -378,128 +437,3 @@ class UI_Container_Wrapper(UI_Sprite_Container):
             if (type(container) == type(self)):
                 container.set_anchor_rect(None)
             container.update(surface)
-
-
-#### single containers ####
-
-class UI_Container_Single(Sprite):
-    ''' container for only one child 
-        * child_position_x: str in ["left", "centerx", "right"]
-        * child_position_y: str in ["top", "centery", "bottom"]
-    '''
-    def __init__(self,
-            position: tuple[int, int],
-            size: tuple[int, int],
-            ref_id,
-            child_position_x: str,
-            child_position_y: str,
-            child_padding_x: int,
-            child_padding_y: int,
-            child: Sprite,
-        ):
-        Sprite.__init__(self)
-
-        self.position = position
-        self.size = size
-        self.ref_id = ref_id
-        self.child_padding_x = child_padding_x
-        self.child_padding_y = child_padding_y
-
-        self.bg_color = None
-        self.border_width = None
-        self.border_color = None
-
-        self.child = child
-        self.children = GroupSingle(child)
-
-        self.rect = Rect((self.position), (self.size))
-        self.set_position_funcs(child_position_x, child_position_y)
-
-    def _position_x_left(self, child: Rect):
-        child.left = self.rect.left + self.child_padding_x
-
-    def _position_x_center(self, child: Rect):
-        child.centerx = self.rect.centerx + self.child_padding_x
-
-    def _position_x_right(self, child: Rect):
-        child.right = self.rect.right - self.child_padding_x
-
-    def _position_y_top(self, child: Rect):
-        child.top = self.rect.top + self.child_padding_y
-
-    def _position_y_center(self, child: Rect):
-        child.centery = self.rect.centery + self.child_padding_y
-
-    def _position_y_bottom(self, child: Rect):
-        child.bottom = self.rect.bottom - self.child_padding_y
-
-    def set_position_funcs(self, child_position_x, child_position_y):
-        ''' updates the internally used self.POS_FUNC_X '''
-        self.child_position_x = child_position_x
-        self.child_position_y = child_position_y
-
-        # set the correct align_func for children in self
-        match self.child_position_x:
-            case 'left':
-                self.POS_FUNC_X = self._position_x_left
-            case 'centerx':
-                self.POS_FUNC_X = self._position_x_center
-            case 'right':
-                self.POS_FUNC_X = self._position_x_right
-            case _:
-                EXPECTED = ["left", "centerx",  "right"]
-                raise ValueError(f'child_position_x expected=[{EXPECTED}]; Found="{self.child_position_x}"')
-
-        match self.child_position_y:
-            case 'top':
-                self.POS_FUNC_Y = self._position_y_top
-            case 'centery':
-                self.POS_FUNC_Y = self._position_y_center
-            case 'bottom':
-                self.POS_FUNC_Y = self._position_y_bottom
-            case _:
-                EXPECTED = ["left", "centery", "right"]
-                raise ValueError(f'child_position_y expected=[{EXPECTED}]; Found="{self.child_position_y}"')
-
-    def add_child(self, child: Sprite):
-        ''' will replace the current child, if any '''
-        self.child = child
-        self.children.add(child)
-
-    def update(self, surface: Surface):
-        self.children.update()
-        self.POS_FUNC_X(self.child.rect)
-        self.POS_FUNC_Y(self.child.rect)
-        self.children.draw(surface)
-
-
-class UI_Container_Single_Filled(UI_Container_Single):
-    def __init__(self,
-            position: tuple[int, int],
-            size: tuple[int, int],
-            ref_id,
-            child_position_y: str,
-            child_position_x: str,
-            child_padding_x: int,
-            child_padding_y: int,
-            children: list[Sprite] | None,
-            active_child_index: int | None,
-            bg_color,
-            border_color,
-            border_width
-        ):
-        super().__init__(
-            position, size, ref_id, child_position_y, child_position_x,
-            child_padding_x, child_padding_y, children, active_child_index
-        )
-
-        self.bg_color = bg_color
-        self.border_color = border_color
-        self.border_width = border_width
-
-    def update(self, surface: Surface):
-        ''' draw bg//border update childrens positions. draw children to the given surface '''
-        draw_rect(surface, self.bg_color, self.rect)
-        if (self.border_width):
-            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
-        super().update(surface)
