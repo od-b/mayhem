@@ -10,7 +10,8 @@ semibold_italic_path = os_path_join('assets','fonts','JetBrainsMono-SemiBoldItal
 bold_path = os_path_join('assets','fonts','JetBrainsMono-Bold.ttf')
 
 # shared default font sizes
-small_font_size = int(24)
+regular_font_size = int(24)
+medium_font_size = int(26)
 large_font_size = int(30)
 xlarge_font_size = int(40)
 
@@ -19,23 +20,37 @@ font_antialias = True
 CF_FONTS = {
     'regular_regular_bone': {
         'path':      regular_path,
-        'size':      small_font_size,
+        'size':      regular_font_size,
         'antialias': font_antialias,
         'color':     RGB['bone'],
         'bg_color':  None
     },
     'semibold_regular_bone': {
         'path':      semibold_path,
-        'size':      small_font_size,
+        'size':      regular_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['bone'],
+        'bg_color':  None
+    },
+    'bold_regular_bone': {
+        'path':      bold_path,
+        'size':      regular_font_size,
         'antialias': font_antialias,
         'color':     RGB['bone'],
         'bg_color':  None
     },
     'semibold_regular_dutchwhite': {
         'path':      semibold_path,
-        'size':      small_font_size,
+        'size':      regular_font_size,
         'antialias': font_antialias,
         'color':     RGB['dutchwhite'],
+        'bg_color':  None
+    },
+    'bold_medium_bone': {
+        'path':      bold_path,
+        'size':      medium_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['bone'],
         'bg_color':  None
     },
     'regular_large_bone': {

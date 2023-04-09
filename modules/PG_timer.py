@@ -61,6 +61,7 @@ class PG_Timer(Timer):
                 ["FPS", "TEXT_BOX", "CONST"],
                 'FPS: ',
                 self.get_fps_string,
+                None,
                 self.TEXT_CONTAINER.rect.center
             )
             self.TEXT_CONTAINER.add_child(FPS_TEXT)
@@ -72,6 +73,7 @@ class PG_Timer(Timer):
                 ["DURATION", "TEXT_BOX", "CONST"],
                 'Time: ',
                 self.get_segment_duration_formatted,
+                None,
                 self.TEXT_CONTAINER.rect.center
             )
             self.TEXT_CONTAINER.add_child(DURATION_TEXT)

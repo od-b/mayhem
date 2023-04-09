@@ -22,9 +22,11 @@ from modules.PG_ui_container import (
     UI_Sprite_Container,
     UI_Container_Wrapper,
     UI_Sprite_Container_Filled,
-    UI_Single_Centered_Container
+    UI_Single_Centered_Container,
+    UI_Single_Centered_Container_Filled
 )
 from modules.PG_ui_text_box import UI_Text_Box
+from modules.PG_ui_button import UI_Button
 
 
 class PG_App:
@@ -66,7 +68,7 @@ class PG_App:
         self.valid_cf_maps_keys = []
         for key, _ in self.cf_maps.items():
             self.valid_cf_maps_keys.append(str(key))
-        # print(f'loaded maps (config map keys): {self.valid_cf_maps_keys}')
+        print(f'loaded maps (config map keys): {self.valid_cf_maps_keys}')
 
         # create the window
         self.window = PG_Window(self.cf_global, self.cf_window)
@@ -79,11 +81,13 @@ class PG_App:
         self.timer.block_events(self.cf_global['blocked_events'])
         self.fetch_menu_controls()
 
-        self.menu_wrapper_group = GroupSingle()
+        self.main_menu_wrapper_group = GroupSingle()
         ''' group of ui sprites that may be run at any point '''
-        
+        self.main_menu_button_group = Group()
+
         self.menu_title_text = str("<GameName>")
 
+        self.curr_mouse_pos = pg.mouse.get_pos()
         self.looping = True
         self.map_object_loaded = False
         self.run_map_on_launch = False
@@ -132,6 +136,8 @@ class PG_App:
     def check_events(self):
         for event in pg.event.get():
             match (event.type):
+                case pg.MOUSEBUTTONUP:
+                    self.check_button_onclick()
                 case pg.KEYDOWN:
                     # TODO: MENU CONTROLS
                     match (event.key):
@@ -187,7 +193,7 @@ class PG_App:
             cf_wrapper['border_width']
         )
         # add wrapper to the apps groupsingle for updates
-        self.menu_wrapper_group.add(self.MENU_WRAPPER)
+        self.main_menu_wrapper_group.add(self.MENU_WRAPPER)
 
         #### SUBCONTAINER CREATION ####
         # first, some setup and declarations. 
@@ -200,14 +206,19 @@ class PG_App:
         wrapper_cum_padding_x = int(20)
         wrapper_cum_padding_y = int(cf_wrapper['child_padding_y'] * (N_SUBCONTAINERS + 1))
 
-        subcontainer_w = int(MENU_WIDTH - wrapper_cum_padding_x)
-        subcontainer_h = int((MENU_HEIGHT - wrapper_cum_padding_y) / (N_SUBCONTAINERS))
+        subcontainer_w = int(
+            MENU_WIDTH - wrapper_cum_padding_x - (2 * cf_wrapper['child_anchor_offset_x'])
+        )
+        subcontainer_h = int(
+            ((MENU_HEIGHT - wrapper_cum_padding_y) / (N_SUBCONTAINERS)) 
+            - round((2 * cf_wrapper['child_anchor_offset_y']) / N_SUBCONTAINERS)
+        )
 
         dummy_pos = (self.MENU_WRAPPER.rect.center)  # does not really matter due to autopositioning
         unclaimed_height = 0
 
         # list for all subcontainers
-        self.menu_subcontainers = []
+        wrapper_subcontainers = []
 
         ### subcontainer 1 --> menu title ###
         # slim down the title text box by -ish- half the regular height
@@ -219,10 +230,10 @@ class PG_App:
             None, (subcontainer_w, title_container_height), 0, 0,
             UI_Text_Box(
                 cf_fonts['xlarge'], self.cf_global,
-                None, '', self.get_menu_title_text, (0, 0)
+                None, '', self.get_menu_title_text, None, (0, 0)
             )
         )
-        self.menu_subcontainers.append(TITLE_CONTAINER)
+        wrapper_subcontainers.append(TITLE_CONTAINER)
 
 
         ### subcontainer 2 --> subtitle text ###
@@ -233,53 +244,63 @@ class PG_App:
             None, (subcontainer_w, subtitle_container_height), 0, 0,
             UI_Text_Box(
                 cf_fonts['large'], self.cf_global,
-                None, '', self.get_menu_subtitle_text, (0, 0)
+                None, '', self.get_menu_subtitle_text, None, (0, 0)
             )
         )
-        self.menu_subcontainers.append(SUBTITLE_CONTAINER)
+        wrapper_subcontainers.append(SUBTITLE_CONTAINER)
 
 
-        ### subcontainer 3 --> map selection || end map
+        ### subcontainer 3 --> button wrapper --> map selection || end map ###
         # create an internal wrapper for containing buttons
         sub_3_height = int(subcontainer_h / 2)
         unclaimed_height += int(subcontainer_h - sub_3_height)
 
-        btn_padding_x = int(4)
-        btn_padding_y = int(4)
+        n_buttons = len(self.valid_cf_maps_keys)
+        # n_buttons = int(4)
 
-        SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
+        btn_padding_x = int(cf_wrapper['border_width'])
+        btn_padding_y = int(0)
+
+        btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
+        btn_height = int(sub_3_height)
+
+        self.SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
             dummy_pos, (subcontainer_w, sub_3_height),
-            "left", 0, 0,
-            "right", "centery",
+            "left", int(-btn_padding_x), 0,
+            "right", "container_centery",
             btn_padding_x, btn_padding_y, None, None, None
         )
 
-        # n_buttons = len(self.valid_cf_maps_keys)
-        n_buttons = 4
-        total_padded_width = int(btn_padding_x * (n_buttons + 1))
-        btn_width = int((subcontainer_w - total_padded_width) / n_buttons)
-        btn_height = int(sub_3_height - (2 * btn_padding_y))
-
-        btn_list = []
-        while (n_buttons != 0):
-            BTN = UI_Single_Centered_Container(
-                None, (btn_width, btn_height), 0, 0,
-                UI_Text_Box(
-                    cf_fonts['alt_regular'], self.cf_global,
-                    None, '', self.get_btn_text, (0, 0)
-                )
+        map_btn_list = []
+        cf_button = self.cf_menu['buttons']['map_selection']
+        for i in range(n_buttons):
+            BTN = UI_Button(
+                cf_button,
+                self.cf_global,
+                str(self.valid_cf_maps_keys[i]),
+                '',
+                self.get_menu_button_text,
+                (btn_width, btn_height),
+                dummy_pos,
+                self.init_map,
+                str(self.valid_cf_maps_keys[i]),
+                self.mouse_is_over
             )
-            btn_list.append(BTN)
-            n_buttons -= 1
+            map_btn_list.append(BTN)
 
-        SUB_3_BTN_WRAPPER.add_child(btn_list)
-        self.menu_subcontainers.append(SUB_3_BTN_WRAPPER)
+        self.SUB_3_BTN_WRAPPER.add_child(map_btn_list)
+        self.main_menu_button_group.add(map_btn_list)
+        wrapper_subcontainers.append(self.SUB_3_BTN_WRAPPER)
 
+
+        ### subcontainer 4 --> ###
+
+
+        ### create the rest as regular subcontainers ###
         # give the freed space from title back to the remaining subcontainers
-        subcontainers_left -= len(self.menu_subcontainers)
+        subcontainers_left -= len(wrapper_subcontainers)
         subcontainer_h += int(unclaimed_height / subcontainers_left)
 
-        # create the rest as regular subcontainers
         for _ in range(subcontainers_left):
             subcontainer = UI_Sprite_Container(
                 dummy_pos,
@@ -287,12 +308,45 @@ class PG_App:
                 "left", 0, 0,
                 "right", "centery", int(4), int(0)
             )
-            self.menu_subcontainers.append(subcontainer)
+            wrapper_subcontainers.append(subcontainer)
 
-        # # add all subcontainers to the wrapper
-        self.MENU_WRAPPER.add_child(self.menu_subcontainers)
 
-        #### set up the rest of the menu content ####
+        ## add all subcontainers to the wrapper
+        self.MENU_WRAPPER.add_child(wrapper_subcontainers)
+
+        ### PIXEL PERFECT SIZE CORRECTIONS ###
+        # update to get the actual positions
+        self.main_menu_wrapper_group.update(self.window.surface)
+
+        # correct last subcontainer height
+        target_y_pos = int(
+            self.MENU_WRAPPER.rect.bottom - self.MENU_WRAPPER.border_width - self.MENU_WRAPPER.CHILD_PADDING_Y)
+        SUBC_LIST = self.MENU_WRAPPER.children.sprites()
+        actual_y_pos = SUBC_LIST[len(SUBC_LIST)-1].rect.bottom
+        SUBC_LIST[len(SUBC_LIST)-1].rect.height += (target_y_pos - actual_y_pos)
+
+        # # correct btn width
+        # last_btn_i = len(btn_list)-1
+        # btn_list[last_btn_i].rect.width += int(self.SUB_3_BTN_WRAPPER.rect.right - btn_list[last_btn_i].rect.right)
+
+    def mouse_is_over(self, has_rect):
+        if has_rect.rect.collidepoint(self.curr_mouse_pos):
+            return True
+        return False
+
+    def get_menu_button_text(self, ref_id):
+        if not (self.map_object_loaded):
+            return str(self.cf_maps[ref_id]['name'])
+        else:
+            # TODO -> EXIT MAP ETC
+            pass
+
+    def check_button_onclick(self):
+        if not (self.map_object_loaded):
+            for button in self.main_menu_button_group:
+                if self.mouse_is_over(button):
+                    button.trigger()
+                    break
 
     def get_menu_title_text(self):
         return self.menu_title_text
@@ -302,7 +356,7 @@ class PG_App:
             # TODO: MAP BEST TIME // POINTS
             pass
         else:
-            return "Select a map! Confirm with space"
+            return "Choose a map! Mouse over for more info"
 
     def get_btn_text(self):
         return str("test")
@@ -312,7 +366,8 @@ class PG_App:
 
         while (self.looping):
             self.window.fill_surface()
-            self.menu_wrapper_group.update(self.window.surface)
+            self.curr_mouse_pos = pg.mouse.get_pos()
+            self.main_menu_wrapper_group.update(self.window.surface)
             self.check_events()
             pg.display.update()
 
@@ -328,11 +383,12 @@ class PG_App:
                     self.looping = False
                     pass
                 else:
-                    # MENU CALL
+                    # PAUSE MENU CALL
                     pass
 
         if (self.print_misc_info):
             print('[APP][loop] App exiting through main loop')
+
 
 if __name__ == '__main__':
     # initialize pygame and verify the version before anything else

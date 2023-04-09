@@ -41,9 +41,9 @@ CF_GLOBAL = {
     # blocked_events are a list of pg.event.type that will be blocked from the event queue
     # improves performance slightly by not needing to iterate over events that are unused
     'blocked_events': [
-        pg.MOUSEMOTION,
-        pg.MOUSEBUTTONUP,
-        pg.MOUSEBUTTONDOWN,
+        # pg.MOUSEMOTION,
+        # pg.MOUSEBUTTONUP,
+        # pg.MOUSEBUTTONDOWN,
         pg.TEXTINPUT
     ],
 }

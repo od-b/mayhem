@@ -29,6 +29,7 @@ class UI_Text_Box(Sprite):
             ref_id,
             text: str,
             text_getter_func: Callable | None,
+            text_getter_param,
             position: tuple
         ):
 
@@ -38,6 +39,7 @@ class UI_Text_Box(Sprite):
         self.ref_id = ref_id
         self.text = text
         self.text_getter_func = text_getter_func
+        self.text_getter_param = text_getter_param
         self.position = position
 
         # store config settings
@@ -47,9 +49,9 @@ class UI_Text_Box(Sprite):
         self.font_color = Color(cf_font['color'])
 
         if (cf_font['bg_color']):
-            self.bg_color = Color(cf_font['bg_color'])
+            self.font_bg_color = Color(cf_font['bg_color'])
         else:
-            self.bg_color = None
+            self.font_bg_color = None
 
         # load font
         self.font = Font(self.font_path, self.font_size)
@@ -60,7 +62,7 @@ class UI_Text_Box(Sprite):
             self.text,
             self.font_antialas,
             self.font_color,
-            self.bg_color
+            self.font_bg_color
         )
         self.rect = self.image.get_rect()
         self.rect.topleft = position
@@ -73,20 +75,36 @@ class UI_Text_Box(Sprite):
         if (self.text_getter_func):
             self.render_on_update = True
             if (self.text == ''):
-                self.text_update_func = self._get_text_from_getter_func
+                if (self.text_getter_param):
+                    self.text_update_func = self._get_text_w_param
+                else:
+                    self.text_update_func = self._get_text
             else:
                 self.pre_text = self.text
-                self.text_update_func = self._get_text_from_getter_func_with_pre_text
+                if (self.text_getter_param):
+                    self.text_update_func = self._get_text_w_pretext_param
+                else:
+                    self.text_update_func = self._get_text_w_pretext
         else:
             self.render_on_update = False
             # default to just returning own text
             self.text_update_func = self.get_text
 
-    def _get_text_from_getter_func(self):
+    def _get_text_w_param(self):
+        ''' internal function: returns a string through the given text_getter_func, no pre_text '''
+        return self.text_getter_func(self.text_getter_param)
+
+    def _get_text(self):
         ''' internal function: returns a string through the given text_getter_func, no pre_text '''
         return self.text_getter_func()
 
-    def _get_text_from_getter_func_with_pre_text(self):
+    def _get_text_w_pretext_param(self):
+        ''' internal function: returns a string through the given text_getter_func
+            * concats the text provided originally and the string from the getter
+        '''
+        return f'{self.pre_text}{self.text_getter_func(self.text_getter_param)}'
+
+    def _get_text_w_pretext(self):
         ''' internal function: returns a string through the given text_getter_func
             * concats the text provided originally and the string from the getter
         '''
@@ -126,7 +144,7 @@ class UI_Text_Box(Sprite):
             self.text,
             self.font_antialas,
             self.font_color,
-            self.bg_color
+            self.font_bg_color
         )
         self.rect = self.image.get_rect()
 

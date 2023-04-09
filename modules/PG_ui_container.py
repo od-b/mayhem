@@ -63,9 +63,6 @@ class UI_Container(Sprite):
         self.border_width = None
         self.border_color = None
 
-        # create a per pixel alpha surface
-        # self.ALPHA_COLOR = Color(0,0,0,0)
-
         self.rect = Rect((self.position), (self.size))
         self.children = []
         ''' group of children with rects, that depend on the container for updates/positioning '''
@@ -174,7 +171,8 @@ class UI_Container(Sprite):
                 EXPECTED = ["top", "bottom", "left", "right"]
                 raise ValueError(f'self.child_align expected one of [{EXPECTED}]; Found="{self.child_anchor}"')
 
-        # if (self.ALIGN_FUNC_Y == self._align_y_to_container_top):
+        self.ANCHOR_RECT.x += self.CHILD_ANCHOR_OFFSET_X
+        self.ANCHOR_RECT.y += self.CHILD_ANCHOR_OFFSET_Y
 
     def get_children_by_ref_id(self, ref_id, child_iter):
         ''' get all children whose ref id / ids is or includes the given ref_id. 
@@ -354,6 +352,34 @@ class UI_Single_Centered_Container(UI_Sprite_Container):
         if (child):
             self.children.add(child)
 
+
+class UI_Single_Centered_Container_Filled(UI_Single_Centered_Container):
+    def __init__(self,
+            position: tuple[int, int] | None,
+            size: tuple[int, int],
+            child_padding_x: int,
+            child_padding_y: int,
+            child: Sprite | None,
+            bg_color: tuple | Color | None,
+            border_color: tuple | Color | None,
+            border_width: int | None
+        ):
+        super().__init__(position, size, child_padding_x, child_padding_y, child)
+
+        if (bg_color):
+            self.bg_color = Color(bg_color)
+        if (border_width):
+            self.border_width = int(border_width)
+            self.border_color = Color(border_color)
+
+    def update(self, surface):
+        if (self.bg_color):
+            draw_rect(surface, self.bg_color, self.rect)
+        if (self.border_width):
+            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
+        super().update()
+
+
 class UI_Sprite_Container_Filled(UI_Sprite_Container):
     def __init__(self,
             position: tuple[int, int],
@@ -431,9 +457,10 @@ class UI_Container_Wrapper(UI_Sprite_Container):
             parent = RE
 
         for container in self.children:
-            draw_rect(surface, (255,255,255), container.rect)
-            draw_rect(surface, (0, 0, 0), container.rect, width=2)
             # if container is a wrapper, reposition anchor rect
+            # draw_rect(surface, (255, 255, 255), container.rect)
             if (type(container) == type(self)):
                 container.set_anchor_rect(None)
+            else:
+                draw_rect(surface, (0, 0, 0), container.rect, width=2)
             container.update(surface)

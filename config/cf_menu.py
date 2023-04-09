@@ -6,7 +6,7 @@ menu_width = 800
 menu_height = 600
 menu_pos_x = WINDOW_CENTER[0] - int(menu_width / 2)
 menu_pos_y = WINDOW_CENTER[1] - int(menu_height / 2)
-menu_border_width = 6
+menu_border_width = 4
 
 CF_MENU = {
     'wrapper': {
@@ -30,5 +30,17 @@ CF_MENU = {
         'large':        CF_FONTS['semibold_large_blue'],
         'alt_large':    CF_FONTS['bold_large_darkblue'],
         'xlarge':       CF_FONTS['bold_xlarge_darkblue']
+    },
+    'buttons': {
+        'map_selection': {
+            'font': CF_FONTS['semibold_regular_bone'],
+            'bg_color': RGB['beige'],
+            'border_color': RGB['orange'],
+            'border_width': int(2),
+            'alt_font': CF_FONTS['bold_medium_bone'],
+            'alt_bg_color': RGB['orange'],
+            'alt_border_color': RGB['beige'],
+            'alt_border_width': int(4),
+        }
     }
 }
