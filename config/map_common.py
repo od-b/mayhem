@@ -1,7 +1,7 @@
 #### MAP CONFIG SHARED BETWEEN ALL MAPS ####
 from os.path import join as os_path_join
-from .ui_components import CF_BARS
-from .cf_window import MAP_TOPLEFT_POS
+from .ui_components import CF_BARS, CF_TEXT_BOXES
+from .cf_window import MAP_TOPLEFT_POS, MAP_MIDTOP_POS
 
 
 #### MISC ####
@@ -65,24 +65,30 @@ MAP_BARS = {
 
 # size the bar containers width to fit bars, plus a margin of 10
 bar_container_width = int(UI_BAR_WIDTH + UI_BAR_HEIGHT + UI_BAR_ICON_OFFSET + 10)
-# its height doesnt really matter as long as it can fit all the bars
 bar_container_height = int(300)
 bar_container_pos_x = int(MAP_TOPLEFT_POS[0] + 26)
 bar_container_pos_y = int(MAP_TOPLEFT_POS[1] + 11)
 
-text_box_container_width = int(200)
+text_box_container_width = int(120)
 text_box_container_height = int(200)
+text_box_pos_x = int(MAP_MIDTOP_POS[0] - int(text_box_container_width/2))
+text_box_pos_y = int(MAP_MIDTOP_POS[1])
 
 
 MAP_CONTAINERS = {
     'bar_container': {
-        'size':          (bar_container_width, bar_container_height),
-        'position':      (bar_container_pos_x, bar_container_pos_y),
-        'child_anchor':  str("top"),
-        'child_align':   str("bottomleft"),
-        'child_padding': int(10), # pixels of padding added between the containers children, bars in this case
+        'size':             (bar_container_width, bar_container_height),
+        'position':         (bar_container_pos_x, bar_container_pos_y),
+        'child_anchor':     str("top"),
+        'child_align':      str("bottomleft"),
+        'child_padding':    int(10), # pixels of padding added between the containers children, bars in this case
     },
-    # 'text_box_container': {
-        
-    # }
+    'text_container': {
+        'text_box_style':   CF_TEXT_BOXES['semibold_small_bone'],
+        'size':             (text_box_container_width, text_box_container_height),
+        'position':         (text_box_pos_x, text_box_pos_y),
+        'child_anchor':     str("top"),
+        'child_align':      str("bottom"),
+        'child_padding':    int(10), # pixels of padding added between the containers children, bars in this case
+    }
 }

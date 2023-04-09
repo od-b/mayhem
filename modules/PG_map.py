@@ -19,8 +19,9 @@ from .PG_timer import PG_Timer
 from .PG_block import Block
 from .PG_player import Player
 from .PG_coin import Coin
-from .PG_ui_container import UI_Sprite_Container
+from .PG_ui_container import UI_Sprite_Container, UI_Container_Single_Filled
 from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
+from .PG_ui_text_box import UI_Text_Box
 
 
 class PG_Map:
@@ -114,9 +115,6 @@ class PG_Map:
             cf_bar_container['child_padding'],
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
-        
-        # set up text box container
-        
 
     def set_update_intervals(self):
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_intervals']['terrain'], 0)
@@ -498,6 +496,7 @@ class PG_Map:
                 if (failed_attempts >= self.LOOP_LIMIT):
                     msg = 'cannot place coins using the corring config'
                     raise LoopError(msg, placed_coins, self.N_COINS, self.LOOP_LIMIT)
+
 
     #### RECURRING METHODS ####
 

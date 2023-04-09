@@ -8,7 +8,7 @@ CF_MAPS = {
     'map_1': {
         'name':            str('Map 1'),
         'fill_color':      RGB['offblack'],
-        'overlap_color': RGB['signal_red'],  # used for visualizing overlapping masks / misc
+        'overlap_color':   RGB['signal_red'],  # used for visualizing overlapping masks / misc
         # gravitational constants. gravity_w must not be 0.
         # gravity_w stops being applied when terminal velocity is reached. gravity_c is always added.
         'gravity_c':       float(0.003),      # every frame gravitational incrementor

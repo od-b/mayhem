@@ -17,8 +17,8 @@ CF_TIMER = {
     'accurate_timing':  True,                # default: True
     'display_fps_text': True,
     'display_segment_time_text': True,
-    'fps_text_style': CF_TEXT_BOXES['semibold_bone_nobg'],
-    'segment_time_text_style': CF_TEXT_BOXES['semibold_bone_nobg'],
+    'fps_text_style': CF_TEXT_BOXES['bold_large_green'],
+    'segment_time_text_style': CF_TEXT_BOXES['regular_large_bone'],
     'text_box_container': {
         'position':      (text_box_container_pos_x, text_box_container_pos_y),
         'size':          (text_box_container_width, text_box_container_height),

@@ -1,5 +1,5 @@
 ## import needed pygame modules
-from pygame import Surface, Rect, Color
+from pygame import Surface, Rect, Color, SRCALPHA
 from pygame.sprite import Sprite, Group, GroupSingle
 from pygame.draw import rect as draw_rect
 
@@ -49,8 +49,15 @@ class UI_Container(Sprite):
         self.position       = position
         self.CHILD_PADDING  = child_padding
 
+        self.bg_color = None
+        self.border_width = None
+        self.border_color = None
+
         # create a per pixel alpha surface
         self.ALPHA_COLOR = Color(0,0,0,0)
+
+        # self.image = Surface(self.size, flags=SRCALPHA)
+        # self.image.fill(self.ALPHA_COLOR)
 
         self.rect = Rect((self.position), (self.size))
         self.rect.topleft = self.position
@@ -295,16 +302,62 @@ class UI_Sprite_Container_Filled(UI_Sprite_Container):
         super().__init__(position, size, child_anchor, child_align, child_padding)
 
         self.bg_color = bg_color
+        if (self.bg_color != None):
+            self.bg_color = Color(self.bg_color)
         self.border_color = border_color
+        if (self.border_color != None):
+            self.border_color = Color(self.border_color)
         self.border_width = border_width
 
     def update(self, surface: Surface):
-        ''' draw bg//border update childrens positions. draw children to the given surface '''
-        draw_rect(surface, self.bg_color, self.rect)
+        if (self.bg_color):
+            draw_rect(surface, self.bg_color, self.rect)
         if (self.border_width):
             draw_rect(surface, self.border_color, self.rect, width=self.border_width)
-        super().update()
+        super().update(surface)
 
+
+class UI_Container_Wrapper(UI_Sprite_Container):
+    def __init__(self,
+            position: tuple[int, int],
+            size: tuple[int, int],
+            child_anchor: str,
+            child_align: str,
+            child_padding: int,
+            bg_color,
+            border_color,
+            border_width
+        ):
+        super().__init__(position, size, child_anchor, child_align, child_padding)
+
+        self.bg_color = bg_color
+        if (self.bg_color != None):
+            self.bg_color = Color(self.bg_color)
+        self.border_color = border_color
+        if (self.border_color != None):
+            self.border_color = Color(self.border_color)
+        self.border_width = border_width
+
+    def update(self, surface: Surface):
+        if (self.bg_color):
+            draw_rect(surface, self.bg_color, self.rect)
+        if (self.border_width):
+            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
+
+        parent = self.ANCHOR_RECT
+        for child in self.children:
+            RE = child.rect
+            self.ALIGN_FUNC(RE, parent)
+            parent = RE
+
+        for container in self.children:
+            # if (type(container) == type(self)):
+            draw_rect(surface, (255,255,255), container.rect)
+            draw_rect(surface, (0, 0, 0), container.rect, width=2)
+            container.update(surface)
+
+
+#### single containers ####
 
 class UI_Container_Single(Sprite):
     ''' container for only one child 
@@ -315,12 +368,11 @@ class UI_Container_Single(Sprite):
             position: tuple[int, int],
             size: tuple[int, int],
             ref_id,
-            child_position_y: str,
             child_position_x: str,
+            child_position_y: str,
             child_padding_x: int,
             child_padding_y: int,
-            children: list[Sprite] | None,
-            active_child_index: int | None
+            child: Sprite,
         ):
         Sprite.__init__(self)
 
@@ -330,15 +382,16 @@ class UI_Container_Single(Sprite):
         self.child_padding_x = child_padding_x
         self.child_padding_y = child_padding_y
 
-        self.children = children
-        self.active_child_index = active_child_index
-        self.active_child = GroupSingle()
+        self.bg_color = None
+        self.border_width = None
+        self.border_color = None
 
-        if self.children and self.active_child_index:
-            self.active_child.add(self.children[self.active_child_index])
+        self.child = child
+        self.children = GroupSingle()
+        self.children.add(child)
 
         self.rect = Rect((self.position), (self.size))
-        
+        print(self.rect)
         self.set_position_funcs(child_position_x, child_position_y)
 
     def _position_x_left(self, child: Rect):
@@ -387,15 +440,17 @@ class UI_Container_Single(Sprite):
                 EXPECTED = ["left", "centery", "right"]
                 raise ValueError(f'child_position_y expected=[{EXPECTED}]; Found="{self.child_position_y}"')
 
-    def append_child(self, child: Sprite | list[Sprite]):
-        if (type(child) == list):
-            self.children.extend(child)
-        else:
-            self.children.append(child)
+    def add_child(self, child: Sprite):
+        ''' will replace the current child, if any '''
+        self.child = child
+        self.children.add(child)
 
     def update(self, surface: Surface):
-        self.active_child.update()
-        self.active_child.draw(surface)
+        self.children.update()
+        self.POS_FUNC_X(self.child.rect)
+        self.POS_FUNC_Y(self.child.rect)
+        self.children.draw(surface)
+
 
 class UI_Container_Single_Filled(UI_Container_Single):
     def __init__(self,
@@ -426,4 +481,4 @@ class UI_Container_Single_Filled(UI_Container_Single):
         draw_rect(surface, self.bg_color, self.rect)
         if (self.border_width):
             draw_rect(surface, self.border_color, self.rect, width=self.border_width)
-        super().update()
+        super().update(surface)

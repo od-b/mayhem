@@ -5,12 +5,8 @@ from pygame import Color
 from pygame.sprite import Sprite
 from pygame.font import Font
 
-from .PG_ui_container import UI_Sprite_Container_Filled
-
-
 class UI_Text_Box(Sprite):
-    ''' Created by container as a child
-
+    '''
         Parameters
         ---
         font_antialias: bool
@@ -154,27 +150,27 @@ class UI_Text_Box(Sprite):
         return msg
 
 
-class UI_Text_Box_Filled(UI_Text_Box):
-    def __init__(self,
-            cf_textbox: dict,
-            cf_global: dict,
-            ref_id,
-            text: str,
-            text_getter_func: Callable | None,
-            position: tuple,
-            fill_color,
-            border_color,
-            border_width,
-            width,
-            height,
-            padding_x,
-            padding_y,
-        ):
+# class UI_Wrapped_Text_Box(UI_Text_Box):
+#     def __init__(self,
+#             cf_textbox: dict,
+#             cf_global: dict,
+#             ref_id,
+#             text: str,
+#             text_getter_func: Callable | None,
+#             position: tuple,
+#             fill_color,
+#             border_color,
+#             border_width,
+#             width,
+#             height,
+#             padding_x,
+#             padding_y,
+#         ):
 
-        super().__init__(cf_textbox, cf_global, ref_id, text, text_getter_func, position)
+#         super().__init__(cf_textbox, cf_global, ref_id, text, text_getter_func, position)
 
-        self.fill_color = fill_color
-        self.border_color = border_color
-        self.border_width = border_width
+#         self.fill_color = fill_color
+#         self.border_color = border_color
+#         self.border_width = border_width
 
         

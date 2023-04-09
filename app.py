@@ -3,20 +3,29 @@ from warnings import warn as warnings_warn
 
 # installed library imports
 import pygame as pg
-## simplify some imports for readability:
 from pygame import Color
-from pygame.sprite import Group, GroupSingle
+from pygame.sprite import Sprite, Group, GroupSingle
 
-### local dir imports
+# config dicts
+from config.cf_global import CF_GLOBAL
+from config.cf_window import CF_WINDOW
+from config.cf_timer import CF_TIMER
+from config.cf_menu import CF_MENU
+from config.cf_maps import CF_MAPS
+
+# local modules
 from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
 
-# import config dicts
-from config.cf_global import CF_GLOBAL
-from config.cf_window import CF_WINDOW
-from config.cf_maps import CF_MAPS
-from config.cf_timer import CF_TIMER
+from modules.PG_ui_container import (
+    UI_Sprite_Container,
+    UI_Container_Wrapper,
+    UI_Sprite_Container_Filled,
+    UI_Container_Single,
+    UI_Container_Single_Filled
+)
+from modules.PG_ui_text_box import UI_Text_Box
 
 
 class PG_App:
@@ -39,13 +48,15 @@ class PG_App:
             cf_global: dict,
             cf_window: dict,
             cf_timer: dict,
+            cf_menu: dict,
             cf_maps: dict
         ):
 
         self.cf_global = cf_global
         self.cf_window = cf_window
-        self.cf_maps = cf_maps
         self.cf_timer = cf_timer
+        self.cf_menu = cf_menu
+        self.cf_maps = cf_maps
 
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
@@ -69,13 +80,17 @@ class PG_App:
         self.timer.block_events(self.cf_global['blocked_events'])
         self.fetch_menu_controls()
 
-        self.menu_root_group = GroupSingle()
+        self.menu_wrapper_group = GroupSingle()
         ''' group of ui sprites that may be run at any point '''
+        
+        self.menu_title_text = str("<GameName>")
 
         self.looping = True
         self.map_object_loaded = False
-        self.run_map_on_launch = True
+        self.run_map_on_launch = False
         self.print_misc_info = True
+
+        self.set_up_menu()
 
     def fetch_menu_controls(self):
         ''' fetch and store player controls from the global config '''
@@ -140,12 +155,138 @@ class PG_App:
                 case _:
                     pass
 
+    def set_up_menu(self):
+        subcontainers_left = self.cf_menu['n_subcontainers']
+        cf_containers = self.cf_menu['containers']
+        cf_text_box_styles = self.cf_menu['text_box_styles']
+        cf_wrapper = cf_containers['wrapper']
+        cf_subcontainer = cf_containers['subcontainer']
+
+        # create a wrapper to hold other containers
+        self.MENU_WRAPPER = UI_Container_Wrapper(
+            cf_wrapper['position'],
+            cf_wrapper['size'],
+            cf_wrapper['child_anchor'],
+            cf_wrapper['child_align'],
+            cf_wrapper['child_padding'],
+            cf_wrapper['bg_color'],
+            cf_wrapper['border_color'],
+            cf_wrapper['border_width']
+        )
+        self.menu_wrapper_group.add(self.MENU_WRAPPER)
+
+        # list for all subcontainers
+        self.menu_subcontainers = []
+
+        # store the calculated sizes
+        subcontainer_width = int(cf_subcontainer['size'][0])
+        subcontainer_height = int(cf_subcontainer['size'][1])
+        unclaimed_height = 0
+
+        ### subcontainer 1 --> menu title ###
+        # slim down the title text box by -ish- half the regular height
+        title_container_height = int(subcontainer_height / 2)
+
+        # create text box within a single-container to keep it centered
+        TITLE_CONTAINER = UI_Container_Single(
+            cf_subcontainer['position'],
+            (subcontainer_width, title_container_height),
+            None, "centerx", "centery", 0, 0,
+            UI_Text_Box(
+                cf_text_box_styles['xlarge'], self.cf_global,
+                None, '', self.get_menu_title_text, (0, 0)
+            )
+        )
+        self.menu_subcontainers.append(TITLE_CONTAINER)
+        unclaimed_height += int(subcontainer_height - title_container_height)
+
+        ### subcontainer 2 --> subtitle text ###
+        subtitle_container_height = int(subcontainer_height / 1.3)
+        SUBTITLE_CONTAINER = UI_Container_Single(
+            cf_subcontainer['position'],
+            (subcontainer_width, subtitle_container_height),
+            None, "centerx", "centery", 0, 0,
+            UI_Text_Box(
+                cf_text_box_styles['large'], self.cf_global,
+                None, '', self.get_menu_subtitle_text, (0, 0)
+            )
+        )
+        self.menu_subcontainers.append(SUBTITLE_CONTAINER)
+        unclaimed_height += int(subcontainer_height - subtitle_container_height)
+
+        # give the freed space from title back to the remaining subcontainers
+        subcontainers_left -= len(self.menu_subcontainers)
+        subcontainer_height += int(unclaimed_height / subcontainers_left)
+
+        ### subcontainer 3 --> map selection || end map
+        # 1) out of map:
+        # create another wrapper for containing buttons
+        btn_padding = int(14)
+        SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
+            cf_subcontainer['position'],
+            (subcontainer_width, subcontainer_height),
+            "left", "right", btn_padding, None, None, None
+        )
+
+        # n_buttons = len(self.valid_cf_maps_keys)
+        n_buttons = 4
+        total_padded_width = int(btn_padding * (n_buttons + 1))
+        btn_width = int((subcontainer_width - total_padded_width) / n_buttons)
+        btn_height = int(subcontainer_height - (2 * btn_padding))
+
+        btn_list = []
+        while (n_buttons != 0):
+            BTN = UI_Container_Single(
+                cf_subcontainer['position'],
+                (btn_width, btn_height),
+                None, "centerx", "centery", 0, 0,
+                UI_Text_Box(
+                    cf_text_box_styles['alt_small'], self.cf_global,
+                    None, '', self.get_btn_text, (0, 0)
+                )
+            )
+            btn_list.append(BTN)
+            n_buttons -= 1
+
+        SUB_3_BTN_WRAPPER.add_child(btn_list)
+        self.menu_subcontainers.append(SUB_3_BTN_WRAPPER)
+        subcontainers_left -= 1
+
+        # create the rest as regular subcontainers
+        for _ in range(subcontainers_left):
+            subcontainer = UI_Sprite_Container(
+                cf_subcontainer['position'],
+                (subcontainer_width, subcontainer_height),
+                cf_subcontainer['child_anchor'],
+                cf_subcontainer['child_align'],
+                cf_subcontainer['child_padding']
+            )
+            self.menu_subcontainers.append(subcontainer)
+
+        # add all subcontainers to the wrapper
+        self.MENU_WRAPPER.add_child(self.menu_subcontainers)
+
+        #### set up the rest of the menu content ####
+
+    def get_menu_title_text(self):
+        return self.menu_title_text
+
+    def get_menu_subtitle_text(self):
+        if (self.map_object_loaded):
+            # TODO: MAP BEST TIME // POINTS
+            pass
+        else:
+            return "Select a map! Confirm with space"
+
+    def get_btn_text(self):
+        return str("test")
+
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
 
         while (self.looping):
             self.window.fill_surface()
-            self.menu_root_group.update()
+            self.menu_wrapper_group.update(self.window.surface)
             self.check_events()
             pg.display.update()
 
@@ -163,7 +304,6 @@ class PG_App:
                 else:
                     # MENU CALL
                     pass
-
 
         if (self.print_misc_info):
             print('[APP][loop] App exiting through main loop')
@@ -183,7 +323,7 @@ if __name__ == '__main__':
 
     if (run_app):
         # load the app
-        APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MAPS)
+        APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MENU, CF_MAPS)
         APP.loop()
 
     pg.quit()

@@ -21,11 +21,14 @@ MAP_RECT_INFO = {
     'h': int(window_height - map_surf_offset['top'] - map_surf_offset['bottom']),
 }
 
-# some definitions to make it easy to position other configs according to the map
+# some definitions to make it easy to position other configs dynamically
+WINDOW_CENTER = (int(window_width / 2), int(window_height / 2))
 MAP_TOPLEFT_POS = (map_surf_offset['left'], map_surf_offset['top'])
 MAP_TOPRIGHT_POS = ((map_surf_offset['left'] + MAP_RECT_INFO['w']), (map_surf_offset['top']))
 MAP_BOTTOMLEFT_POS = (map_surf_offset['left'], (map_surf_offset['top'] + MAP_RECT_INFO['h']))
 MAP_BOTTOMRIGHT_POS = ((map_surf_offset['left'] + MAP_RECT_INFO['w']), (map_surf_offset['top'] + MAP_RECT_INFO['h']))
+MAP_MIDTOP_POS = ((map_surf_offset['left'] + int(MAP_RECT_INFO['w'] / 2)), map_surf_offset['top'])
+MAP_MIDBOTTOM_POS = ((map_surf_offset['left'] + int(MAP_RECT_INFO['w'] / 2)), (map_surf_offset['top'] + MAP_RECT_INFO['h']))
 
 # configure misc window settings
 CF_WINDOW = {

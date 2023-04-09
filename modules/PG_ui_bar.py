@@ -142,7 +142,7 @@ class UI_Bar(Sprite):
         if (self.bar_border_width):
             draw_rect(self.BAR_SURF, self.bar_border_color, BAR_RECT, width=self.bar_border_width)
     
-    def update(self):
+    def update(self, surface):
         pass
 
     def __str__(self):
