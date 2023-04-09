@@ -1,7 +1,90 @@
 from os.path import join as os_path_join
 from .colors import RGB
 
-# bar styles
+#### FONTS ####
+# shared default font paths
+regular_path = os_path_join('assets','fonts','JetBrainsMono-Regular.ttf')
+italic_path = os_path_join('assets','fonts','JetBrainsMono-Italic.ttf')
+semibold_path = os_path_join('assets','fonts','JetBrainsMono-SemiBold.ttf')
+semibold_italic_path = os_path_join('assets','fonts','JetBrainsMono-SemiBoldItalic.ttf')
+bold_path = os_path_join('assets','fonts','JetBrainsMono-Bold.ttf')
+
+# shared default font sizes
+small_font_size = int(24)
+large_font_size = int(30)
+xlarge_font_size = int(40)
+
+font_antialias = True
+
+CF_FONTS = {
+    'regular_regular_bone': {
+        'path':      regular_path,
+        'size':      small_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['bone'],
+        'bg_color':  None
+    },
+    'semibold_regular_bone': {
+        'path':      semibold_path,
+        'size':      small_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['bone'],
+        'bg_color':  None
+    },
+    'semibold_regular_dutchwhite': {
+        'path':      semibold_path,
+        'size':      small_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['dutchwhite'],
+        'bg_color':  None
+    },
+    'regular_large_bone': {
+        'path':      regular_path,
+        'size':      large_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['bone'],
+        'bg_color':  None
+    },
+    'semibold_large_blue': {
+        'path':      semibold_path,
+        'size':      large_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['blue'],
+        'bg_color':  None
+    },
+    'bold_large_bone': {
+        'path':      bold_path,
+        'size':      large_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['bone'],
+        'bg_color':  None
+    },
+    'bold_large_green': {
+        'path':      bold_path,
+        'size':      large_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['green'],
+        'bg_color':  None
+    },
+    'bold_large_darkblue': {
+        'path':      bold_path,
+        'size':      large_font_size,
+        'antialias': font_antialias,
+        'color':     RGB['blue_dark'],
+        'bg_color':  None
+    },
+    'bold_xlarge_darkblue': {
+        'path':      bold_path,
+        'size':      40,
+        'antialias': font_antialias,
+        'color':     RGB['blue_dark'],
+        'bg_color':  None
+    }
+}
+''' Naming convention: <type_size_RGBcolorName>, e.g. <bold_small_orange>'''
+
+
+#### BAR STYLES ####
 CF_BARS = {
     'green': {
         'bg_color':             RGB['sage'],
@@ -59,82 +142,4 @@ CF_BARS = {
         'internal_padding_x':   int(2),
         'internal_padding_y':   int(2)
     },
-}
-
-
-# default, shared font paths. can be replaced individually
-regular_path = os_path_join('assets','fonts','JetBrainsMono-Regular.ttf')
-italic_path = os_path_join('assets','fonts','JetBrainsMono-Italic.ttf')
-semibold_path = os_path_join('assets','fonts','JetBrainsMono-SemiBold.ttf')
-semibold_italic_path = os_path_join('assets','fonts','JetBrainsMono-SemiBoldItalic.ttf')
-bold_path = os_path_join('assets','fonts','JetBrainsMono-Bold.ttf')
-
-small_font_size = int(24)
-large_font_size = int(30)
-
-# text box styles
-CF_TEXT_BOXES = {
-    'regular_small_bone': {
-        'text_bg_color':  None,
-        'font_size':      small_font_size,
-        'font_path':      regular_path,
-        'font_antialias': True,
-        'font_color':     RGB['bone']
-    },
-    'semibold_small_bone': {
-        'text_bg_color':  None,
-        'font_size':      small_font_size,
-        'font_path':      semibold_path,
-        'font_antialias': True,
-        'font_color':     RGB['bone']
-    },
-    'semibold_small_dutchwhite': {
-        'text_bg_color':  None,
-        'font_size':      small_font_size,
-        'font_path':      semibold_path,
-        'font_antialias': True,
-        'font_color':     RGB['dutchwhite']
-    },
-    'regular_large_bone': {
-        'text_bg_color':  None,
-        'font_size':      large_font_size,
-        'font_path':      regular_path,
-        'font_antialias': True,
-        'font_color':     RGB['bone']
-    },
-    'semibold_large_blue': {
-        'text_bg_color':  None,
-        'font_size':      large_font_size,
-        'font_path':      semibold_path,
-        'font_antialias': True,
-        'font_color':     RGB['blue']
-    },
-    'bold_large_bone': {
-        'text_bg_color':  None,
-        'font_size':      large_font_size,
-        'font_path':      bold_path,
-        'font_antialias': True,
-        'font_color':     RGB['bone']
-    },
-    'bold_large_green': {
-        'text_bg_color':  None,
-        'font_size':      large_font_size,
-        'font_path':      bold_path,
-        'font_antialias': True,
-        'font_color':     RGB['green']
-    },
-    'bold_large_darkblue': {
-        'text_bg_color':  None,
-        'font_size':      large_font_size,
-        'font_path':      bold_path,
-        'font_antialias': True,
-        'font_color':     RGB['blue_dark']
-    },
-    'bold_xlarge_darkblue': {
-        'text_bg_color':  None,
-        'font_size':      40,
-        'font_path':      bold_path,
-        'font_antialias': True,
-        'font_color':     RGB['blue_dark']
-    }
 }

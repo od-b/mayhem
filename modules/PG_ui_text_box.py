@@ -24,7 +24,7 @@ class UI_Text_Box(Sprite):
     '''
 
     def __init__(self,
-            cf_textbox: dict,
+            cf_font: dict,
             cf_global: dict,
             ref_id,
             text: str,
@@ -33,7 +33,7 @@ class UI_Text_Box(Sprite):
         ):
 
         Sprite.__init__(self)
-        self.cf_textbox = cf_textbox
+        self.cf_font = cf_font
         self.cf_global = cf_global
         self.ref_id = ref_id
         self.text = text
@@ -41,12 +41,13 @@ class UI_Text_Box(Sprite):
         self.position = position
 
         # store config settings
-        self.font_path = str(cf_textbox['font_path'])
-        self.font_size = int(cf_textbox['font_size'])
-        self.font_antialas: bool = cf_textbox['font_antialias']
-        self.font_color = Color(cf_textbox['font_color'])
-        if (cf_textbox['text_bg_color']):
-            self.bg_color = Color(cf_textbox['text_bg_color'])
+        self.font_path = str(cf_font['path'])
+        self.font_size = int(cf_font['size'])
+        self.font_antialas: bool = cf_font['antialias']
+        self.font_color = Color(cf_font['color'])
+
+        if (cf_font['bg_color']):
+            self.bg_color = Color(cf_font['bg_color'])
         else:
             self.bg_color = None
 
@@ -152,7 +153,7 @@ class UI_Text_Box(Sprite):
 
 # class UI_Wrapped_Text_Box(UI_Text_Box):
 #     def __init__(self,
-#             cf_textbox: dict,
+#             cf_font: dict,
 #             cf_global: dict,
 #             ref_id,
 #             text: str,
@@ -167,7 +168,7 @@ class UI_Text_Box(Sprite):
 #             padding_y,
 #         ):
 
-#         super().__init__(cf_textbox, cf_global, ref_id, text, text_getter_func, position)
+#         super().__init__(cf_font, cf_global, ref_id, text, text_getter_func, position)
 
 #         self.fill_color = fill_color
 #         self.border_color = border_color

@@ -13,7 +13,7 @@ from pygame.mask import Mask
 # image_save(self.surface, "screenshot.png")
 
 ## general classes
-from .general.exceptions import ConfigError, LoopError
+from .exceptions import ConfigError, LoopError
 ## pygame specific classes
 from .PG_timer import PG_Timer
 from .PG_block import Block
@@ -111,8 +111,10 @@ class PG_Map:
             cf_bar_container['position'],
             cf_bar_container['size'],
             cf_bar_container['child_anchor'],
-            cf_bar_container['child_align'],
-            cf_bar_container['child_padding'],
+            cf_bar_container['child_align_x'],
+            cf_bar_container['child_align_y'],
+            cf_bar_container['child_padding_x'],
+            cf_bar_container['child_padding_y'],
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
 

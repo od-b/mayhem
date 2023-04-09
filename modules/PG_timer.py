@@ -3,7 +3,7 @@ from pygame import time, event, Surface
 from pygame.sprite import Sprite, Group, GroupSingle
 from pygame.event import Event
 
-from .general.timer import Timer
+from .timer import Timer
 from .PG_ui_text_box import UI_Text_Box
 from .PG_ui_container import UI_Sprite_Container
 
@@ -42,8 +42,10 @@ class PG_Timer(Timer):
             cf_text_container['position'],
             cf_text_container['size'],
             cf_text_container['child_anchor'],
-            cf_text_container['child_align'],
-            cf_text_container['child_padding']
+            cf_text_container['child_align_x'],
+            cf_text_container['child_align_y'],
+            cf_text_container['child_padding_x'],
+            cf_text_container['child_padding_y']
         )
         self.container_group.add(self.TEXT_CONTAINER)
         

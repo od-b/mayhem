@@ -1,6 +1,6 @@
 #### MAP CONFIG SHARED BETWEEN ALL MAPS ####
 from os.path import join as os_path_join
-from .ui_components import CF_BARS, CF_TEXT_BOXES
+from .ui_components import CF_BARS, CF_FONTS
 from .cf_window import MAP_TOPLEFT_POS, MAP_MIDTOP_POS
 
 
@@ -80,15 +80,19 @@ MAP_CONTAINERS = {
         'size':             (bar_container_width, bar_container_height),
         'position':         (bar_container_pos_x, bar_container_pos_y),
         'child_anchor':     str("top"),
-        'child_align':      str("bottomleft"),
-        'child_padding':    int(10), # pixels of padding added between the containers children, bars in this case
+        'child_align_x':    str("inline_left"),
+        'child_align_y':    str("bottom"),
+        'child_padding_x':  int(0),
+        'child_padding_y':  int(10),
     },
     'text_container': {
-        'text_box_style':   CF_TEXT_BOXES['semibold_small_bone'],
+        'text_box_style':   CF_FONTS['semibold_regular_bone'],
         'size':             (text_box_container_width, text_box_container_height),
         'position':         (text_box_pos_x, text_box_pos_y),
         'child_anchor':     str("top"),
-        'child_align':      str("bottom"),
-        'child_padding':    int(10), # pixels of padding added between the containers children, bars in this case
+        'child_align_x':    str("centerx"),
+        'child_align_y':    str("bottom"),
+        'child_padding_x':  int(0),
+        'child_padding_y':  int(10),
     }
 }

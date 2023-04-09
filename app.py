@@ -87,7 +87,7 @@ class PG_App:
 
         self.looping = True
         self.map_object_loaded = False
-        self.run_map_on_launch = False
+        self.run_map_on_launch = True
         self.print_misc_info = True
 
         self.set_up_menu()
@@ -156,46 +156,71 @@ class PG_App:
                     pass
 
     def set_up_menu(self):
-        subcontainers_left = self.cf_menu['n_subcontainers']
-        cf_containers = self.cf_menu['containers']
-        cf_text_box_styles = self.cf_menu['text_box_styles']
-        cf_wrapper = cf_containers['wrapper']
-        cf_subcontainer = cf_containers['subcontainer']
+        ''' This function has a lot of constants / magic numbers / settings
+        
+            Originally tried doing this exclusively through config, but no way tbh.
+            Callable references, etc, are for one not viable if that is done. Also, nearly 
+            everything relies on calculating previous sizes.
+            
+            As a compromise, I chose to do the very size of the menu frame in config, then 
+            dynamically position all the subcontainers within the set bounds,
+        '''
+
+        N_SUBCONTAINERS = 5
+        subcontainers_left = int(N_SUBCONTAINERS)
+
+        cf_fonts = self.cf_menu['fonts']
+        cf_wrapper = self.cf_menu['wrapper']
 
         # create a wrapper to hold other containers
         self.MENU_WRAPPER = UI_Container_Wrapper(
             cf_wrapper['position'],
             cf_wrapper['size'],
             cf_wrapper['child_anchor'],
-            cf_wrapper['child_align'],
-            cf_wrapper['child_padding'],
+            cf_wrapper['child_align_x'],
+            cf_wrapper['child_align_y'],
+            cf_wrapper['child_padding_x'],
+            cf_wrapper['child_padding_y'],
             cf_wrapper['bg_color'],
             cf_wrapper['border_color'],
             cf_wrapper['border_width']
         )
+        # add wrapper to the apps groupsingle for updates
         self.menu_wrapper_group.add(self.MENU_WRAPPER)
+
+        #### SUBCONTAINER CREATION ####
+        # first, some setup and declarations. 
+        MENU_WIDTH = int(cf_wrapper['size'][0])
+        MENU_HEIGHT = int(cf_wrapper['size'][1])
+
+        # note: padding is often +1 to account for the fact that the first elem is padded twice (top/bottom)
+
+        # find cumulative padding applied by the wrapper, calculate sizes accordingly
+        wrapper_cum_padding_x = int(cf_wrapper['child_padding_x'] * 2)
+        wrapper_cum_padding_y = int(cf_wrapper['child_padding_y'] * (N_SUBCONTAINERS + 1))
+
+        subcontainer_w = int(MENU_WIDTH - wrapper_cum_padding_x)
+        subcontainer_h = int((MENU_HEIGHT - wrapper_cum_padding_y) / (N_SUBCONTAINERS))
+
+        dummy_pos = (self.MENU_WRAPPER.rect.center)  # does not really matter due to autopositioning
+        unclaimed_height = 0
 
         # list for all subcontainers
         self.menu_subcontainers = []
 
-        # store the calculated sizes
-        subcontainer_width = int(cf_subcontainer['size'][0])
-        subcontainer_height = int(cf_subcontainer['size'][1])
-        unclaimed_height = 0
 
 
         ### subcontainer 1 --> menu title ###
         # slim down the title text box by -ish- half the regular height
-        title_container_height = int(subcontainer_height / 2)
-        unclaimed_height += int(subcontainer_height - title_container_height)
+        title_container_height = int(subcontainer_h / 2)
+        unclaimed_height += int(subcontainer_h - title_container_height)
 
         # create text box within a single-container to keep it centered
         TITLE_CONTAINER = UI_Container_Single(
-            cf_subcontainer['position'],
-            (subcontainer_width, title_container_height),
+            dummy_pos, (subcontainer_w, title_container_height),
             None, "centerx", "centery", 0, 0,
             UI_Text_Box(
-                cf_text_box_styles['xlarge'], self.cf_global,
+                cf_fonts['xlarge'], self.cf_global,
                 None, '', self.get_menu_title_text, (0, 0)
             )
         )
@@ -203,15 +228,14 @@ class PG_App:
 
 
         ### subcontainer 2 --> subtitle text ###
-        subtitle_container_height = int(subcontainer_height / 1.5)
-        unclaimed_height += int(subcontainer_height - subtitle_container_height)
+        subtitle_container_height = int(subcontainer_h / 1.5)
+        unclaimed_height += int(subcontainer_h - subtitle_container_height)
     
         SUBTITLE_CONTAINER = UI_Container_Single(
-            cf_subcontainer['position'],
-            (subcontainer_width, subtitle_container_height),
+            dummy_pos, (subcontainer_w, subtitle_container_height),
             None, "centerx", "centery", 0, 0,
             UI_Text_Box(
-                cf_text_box_styles['large'], self.cf_global,
+                cf_fonts['large'], self.cf_global,
                 None, '', self.get_menu_subtitle_text, (0, 0)
             )
         )
@@ -220,30 +244,31 @@ class PG_App:
 
         ### subcontainer 3 --> map selection || end map
         # create an internal wrapper for containing buttons
-        sub_3_height = int(subcontainer_height / 2)
-        unclaimed_height += int(subcontainer_height - sub_3_height)
+        sub_3_height = int(subcontainer_h / 2)
+        unclaimed_height += int(subcontainer_h - sub_3_height)
 
-        btn_padding = int(4)
+        btn_padding_x = int(4)
+        btn_padding_y = int(4)
+
         SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
-            cf_subcontainer['position'],
-            (subcontainer_width, sub_3_height),
-            "left", "right", btn_padding, None, None, None
+            dummy_pos, (subcontainer_w, sub_3_height),
+            "left", "right", "centery",
+            btn_padding_x, btn_padding_y, None, None, None
         )
 
         # n_buttons = len(self.valid_cf_maps_keys)
         n_buttons = 4
-        total_padded_width = int(btn_padding * (n_buttons + 1))
-        btn_width = int((subcontainer_width - total_padded_width) / n_buttons)
-        btn_height = int(sub_3_height - (2 * btn_padding))
+        total_padded_width = int(btn_padding_x * (n_buttons + 1))
+        btn_width = int((subcontainer_w - total_padded_width) / n_buttons)
+        btn_height = int(sub_3_height - (2 * btn_padding_y))
 
         btn_list = []
         while (n_buttons != 0):
             BTN = UI_Container_Single(
-                cf_subcontainer['position'],
-                (btn_width, btn_height),
+                dummy_pos, (btn_width, btn_height),
                 None, "centerx", "centery", 0, 0,
                 UI_Text_Box(
-                    cf_text_box_styles['alt_small'], self.cf_global,
+                    cf_fonts['alt_regular'], self.cf_global,
                     None, '', self.get_btn_text, (0, 0)
                 )
             )
@@ -255,16 +280,14 @@ class PG_App:
 
         # give the freed space from title back to the remaining subcontainers
         subcontainers_left -= len(self.menu_subcontainers)
-        subcontainer_height += int(unclaimed_height / subcontainers_left)
+        subcontainer_h += int(unclaimed_height / subcontainers_left)
 
         # create the rest as regular subcontainers
         for _ in range(subcontainers_left):
             subcontainer = UI_Sprite_Container(
-                cf_subcontainer['position'],
-                (subcontainer_width, subcontainer_height),
-                cf_subcontainer['child_anchor'],
-                cf_subcontainer['child_align'],
-                cf_subcontainer['child_padding']
+                dummy_pos,
+                (subcontainer_w, subcontainer_h),
+                "left", "right", "centery", int(4), int(0)
             )
             self.menu_subcontainers.append(subcontainer)
 
