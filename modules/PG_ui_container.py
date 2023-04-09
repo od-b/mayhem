@@ -56,11 +56,7 @@ class UI_Container(Sprite):
         # create a per pixel alpha surface
         self.ALPHA_COLOR = Color(0,0,0,0)
 
-        # self.image = Surface(self.size, flags=SRCALPHA)
-        # self.image.fill(self.ALPHA_COLOR)
-
         self.rect = Rect((self.position), (self.size))
-        self.rect.topleft = self.position
         self.children = []
         ''' group of children with rects, that depend on the container for updates/positioning '''
 
@@ -68,7 +64,6 @@ class UI_Container(Sprite):
         self.set_anchor_rect(child_anchor)
 
     def _align_to_left_of(self, child: Rect, parent: Rect):
-        # move_ip()
         child.right = (parent.left - self.CHILD_PADDING)
         child.centery = parent.centery
 
@@ -225,16 +220,6 @@ class UI_Sprite_Container(UI_Container):
     ''' Surface container for children that are sprites. Expanded functionality.
         * self.children is a group for this container.
         * update takes in a surface parameter and draws children onto the surface after positioning.
-        ---
-        child_anchor:
-            align-parent for positioning the first child, relative to the inner bounds of self.\n
-            the next children will have the previous child as reference.
-            expects: str in ["top_centerx", "left_centery"]
-
-        child_align:
-            determines where children are aligned/positioned, relative to the root and other children
-            expects: str in ["top", "bottom", "left", "right", "bottomleft", "topleft"]
-
         * See UI_Container for further info
         '''
     def __init__(self,
@@ -351,10 +336,21 @@ class UI_Container_Wrapper(UI_Sprite_Container):
             parent = RE
 
         for container in self.children:
-            # if (type(container) == type(self)):
             draw_rect(surface, (255,255,255), container.rect)
             draw_rect(surface, (0, 0, 0), container.rect, width=2)
+            # if container is a wrapper, reposition anchor rect
+            if (type(container) == type(self)):
+                container.set_anchor_rect(None)
             container.update(surface)
+
+
+# for container in reposition:
+#     parent = container.ANCHOR_RECT
+#     for child in container.children:
+#         RE = child.rect
+#         container.ALIGN_FUNC(RE, parent)
+#         parent = RE
+#     container.update(surface)
 
 
 #### single containers ####
@@ -387,11 +383,9 @@ class UI_Container_Single(Sprite):
         self.border_color = None
 
         self.child = child
-        self.children = GroupSingle()
-        self.children.add(child)
+        self.children = GroupSingle(child)
 
         self.rect = Rect((self.position), (self.size))
-        print(self.rect)
         self.set_position_funcs(child_position_x, child_position_y)
 
     def _position_x_left(self, child: Rect):

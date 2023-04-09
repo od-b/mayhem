@@ -7,7 +7,7 @@ menu_height = int(600)
 menu_pos_x = int(WINDOW_CENTER[0] - int(menu_width / 2))
 menu_pos_y = int(WINDOW_CENTER[1] - int(menu_height / 2))
 
-N_SUBCONTAINERS = int(4)
+N_SUBCONTAINERS = int(5)
 
 WRAPPER = {
     'position': (menu_pos_x, menu_pos_y),

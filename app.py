@@ -183,9 +183,11 @@ class PG_App:
         subcontainer_height = int(cf_subcontainer['size'][1])
         unclaimed_height = 0
 
+
         ### subcontainer 1 --> menu title ###
         # slim down the title text box by -ish- half the regular height
         title_container_height = int(subcontainer_height / 2)
+        unclaimed_height += int(subcontainer_height - title_container_height)
 
         # create text box within a single-container to keep it centered
         TITLE_CONTAINER = UI_Container_Single(
@@ -198,10 +200,12 @@ class PG_App:
             )
         )
         self.menu_subcontainers.append(TITLE_CONTAINER)
-        unclaimed_height += int(subcontainer_height - title_container_height)
+
 
         ### subcontainer 2 --> subtitle text ###
-        subtitle_container_height = int(subcontainer_height / 1.3)
+        subtitle_container_height = int(subcontainer_height / 1.5)
+        unclaimed_height += int(subcontainer_height - subtitle_container_height)
+    
         SUBTITLE_CONTAINER = UI_Container_Single(
             cf_subcontainer['position'],
             (subcontainer_width, subtitle_container_height),
@@ -212,19 +216,17 @@ class PG_App:
             )
         )
         self.menu_subcontainers.append(SUBTITLE_CONTAINER)
-        unclaimed_height += int(subcontainer_height - subtitle_container_height)
 
-        # give the freed space from title back to the remaining subcontainers
-        subcontainers_left -= len(self.menu_subcontainers)
-        subcontainer_height += int(unclaimed_height / subcontainers_left)
 
         ### subcontainer 3 --> map selection || end map
-        # 1) out of map:
-        # create another wrapper for containing buttons
-        btn_padding = int(14)
+        # create an internal wrapper for containing buttons
+        sub_3_height = int(subcontainer_height / 2)
+        unclaimed_height += int(subcontainer_height - sub_3_height)
+
+        btn_padding = int(4)
         SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
             cf_subcontainer['position'],
-            (subcontainer_width, subcontainer_height),
+            (subcontainer_width, sub_3_height),
             "left", "right", btn_padding, None, None, None
         )
 
@@ -232,7 +234,7 @@ class PG_App:
         n_buttons = 4
         total_padded_width = int(btn_padding * (n_buttons + 1))
         btn_width = int((subcontainer_width - total_padded_width) / n_buttons)
-        btn_height = int(subcontainer_height - (2 * btn_padding))
+        btn_height = int(sub_3_height - (2 * btn_padding))
 
         btn_list = []
         while (n_buttons != 0):
@@ -250,7 +252,10 @@ class PG_App:
 
         SUB_3_BTN_WRAPPER.add_child(btn_list)
         self.menu_subcontainers.append(SUB_3_BTN_WRAPPER)
-        subcontainers_left -= 1
+
+        # give the freed space from title back to the remaining subcontainers
+        subcontainers_left -= len(self.menu_subcontainers)
+        subcontainer_height += int(unclaimed_height / subcontainers_left)
 
         # create the rest as regular subcontainers
         for _ in range(subcontainers_left):
@@ -263,7 +268,7 @@ class PG_App:
             )
             self.menu_subcontainers.append(subcontainer)
 
-        # add all subcontainers to the wrapper
+        # # add all subcontainers to the wrapper
         self.MENU_WRAPPER.add_child(self.menu_subcontainers)
 
         #### set up the rest of the menu content ####
