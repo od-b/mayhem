@@ -169,27 +169,5 @@ class UI_Text_Box(Sprite):
         return msg
 
 
-# class UI_Wrapped_Text_Box(UI_Text_Box):
-#     def __init__(self,
-#             cf_font: dict,
-#             cf_global: dict,
-#             ref_id,
-#             text: str,
-#             text_getter_func: Callable | None,
-#             position: tuple,
-#             fill_color,
-#             border_color,
-#             border_width,
-#             width,
-#             height,
-#             padding_x,
-#             padding_y,
-#         ):
-
-#         super().__init__(cf_font, cf_global, ref_id, text, text_getter_func, position)
-
-#         self.fill_color = fill_color
-#         self.border_color = border_color
-#         self.border_width = border_width
-
-        
+# class UI_Text_Box_Filled(UI_Text_Box):
+    

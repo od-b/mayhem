@@ -360,17 +360,15 @@ class UI_Single_Centered_Container_Filled(UI_Single_Centered_Container):
             child_padding_x: int,
             child_padding_y: int,
             child: Sprite | None,
-            bg_color: tuple | Color | None,
-            border_color: tuple | Color | None,
-            border_width: int | None
+            cf_bg: dict
         ):
         super().__init__(position, size, child_padding_x, child_padding_y, child)
 
-        if (bg_color):
-            self.bg_color = Color(bg_color)
-        if (border_width):
-            self.border_width = int(border_width)
-            self.border_color = Color(border_color)
+        if (cf_bg['color']):
+            self.bg_color = Color(cf_bg['color'])
+        if (cf_bg['border_width']):
+            self.border_width = int(cf_bg['border_width'])
+            self.border_color = Color(cf_bg['border_color'])
 
     def update(self, surface):
         if (self.bg_color):
@@ -391,20 +389,23 @@ class UI_Sprite_Container_Filled(UI_Sprite_Container):
             child_align_y: str,
             child_padding_x: int,
             child_padding_y: int,
-            bg_color,
-            border_color,
-            border_width
+            cf_bg: dict | None
         ):
         super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
                          child_align_x, child_align_y, child_padding_x, child_padding_y)
 
-        self.bg_color = bg_color
-        if (self.bg_color != None):
-            self.bg_color = Color(self.bg_color)
-        self.border_color = border_color
-        if (self.border_color != None):
-            self.border_color = Color(self.border_color)
-        self.border_width = border_width
+        if (cf_bg == None):
+            self.bg_color = None
+            self.border_color = None
+            self.border_width = 0
+        else:
+            self.bg_color = cf_bg['color']
+            if (self.bg_color != None):
+                self.bg_color = Color(self.bg_color)
+            self.border_color = cf_bg['border_color']
+            if (self.border_color != None):
+                self.border_color = Color(self.border_color)
+            self.border_width = cf_bg['border_width']
 
     def update(self, surface: Surface):
         if (self.bg_color):
@@ -428,20 +429,23 @@ class UI_Container_Wrapper(UI_Sprite_Container):
             child_align_y: str,
             child_padding_x: int,
             child_padding_y: int,
-            bg_color,
-            border_color,
-            border_width
+            cf_bg: dict | None
         ):
         super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
                          child_align_x, child_align_y, child_padding_x, child_padding_y)
 
-        self.bg_color = bg_color
-        if (self.bg_color != None):
-            self.bg_color = Color(self.bg_color)
-        self.border_color = border_color
-        if (self.border_color != None):
-            self.border_color = Color(self.border_color)
-        self.border_width = border_width
+        if (cf_bg == None):
+            self.bg_color = None
+            self.border_width = None
+            self.border_color = None
+        else:
+            self.bg_color = cf_bg['color']
+            if (self.bg_color != None):
+                self.bg_color = Color(self.bg_color)
+            self.border_color = cf_bg['border_color']
+            if (self.border_color != None):
+                self.border_color = Color(self.border_color)
+            self.border_width = cf_bg['border_width']
 
     def update(self, surface: Surface):
         if (self.bg_color):

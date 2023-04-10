@@ -1,6 +1,7 @@
-from .colors import RGB
-from .ui_components import CF_BARS, CF_FONTS
+from .colors import RGB, RGBA
+from .fonts import cf_font
 from .cf_window import WINDOW_CENTER
+from .rect_styles import CF_FILLED_RECT
 
 menu_width = 800
 menu_height = 600
@@ -20,27 +21,26 @@ CF_MENU = {
         'child_align_y': str("bottom"),
         'child_padding_x': int(0),
         'child_padding_y': int(10),
-        'bg_color': RGB['blue_light'],
-        'border_color': RGB['blue'],
-        'border_width': int(menu_border_width),
+        'bg': CF_FILLED_RECT['lightblue_on_blue']
     },
     'fonts': {
-        'regular':      CF_FONTS['regular_regular_bone'],
-        'alt_regular':  CF_FONTS['semibold_regular_dutchwhite'],
-        'large':        CF_FONTS['semibold_large_blue'],
-        'alt_large':    CF_FONTS['bold_large_darkblue'],
-        'xlarge':       CF_FONTS['bold_xlarge_darkblue']
+        'regular':      cf_font('normal', 'bone', 'regular', None),
+        'alt_regular':  cf_font('normal', 'dutchwhite', 'semibold', None),
+        'large':        cf_font('large', 'blue', 'semibold', None),
+        'alt_large':    cf_font('large', 'blue_dark', 'bold', None),
+        'xlarge':       cf_font('xlarge', 'blue_dark', 'bold', None)
     },
+    # buttons combine two backgrounds and two fonts
     'buttons': {
         'map_selection': {
-            'font': CF_FONTS['semibold_regular_bone'],
-            'bg_color': RGB['beige'],
-            'border_color': RGB['orange'],
-            'border_width': int(2),
-            'alt_font': CF_FONTS['bold_medium_bone'],
-            'alt_bg_color': RGB['orange'],
-            'alt_border_color': RGB['beige'],
-            'alt_border_width': int(4),
-        }
+            'default': {
+                'bg':   CF_FILLED_RECT['beige_on_orange'],
+                'font': cf_font(24, 'bone', 'bold', None)
+            },
+            'alt': {
+                'bg':   CF_FILLED_RECT['orange_on_beige'],
+                'font': cf_font(26, 'bone', 'bold', None)
+            }
+        },
     }
 }

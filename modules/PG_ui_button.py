@@ -22,21 +22,24 @@ class UI_Button(Sprite):
             alt_state_bool_func: Callable
         ):
         Sprite.__init__(self)
+        
+        
+        cf_default = cf_button['default']
+        cf_alt = cf_button['alt']
 
-        self.text_box = UI_Text_Box(cf_button['font'], cf_global, ref_id, text, text_getter_func, ref_id, position)
-        self.alt_text_box = UI_Text_Box(cf_button['alt_font'], cf_global, ref_id, text, text_getter_func, ref_id, position)
+        self.text_box = UI_Text_Box(cf_default['font'], cf_global, ref_id, text, text_getter_func, ref_id, position)
+        self.alt_text_box = UI_Text_Box(cf_alt['font'], cf_global, ref_id, text, text_getter_func, ref_id, position)
 
         self.alt_state_bool_func = alt_state_bool_func
         self.position = position
-        self.cf_button = cf_button
 
-        self.bg_color = self.col_or_none(cf_button['bg_color'])
-        self.border_color = self.col_or_none(cf_button['border_color'])
-        self.border_width = self.int_or_none(cf_button['border_width'])
+        self.bg_color = self.col_or_none(cf_default['bg']['color'])
+        self.border_color = self.col_or_none(cf_default['bg']['border_color'])
+        self.border_width = self.int_or_none(cf_default['bg']['border_width'])
 
-        self.alt_bg_color = self.col_or_none(cf_button['alt_bg_color'])
-        self.alt_border_color = self.col_or_none(cf_button['alt_border_color'])
-        self.alt_border_width = self.int_or_none(cf_button['alt_border_width'])
+        self.alt_bg_color = self.col_or_none(cf_alt['bg']['color'])
+        self.alt_border_color = self.col_or_none(cf_alt['bg']['border_color'])
+        self.alt_border_width = self.int_or_none(cf_alt['bg']['border_width'])
 
         self.size = size
         self.bg_surf = Surface(self.size, flags=SRCALPHA)

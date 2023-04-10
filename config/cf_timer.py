@@ -1,6 +1,5 @@
 from .cf_window import MAP_TOPRIGHT_POS
-from .ui_components import CF_FONTS
-
+from .fonts import cf_font
 
 text_box_container_width = int(200)
 text_box_container_height = int(200)
@@ -17,8 +16,8 @@ CF_TIMER = {
     'accurate_timing':           True,                # default: True
     'display_fps_text':          True,
     'display_segment_time_text': True,
-    'fps_text_style':            CF_FONTS['bold_large_green'],
-    'segment_time_text_style':   CF_FONTS['regular_large_bone'],
+    'fps_text_style':            cf_font('large', 'green', 'bold', None),
+    'segment_time_text_style':   cf_font('normal', 'dutchwhite', 'semibold', None),
     'text_box_container': {
         'position':        (text_box_container_pos_x, text_box_container_pos_y),
         'size':            (text_box_container_width, text_box_container_height),

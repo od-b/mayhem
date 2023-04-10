@@ -9,7 +9,7 @@ from pygame.draw import rect as draw_rect
 
 class UI_Bar(Sprite):
     def __init__(self,
-            cf_bar_style: dict,
+            cf_bar: dict,
             cf_global: dict,
             ref_id,
             position: tuple[int, int],
@@ -17,26 +17,26 @@ class UI_Bar(Sprite):
         ):
         Sprite.__init__(self)
 
-        self.cf_bar_style = cf_bar_style
+        self.cf_bar = cf_bar
         self.cf_global = cf_global
         self.ref_id = ref_id
         self.position = position
         self.size = size
 
-        self.bg_color               = Color(cf_bar_style['bg_color'])
-        self.BG_ALPHA_KEY           = int(cf_bar_style['bg_alpha_key'])
-        self.bg_border_color        = Color(cf_bar_style['bg_border_color'])
-        self.bg_border_alpha_key    = int(cf_bar_style['bg_border_alpha_key'])
-        self.bg_border_width        = int(cf_bar_style['bg_border_width'])
+        self.bg_color               = Color(cf_bar['bg']['color'])
+        self.bg_alpha_key           = int(cf_bar['bg']['alpha'])
+        self.bg_border_color        = Color(cf_bar['bg']['border_color'])
+        self.bg_border_width        = int(cf_bar['bg']['border_width'])
+        self.bg_border_alpha_key    = int(cf_bar['bg']['border_alpha'])
 
-        self.bar_color              = Color(cf_bar_style['bar_color'])
-        self.BAR_ALPHA_KEY          = int(cf_bar_style['bar_alpha_key'])
-        self.bar_border_color       = Color(cf_bar_style['bar_border_color'])
-        self.bar_border_alpha_key   = int(cf_bar_style['bar_border_alpha_key'])
-        self.bar_border_width       = int(cf_bar_style['bar_border_width'])
+        self.bar_color              = Color(cf_bar['bar']['color'])
+        self.bar_alpha_key          = int(cf_bar['bar']['alpha'])
+        self.bar_border_color       = Color(cf_bar['bar']['border_color'])
+        self.bar_border_width       = int(cf_bar['bar']['border_width'])
+        self.bar_border_alpha_key   = int(cf_bar['bar']['border_alpha'])
 
-        self.internal_padding_x     = int(cf_bar_style['internal_padding_x'])
-        self.internal_padding_y     = int(cf_bar_style['internal_padding_y'])
+        self.internal_padding_x     = int(cf_bar['internal_padding_x'])
+        self.internal_padding_y     = int(cf_bar['internal_padding_y'])
 
         self.convert_color_alpha()
 
@@ -73,7 +73,7 @@ class UI_Bar(Sprite):
         self.rect = self.ROOT_RECT
         self.rect.topleft = position
         
-        if (self.BG_ALPHA_KEY != 255):
+        if (self.bg_alpha_key != 255):
             self.FILL_WITH_ALPHA = True
         else:
             self.FILL_WITH_ALPHA = False
@@ -82,8 +82,8 @@ class UI_Bar(Sprite):
 
     def convert_color_alpha(self):
         ''' convert all colors to rgba '''
-        self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.BG_ALPHA_KEY))
-        self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.BAR_ALPHA_KEY))
+        self.bg_color = Color((self.bg_color.r, self.bg_color.g, self.bg_color.b, self.bg_alpha_key))
+        self.bar_color = Color((self.bar_color.r, self.bar_color.g, self.bar_color.b, self.bar_alpha_key))
         self.bg_border_color = Color((self.bg_border_color.r, self.bg_border_color.g,
                                        self.bg_border_color.b, self.bg_border_alpha_key))
         self.bar_border_color = Color((self.bar_border_color.r, self.bar_border_color.g,
@@ -141,9 +141,6 @@ class UI_Bar(Sprite):
 
         if (self.bar_border_width):
             draw_rect(self.BAR_SURF, self.bar_border_color, BAR_RECT, width=self.bar_border_width)
-    
-    def update(self, surface):
-        pass
 
     def __str__(self):
         msg = f'[{super().__str__()} : '
@@ -151,61 +148,25 @@ class UI_Bar(Sprite):
         return msg
 
 
-class UI_Auto_Bar_Horizontal(UI_Bar):
-    def __init__(self,
-            cf_bar_style: dict,
-            cf_global: dict,
-            ref_id,
-            position: tuple[int, int],
-            size: tuple[int, int],
-            max_val: float,
-            getter_func: Callable[[None], float],
-            remove_when_empty: bool
-        ):
-        super().__init__(cf_bar_style, cf_global, ref_id, position, size)
-        self.max_val = max_val
-
-        self.GETTER_FUNC = getter_func
-        self.remove_when_empty = remove_when_empty
-
-    def update(self):
-        weight = (self.GETTER_FUNC() / self.max_val)
-
-        if (weight <= 0.0):
-            if (self.remove_when_empty):
-                self.kill()
-            else:
-                self.bar_draw_func(0.0)
-        elif (weight > 1.0):
-            self.max_val = self.GETTER_FUNC()
-            self.bar_draw_func(1.0)
-        else:
-            super().draw_horizontal_bar(weight)
-
-
 class UI_Icon_Bar_Horizontal(UI_Bar):
     def __init__(self,
-            cf_bar_style: dict,
+            cf_icon_bar: dict,
             cf_global: dict,
-            ref_id,
             position: tuple[int, int],
             bar_size: tuple[int, int],
-            icon_path: str,
-            icon_offset: int,
-            copy_super_bg: bool
         ):
 
         # bar_width = size[0] - icon_offset - size[1]
-        super().__init__(cf_bar_style, cf_global, ref_id, position, bar_size)
+        super().__init__(cf_icon_bar['cf_bar'], cf_global, cf_icon_bar['ref_id'], position, bar_size)
 
-        self.icon_path = icon_path
-        self.icon_offset = icon_offset
-        self.copy_super_bg = copy_super_bg
+        self.icon_path = cf_icon_bar['icon_path']
+        self.icon_offset = cf_icon_bar['icon_offset']
+        self.icon_bg = cf_icon_bar['icon_bg']
 
         self.icon_size = (self.rect.h, self.rect.h)
-        ICON_IMG = image.load(icon_path).convert_alpha()
+        ICON_IMG = image.load(self.icon_path).convert_alpha()
 
-        if (self.copy_super_bg):
+        if (self.icon_bg):
             # create background/border for icon
             ICON_BG_SURF = Surface((self.icon_size)).convert_alpha()
             ICON_BG_SURF.fill(self.bg_color)
@@ -252,26 +213,19 @@ class UI_Icon_Bar_Horizontal(UI_Bar):
 
 
 class UI_Auto_Icon_Bar_Horizontal(UI_Icon_Bar_Horizontal):
+    ''' uses a max value and a getter instead of weight between <0.0, 1.0] '''
     def __init__(self,
-            cf_bar_style: dict,
+            cf_auto_icon_bar: dict,
             cf_global: dict,
-            ref_id,
             position: tuple[int, int],
-            bar_size: tuple[int, int],
-            icon_path: str,
-            icon_offset: int,
-            copy_super_bg: bool,
             max_val: float,
             getter_func: Callable[[None], float],
-            remove_when_empty: bool,
         ):
+        super().__init__(cf_auto_icon_bar['cf_icon_bar'], cf_global, position, cf_auto_icon_bar['size'])
 
-        # bar_width = size[0] - icon_offset - size[1]
-        super().__init__(cf_bar_style, cf_global, ref_id, position, bar_size, icon_path, icon_offset, copy_super_bg)
-
+        self.remove_when_empty = cf_auto_icon_bar['remove_when_empty']
         self.max_val = max_val
         self.GETTER_FUNC = getter_func
-        self.remove_when_empty = remove_when_empty
 
     def update(self):
         NEW_VAL = self.GETTER_FUNC()

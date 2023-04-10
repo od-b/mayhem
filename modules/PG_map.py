@@ -72,7 +72,7 @@ class PG_Map:
         self.ui_container_group = Group()
     
         # create a list to hold all created bars. can be needed for search after .kill()
-        self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
+        self.UI_STATUS_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
         #### VARIABLES ####
         self.collected_coins = []
@@ -374,56 +374,39 @@ class PG_Map:
         self.player = Player(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
         self.player_group.add(self.player)
 
-    def create_horizontal_icon_bar(self, cf_key: str, getter_func: Callable, max: float | int):
-        CF = self.cf_ui_bars[cf_key]
-        cf_bar = CF['cf_bar']
-        ref_id = CF['ref_id']
-        size = CF['size']
-        icon_path = CF['icon']
-        icon_offset = CF['icon_offset']
-        copy_super_bg = CF['copy_super_bg']
-        remove_when_empty = CF['remove_when_empty']
-
-        BAR = UI_Auto_Icon_Bar_Horizontal(
-            cf_bar,
-            self.cf_global,
-            ref_id,
-            (0, 0),
-            size,
-            icon_path,
-            icon_offset,
-            copy_super_bg,
-            float(max),
-            getter_func,
-            remove_when_empty
-        )
-        self.UI_AUTO_BARS.append(BAR)
-        return BAR
-
     def create_all_ui_bars(self):
-        self.create_horizontal_icon_bar(
-            'icon_bar_health',
+        HEALTH_BAR = UI_Auto_Icon_Bar_Horizontal(
+            self.cf_ui_bars['player_status']['health'],
+            self.cf_global,
+            (0, 0),
+            float(self.player.MAX_HEALTH),
             self.player.get_curr_health,
-            self.player.MAX_HEALTH,
         )
-        self.create_horizontal_icon_bar(
-            'icon_bar_fuel',
+        FUEL_BAR = UI_Auto_Icon_Bar_Horizontal(
+            self.cf_ui_bars['player_status']['fuel'],
+            self.cf_global,
+            (0, 0),
+            float(self.player.MAX_FUEL),
             self.player.get_curr_fuel,
-            self.player.MAX_FUEL,
         )
-        self.create_horizontal_icon_bar(
-            'icon_bar_ghost',
+        GHOST_BAR = UI_Auto_Icon_Bar_Horizontal(
+            self.cf_ui_bars['player_status']['ghost'],
+            self.cf_global,
+            (0, 0),
+            0.0,
             self.player.get_collision_cooldown_frames_left,
-            0.0
         )
-        self.create_horizontal_icon_bar(
-            'icon_bar_shield',
+        SHIELD_BAR = UI_Auto_Icon_Bar_Horizontal(
+            self.cf_ui_bars['player_status']['shield'],
+            self.cf_global,
+            (0, 0),
+            0.0,
             self.player.get_collision_cooldown_frames_left,
-            0.0
         )
+        self.UI_STATUS_BARS.extend([HEALTH_BAR, FUEL_BAR, GHOST_BAR, SHIELD_BAR])
 
         # auto add all const bars
-        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_AUTO_BARS)
+        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_STATUS_BARS)
 
     def partition_spritesheet(self, spritesheet: Surface, n_images: int, scale: float) -> tuple[Surface, ...]:
         ''' partition a horizontal spritesheet into equal sized segments '''
@@ -531,7 +514,7 @@ class PG_Map:
         else:
             ref_id.append("BAR")
 
-        MATCHING_BARS = self.BAR_CONTAINER.add_children_by_ref_id(ref_id, self.UI_AUTO_BARS)
+        MATCHING_BARS = self.BAR_CONTAINER.add_children_by_ref_id(ref_id, self.UI_STATUS_BARS)
         for BAR in MATCHING_BARS:
             if (min_val):
                 BAR.min_val = float(min_val)

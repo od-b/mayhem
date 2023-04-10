@@ -189,9 +189,7 @@ class PG_App:
             cf_wrapper['child_align_y'],
             cf_wrapper['child_padding_x'],
             cf_wrapper['child_padding_y'],
-            cf_wrapper['bg_color'],
-            cf_wrapper['border_color'],
-            cf_wrapper['border_width']
+            cf_wrapper['bg']
         )
         # add wrapper to the apps groupsingle for updates
         self.menu_wrapper_group.add(self.MENU_WRAPPER)
@@ -256,7 +254,7 @@ class PG_App:
         n_buttons = len(self.valid_cf_maps_keys)
         # n_buttons = int(4)
 
-        btn_padding_x = int(cf_wrapper['border_width'])
+        btn_padding_x = self.MENU_WRAPPER.border_width
         btn_padding_y = int(0)
 
         btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
@@ -266,7 +264,7 @@ class PG_App:
             dummy_pos, (subcontainer_w, sub_3_height),
             "left", int(-btn_padding_x), 0,
             "right", "container_centery",
-            btn_padding_x, btn_padding_y, None, None, None
+            btn_padding_x, btn_padding_y, None
         )
         self.MENU_WRAPPER.add_child(self.MENU_BUTTON_WRAPPER)
 
