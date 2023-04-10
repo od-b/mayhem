@@ -75,9 +75,11 @@ class PG_Map:
         self.UI_AUTO_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
         #### VARIABLES ####
-        self.collected_coins = int(0)
-        self.looping         = False
-        self.paused          = False
+        self.collected_coins = []
+        self.looping   = False
+        self.paused    = False
+        self.completed = False
+        self.quit_called = False
 
         # debug // misc toggles
         self.debug_player_visuals = True
@@ -504,8 +506,24 @@ class PG_Map:
 
     #### RECURRING METHODS ####
 
-    def pause_loop(self):
+    def pause(self):
+        # self.pause_time = self.timer.active_segment.get_duration_int()
+        self.paused = True
         self.looping = False
+
+    def unpause(self):
+        # self.timer.update()
+        self.paused = False
+        self.looping = True
+
+    def restart(self):
+        self.player.reset_all_attributes()
+        for block in self.block_group:
+            block.alt_surf_timeleft = 0
+        self.coin_group.add(self.collected_coins)
+        self.collected_coins = 0
+        self.timer.new_segment(self.name, False)
+        self.looping = True
 
     def activate_temp_bar(self, ref_id, min_val, max_val):
         if type(ref_id) != list:
@@ -566,8 +584,8 @@ class PG_Map:
             # if rect collide, check mask collide, get & kill collected coins, if any
             collidelist = spritecollide(self.player, self.coin_group, True, collided=collide_mask)
             if (collidelist):
-                self.collected_coins += len(collidelist)
-                if (self.collected_coins == self.N_COINS):
+                self.collected_coins.extend(collidelist)
+                if (len(self.collected_coins) == self.N_COINS):
                     print("ALL COINS COLLECTED")
                     # TODO: SOMETHING
 
@@ -617,6 +635,8 @@ class PG_Map:
                             self.player.key_direction.x += 1.0
                         case self.THRUST:
                             self.player.init_phase_thrust_begin()
+                        case pg.K_ESCAPE:
+                            self.pause()
                         case _:
                             pass
                 case pg.KEYUP:
@@ -637,7 +657,7 @@ class PG_Map:
                 case pg.QUIT:
                     # break both loops and quit program
                     self.looping = False
-                    self.done_looping = True
+                    self.quit_called = True
                 case _:
                     pass
 
@@ -701,7 +721,6 @@ class PG_Map:
             collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
             for BLOCK in collidelist:
                 self.blit_overlap_mask(self.player, BLOCK)
-
 
     #### MISC GETTERS ####
 

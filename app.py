@@ -81,15 +81,16 @@ class PG_App:
         self.timer.block_events(self.cf_global['blocked_events'])
         self.fetch_menu_controls()
 
-        self.main_menu_wrapper_group = GroupSingle()
+        self.menu_wrapper_group = GroupSingle()
         ''' group of ui sprites that may be run at any point '''
-        self.main_menu_button_group = Group()
+        self.main_menu_buttons = []
+        self.pause_menu_buttons = []
 
         self.menu_title_text = str("<GameName>")
 
         self.curr_mouse_pos = pg.mouse.get_pos()
         self.looping = True
-        self.map_object_loaded = False
+        self.map_loaded = False
         self.run_map_on_launch = False
         self.print_misc_info = True
 
@@ -109,7 +110,7 @@ class PG_App:
         if (self.print_misc_info):
             print(f'[APP][init_map]:\n> Call to create map from key "{cf_maps_key}"')
 
-        if (self.map_object_loaded):
+        if (self.map_loaded):
             if (self.print_misc_info):
                 print(f'Map object "{self.map.name}" already loaded. Deleting it')
             # TODO: Clear up sprites properly, make sure memory is released
@@ -131,7 +132,7 @@ class PG_App:
         if (self.print_misc_info):
             print(f'> succesfully created and set up map. Returning ...')
 
-        self.map_object_loaded = True
+        self.map_loaded = True
 
     def check_events(self):
         for event in pg.event.get():
@@ -193,7 +194,7 @@ class PG_App:
             cf_wrapper['border_width']
         )
         # add wrapper to the apps groupsingle for updates
-        self.main_menu_wrapper_group.add(self.MENU_WRAPPER)
+        self.menu_wrapper_group.add(self.MENU_WRAPPER)
 
         #### SUBCONTAINER CREATION ####
         # first, some setup and declarations. 
@@ -217,9 +218,6 @@ class PG_App:
         dummy_pos = (self.MENU_WRAPPER.rect.center)  # does not really matter due to autopositioning
         unclaimed_height = 0
 
-        # list for all subcontainers
-        wrapper_subcontainers = []
-
         ### subcontainer 1 --> menu title ###
         # slim down the title text box by -ish- half the regular height
         title_container_height = int(subcontainer_h / 2)
@@ -233,7 +231,7 @@ class PG_App:
                 None, '', self.get_menu_title_text, None, (0, 0)
             )
         )
-        wrapper_subcontainers.append(TITLE_CONTAINER)
+        self.MENU_WRAPPER.add_child(TITLE_CONTAINER)
 
 
         ### subcontainer 2 --> subtitle text ###
@@ -247,10 +245,10 @@ class PG_App:
                 None, '', self.get_menu_subtitle_text, None, (0, 0)
             )
         )
-        wrapper_subcontainers.append(SUBTITLE_CONTAINER)
+        self.MENU_WRAPPER.add_child(SUBTITLE_CONTAINER)
 
 
-        ### subcontainer 3 --> button wrapper --> map selection || end map ###
+        ### subcontainer 3 --> button wrapper
         # create an internal wrapper for containing buttons
         sub_3_height = int(subcontainer_h / 2)
         unclaimed_height += int(subcontainer_h - sub_3_height)
@@ -264,14 +262,15 @@ class PG_App:
         btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
         btn_height = int(sub_3_height)
 
-        self.SUB_3_BTN_WRAPPER = UI_Container_Wrapper(
+        self.MENU_BUTTON_WRAPPER = UI_Container_Wrapper(
             dummy_pos, (subcontainer_w, sub_3_height),
             "left", int(-btn_padding_x), 0,
             "right", "container_centery",
             btn_padding_x, btn_padding_y, None, None, None
         )
+        self.MENU_WRAPPER.add_child(self.MENU_BUTTON_WRAPPER)
 
-        map_btn_list = []
+        ### create main menu buttons ###
         cf_button = self.cf_menu['buttons']['map_selection']
         for i in range(n_buttons):
             BTN = UI_Button(
@@ -286,19 +285,72 @@ class PG_App:
                 str(self.valid_cf_maps_keys[i]),
                 self.mouse_is_over
             )
-            map_btn_list.append(BTN)
+            self.main_menu_buttons.append(BTN)
 
-        self.SUB_3_BTN_WRAPPER.add_child(map_btn_list)
-        self.main_menu_button_group.add(map_btn_list)
-        wrapper_subcontainers.append(self.SUB_3_BTN_WRAPPER)
+        # self.MENU_BUTTON_WRAPPER.add_child(self.main_menu_buttons)
 
 
-        ### subcontainer 4 --> ###
+        ### create pause menu buttons ###
+
+        # recalculate width
+        n_buttons = int(3)
+        btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
+
+
+        # 1) restart
+        BTN_RESTART = UI_Button(
+            cf_button,
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "RESTART"],
+            str('Restart'),
+            None,
+            (btn_width, btn_height),
+            dummy_pos,
+            self.restart_map,
+            None,
+            self.mouse_is_over
+        )
+        self.pause_menu_buttons.append(BTN_RESTART)
+
+        # 2) main menu
+        BTN_RETURN = UI_Button(
+            cf_button,
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "RETURN"],
+            str('Main Menu'),
+            None,
+            (btn_width, btn_height),
+            dummy_pos,
+            self.exit_map,
+            False,
+            self.mouse_is_over
+        )
+        self.pause_menu_buttons.append(BTN_RETURN)
+
+        # 3) unpause
+        BTN_UNPAUSE = UI_Button(
+            cf_button,
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "UNPAUSE"],
+            str('Unpause'),
+            None,
+            (btn_width, btn_height),
+            dummy_pos,
+            self.return_to_map,
+            False,
+            self.mouse_is_over
+        )
+        self.pause_menu_buttons.append(BTN_UNPAUSE)
+        
+
+        self.MENU_BUTTON_WRAPPER.add_child(self.pause_menu_buttons)
+
+        ### subcontainer 4 --> button tooltip panel ###
 
 
         ### create the rest as regular subcontainers ###
         # give the freed space from title back to the remaining subcontainers
-        subcontainers_left -= len(wrapper_subcontainers)
+        subcontainers_left -= len(self.MENU_BUTTON_WRAPPER.children.sprites())
         subcontainer_h += int(unclaimed_height / subcontainers_left)
 
         for _ in range(subcontainers_left):
@@ -308,15 +360,12 @@ class PG_App:
                 "left", 0, 0,
                 "right", "centery", int(4), int(0)
             )
-            wrapper_subcontainers.append(subcontainer)
+            self.MENU_WRAPPER.add_child(subcontainer)
 
-
-        ## add all subcontainers to the wrapper
-        self.MENU_WRAPPER.add_child(wrapper_subcontainers)
 
         ### PIXEL PERFECT SIZE CORRECTIONS ###
         # update to get the actual positions
-        self.main_menu_wrapper_group.update(self.window.surface)
+        self.menu_wrapper_group.update(self.window.surface)
 
         # correct last subcontainer height
         target_y_pos = int(
@@ -327,7 +376,20 @@ class PG_App:
 
         # # correct btn width
         # last_btn_i = len(btn_list)-1
-        # btn_list[last_btn_i].rect.width += int(self.SUB_3_BTN_WRAPPER.rect.right - btn_list[last_btn_i].rect.right)
+        # btn_list[last_btn_i].rect.width += int(self.MENU_BUTTON_WRAPPER.rect.right - btn_list[last_btn_i].rect.right)
+
+    def exit_map(self, map_completed: bool):
+        # save segment if map was completed
+        self.timer.new_segment("menu", map_completed)
+        self.map_loaded = False
+        del self.map
+
+    def return_to_map(self):
+        self.map.unpause()
+
+    def restart_map(self):
+        # for button creation prior to map creation
+        self.map.restart()
 
     def mouse_is_over(self, has_rect):
         if has_rect.rect.collidepoint(self.curr_mouse_pos):
@@ -335,31 +397,28 @@ class PG_App:
         return False
 
     def get_menu_button_text(self, ref_id):
-        if not (self.map_object_loaded):
+        if not (self.map_loaded):
             return str(self.cf_maps[ref_id]['name'])
         else:
             # TODO -> EXIT MAP ETC
             pass
 
     def check_button_onclick(self):
-        if not (self.map_object_loaded):
-            for button in self.main_menu_button_group:
+        if not (self.map_loaded):
+            for button in self.main_menu_buttons:
                 if self.mouse_is_over(button):
                     button.trigger()
                     break
 
     def get_menu_title_text(self):
+        if (self.map_loaded):
+            return f'{self.menu_title_text} - {self.map.name}'
         return self.menu_title_text
 
     def get_menu_subtitle_text(self):
-        if (self.map_object_loaded):
-            # TODO: MAP BEST TIME // POINTS
-            pass
-        else:
-            return "Choose a map! Mouse over for more info"
-
-    def get_btn_text(self):
-        return str("test")
+        if (self.map_loaded):
+            return str("Map Paused. Select an action")
+        return str("Hover over the maps for more info")
 
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
@@ -367,7 +426,7 @@ class PG_App:
         while (self.looping):
             self.window.fill_surface()
             self.curr_mouse_pos = pg.mouse.get_pos()
-            self.main_menu_wrapper_group.update(self.window.surface)
+            self.menu_wrapper_group.update(self.window.surface)
             self.check_events()
             pg.display.update()
 
@@ -376,15 +435,12 @@ class PG_App:
                 self.init_map(self.valid_cf_maps_keys[0])
                 self.map.looping = True
 
-            if (self.map_object_loaded):
-                # cProfile.run('APP.map.loop()')
-                self.map.loop()
-                if (self.map.done_looping):
-                    self.looping = False
-                    pass
-                else:
-                    # PAUSE MENU CALL
-                    pass
+            if (self.map_loaded):
+                if not (self.map.paused):
+                    # cProfile.run('APP.map.loop()')
+                    self.map.loop()
+                    if (self.map.quit_called):
+                        self.looping = False
 
         if (self.print_misc_info):
             print('[APP][loop] App exiting through main loop')
