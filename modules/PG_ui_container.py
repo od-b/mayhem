@@ -471,6 +471,8 @@ class UI_Text_Container(Sprite):
         will result in:
             "Hello
              World"
+
+        Certain trigger phases can be combined, like _N__B_ for newline + bold word
     '''
     def __init__(self,
             cf_fonts: dict,

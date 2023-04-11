@@ -237,6 +237,7 @@ class PG_App:
         ### create main menu buttons ###
         cf_button = self.cf_menu['buttons']['map_selection']
         for i in range(n_buttons):
+            # TODO: map info text containing some of the map_cf info
             tooltip_text = f'map button! #{i}'
             BTN = UI_Button(
                 cf_button,
@@ -262,26 +263,8 @@ class PG_App:
         n_buttons = int(3)
         btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
 
-
-        # 1) restart
-        btn_restart_tooltip = "BTN_RESTART"
-        BTN_RESTART = UI_Button(
-            cf_button,
-            self.cf_global,
-            ["BUTTON", "PAUSE_MENU", "RESTART"],
-            str('Restart'),
-            None,
-            (btn_width, btn_height),
-            dummy_pos,
-            self.restart_map,
-            None,
-            self.button_mouse_over,
-            btn_restart_tooltip
-        )
-        self.PAUSE_MENU_BUTTONS.append(BTN_RESTART)
-
-        # 2) main menu
-        btn_return_tooltip = "BTN_RETURN"
+        # 1) main menu
+        btn_return_tooltip = "Return to the main menu. _N__B_All progress will be lost."
         BTN_RETURN = UI_Button(
             cf_button,
             self.cf_global,
@@ -297,8 +280,25 @@ class PG_App:
         )
         self.PAUSE_MENU_BUTTONS.append(BTN_RETURN)
 
+        # 2) restart
+        btn_restart_tooltip = "Restart the map. _N_Map setup will be the same."
+        BTN_RESTART = UI_Button(
+            cf_button,
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "RESTART"],
+            str('Restart'),
+            None,
+            (btn_width, btn_height),
+            dummy_pos,
+            self.restart_map,
+            None,
+            self.button_mouse_over,
+            btn_restart_tooltip
+        )
+        self.PAUSE_MENU_BUTTONS.append(BTN_RESTART)
+
         # 3) unpause
-        btn_unpause_tooltip = "BTN_UNPAUSE"
+        btn_unpause_tooltip = str("Return to the game.")
         BTN_UNPAUSE = UI_Button(
             cf_button,
             self.cf_global,
@@ -317,7 +317,14 @@ class PG_App:
 
         # self.MENU_BUTTON_WRAPPER.add_child(self.PAUSE_MENU_BUTTONS)
 
-        ### subcontainer 4 --> button tooltip panel ###
+        # TODO
+        ## out of map 
+        #   --> control info? how to access menu ingame?
+        #   --> key config options?
+        ## in-map
+        #   --> status report? (coin count, health, fuel, fastest map time)
+        # 
+        ### subcontainer 4 -->  ###
 
 
         ### create the rest as regular subcontainers ###
