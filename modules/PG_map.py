@@ -499,12 +499,12 @@ class PG_Map:
         self.paused = False
         self.looping = True
 
-    def restart(self):
+    def reset(self):
         self.player.reset_all_attributes()
         for block in self.block_group:
             block.alt_surf_timeleft = 0
         self.coin_group.add(self.collected_coins)
-        self.collected_coins = 0
+        self.collected_coins = []
         self.timer.new_segment(self.name, False)
         self.looping = True
 

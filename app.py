@@ -245,29 +245,27 @@ class PG_App:
             None,
             (btn_width, btn_height),
             dummy_pos,
-            self.init_map_exit,
+            self.exit_map,
             False,
             self.button_mouse_over,
             btn_return_tooltip
         )
-        self.PAUSE_MENU_BUTTONS.append(BTN_RETURN)
 
         # 2) restart
         btn_reset_tooltip = "Reset the map. n/Map setup will be the same."
         BTN_RESET = UI_Button(
             self.cf_menu['buttons']['map_paused_action'],
             self.cf_global,
-            ["BUTTON", "PAUSE_MENU", "RESTART"],
+            ["BUTTON", "PAUSE_MENU", "RESET"],
             str('Reset'),
             None,
             (btn_width, btn_height),
             dummy_pos,
-            self.restart_map,
+            self.reset_map,
             None,
             self.button_mouse_over,
             btn_reset_tooltip
         )
-        self.PAUSE_MENU_BUTTONS.append(BTN_RESET)
 
         # 3) unpause
         btn_unpause_tooltip = str("Return to the game.")
@@ -279,15 +277,13 @@ class PG_App:
             None,
             (btn_width, btn_height),
             dummy_pos,
-            self.return_to_map,
-            False,
+            self.unpause_map,
+            None,
             self.button_mouse_over,
             btn_unpause_tooltip
         )
-        self.PAUSE_MENU_BUTTONS.append(BTN_UNPAUSE)
 
-
-        # self.MENU_BUTTON_WRAPPER.add_child(self.PAUSE_MENU_BUTTONS)
+        self.PAUSE_MENU_BUTTONS.extend([BTN_RETURN, BTN_RESET, BTN_UNPAUSE])
 
         # TODO
         ## out of map 
@@ -373,20 +369,23 @@ class PG_App:
             print(f'> succesfully created and set up map. Returning ...')
 
         self.map_loaded = True
+        self.timer.activate_duration_text()
 
-    def init_map_exit(self, map_completed: bool):
+    def exit_map(self, map_completed: bool):
         # save segment if map was completed
         self.timer.new_segment("menu", map_completed)
         self.map_loaded = False
         del self.map
         self.MENU_BUTTON_WRAPPER.replace_children(self.MAIN_MENU_BUTTONS)
+        self.timer.kill_duration_text()
 
-    def return_to_map(self):
+    def reset_map(self):
+        self.map.reset()
+        if (self.map.paused):
+            self.map.unpause()
+
+    def unpause_map(self):
         self.map.unpause()
-
-    def restart_map(self):
-        # for button creation prior to map creation
-        self.map.restart()
 
     def mouse_is_over(self, has_rect):
         if has_rect.rect.collidepoint(self.curr_mouse_pos):
@@ -404,7 +403,12 @@ class PG_App:
 
     def check_button_onclick(self):
         ''' check if mouse is above a button when mouse1 clicked '''
-        if not (self.map_loaded):
+        if (self.map_loaded):
+            for button in self.PAUSE_MENU_BUTTONS:
+                if self.mouse_is_over(button):
+                    button.trigger()
+                    break
+        else:
             for button in self.MAIN_MENU_BUTTONS:
                 if self.mouse_is_over(button):
                     button.trigger()
@@ -471,7 +475,6 @@ class PG_App:
             if (self.map_loaded):
                 if not (self.map.paused):
                     # ignore mouse events when map is active
-                    self.timer.activate_duration_text()
                     self.timer.block_events(self.PG_MOUSE_EVENTS)
                     self.map.loop()
                     if (self.map.quit_called):
@@ -480,8 +483,6 @@ class PG_App:
                         self.timer.allow_events(self.PG_MOUSE_EVENTS)
                         if (self.map.paused):
                             self.MENU_BUTTON_WRAPPER.replace_children(self.PAUSE_MENU_BUTTONS)
-                        else:
-                            self.timer.kill_duration_text()
                 else:
                     self.map.draw()
                     self.map.ui_container_group.update(self.map.surface)
