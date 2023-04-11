@@ -18,6 +18,8 @@ CF_TIMER = {
     'display_segment_time_text': True,
     'fps_text_style':            cf_font('large', 'green', 'bold', None),
     'segment_time_text_style':   cf_font('normal', 'dutchwhite', 'semibold', None),
+    'segment_time_text_ref_id': ["DURATION", "TEXT_BOX", "TEMP"],
+    'fps_text_ref_id':          ["FPS", "TEXT_BOX", "CONST"],
     'text_box_container': {
         'cf_bg': None,
         'position':        (text_box_container_pos_x, text_box_container_pos_y),

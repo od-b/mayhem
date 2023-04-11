@@ -18,7 +18,7 @@ from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
 
-from modules.PG_ui_container import (
+from modules.PG_ui_containers import (
     UI_Sprite_Container,
     UI_Container_Wrapper,
     UI_Single_Centered_Container,

@@ -1,11 +1,11 @@
 from typing import Callable
-from pygame import time, event, Surface
-from pygame.sprite import Sprite, Group, GroupSingle
+from pygame import time, event
+from pygame.sprite import Sprite, GroupSingle
 from pygame.event import Event
 
 from .timer import Timer
 from .PG_ui_text_box import UI_Text_Box
-from .PG_ui_container import UI_Sprite_Container
+from .PG_ui_containers import UI_Sprite_Container
 
 
 class PG_Timer(Timer):
@@ -52,10 +52,6 @@ class PG_Timer(Timer):
         )
         self.container_group.add(self.TEXT_CONTAINER)
         self.UI_ELEMENTS: list[Sprite] = []
-        
-        self.duration_text_ref_id = ["DURATION", "TEXT_BOX", "TEMP"]
-        self.fps_text_ref_id = ["FPS", "TEXT_BOX", "CONST"]
-
         self.set_up_textboxes()
 
     def pause(self):
@@ -67,6 +63,9 @@ class PG_Timer(Timer):
         self.active_segment.unpause(curr_time)
 
     def set_up_textboxes(self):
+        self.duration_text_ref_id: list[str] = self.cf_timer['segment_time_text_ref_id']
+        self.fps_text_ref_id: list[str] = self.cf_timer['fps_text_ref_id']
+
         if (self.cf_timer['display_fps_text']):
             FPS_TEXT = UI_Text_Box(
                 self.cf_timer['fps_text_style'],
