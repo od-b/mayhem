@@ -519,7 +519,9 @@ class UI_Text_Container(Sprite):
 
     def set_content_rect(self):
         ''' create a rect used internally for the content, adjusted for border & padding '''
-        self.content_relative_y = int(self.child_padding_y + self.border_width)
+        self.content_relative_y = int(self.child_padding_y)
+        if (self.border_width > 3):
+            self.content_relative_y += int(self.border_width/2)
         self.content_relative_x = int(self.child_padding_x + self.border_width)
         self.content_rect = Rect(
             int(self.rect.x + self.content_relative_x),
@@ -593,8 +595,6 @@ class UI_Text_Container(Sprite):
                 extra_padding = int(self.font_title_size_diff / 3)
                 _padding = int((self.child_padding_x + extra_padding) * (len(_renders) - 1))
                 _SURF = Surface((int(_surf_w + _padding), _renders[0].get_height()), flags=SRCALPHA)
-                _SURF.fill(Color(255,255,255))
-                # _SURF.fill(Color(0,0,0,0))
                 pos_x = int()
                 pos_y = int()
 

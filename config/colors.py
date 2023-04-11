@@ -54,6 +54,11 @@ RGB: dict[str, tuple[int, int, int]] = {
     'gray_148':         (148, 148, 148),
     'gray_mix_168':     (168, 168, 158),
     'gray_mix_178':     (178, 178, 168),
+    'earth_beige':      (255, 244, 224),
+    'earth_orange':     (255, 191, 155),
+    'earth_red':        (180, 96, 96),
+    'earth_red_dark':   (183, 62, 62),
+    'earth_black':      (77, 77, 77),
 }
 ''' RGB color tuples -- most are sourced from [colorhunt.co](https://colorhunt.co)
     a lot of these are unused, 

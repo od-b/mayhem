@@ -10,6 +10,13 @@ menu_pos_y = WINDOW_CENTER[1] - int(menu_height / 2)
 menu_border_width = 4
 
 CF_MENU = {
+    'default_fonts': {
+        'regular':      cf_font('normal', 'bone', 'regular', None),
+        'alt_regular':  cf_font('normal', 'dutchwhite', 'semibold', None),
+        'large':        cf_font('large', 'blue', 'semibold', None),
+        'alt_large':    cf_font('large', 'blue_dark', 'bold', None),
+        'xlarge':       cf_font('xlarge', 'blue_dark', 'bold', None)
+    },
     'wrapper': {
         # root menu wrapper. subcontainers are by nescessity setup within app.py
         'cf_bg': CF_FILLED_RECT['lightblue_on_blue'],
@@ -22,13 +29,6 @@ CF_MENU = {
         'child_align_y': str("bottom"),
         'child_padding_x': int(0),
         'child_padding_y': int(10)
-    },
-    'fonts': {
-        'regular':      cf_font('normal', 'bone', 'regular', None),
-        'alt_regular':  cf_font('normal', 'dutchwhite', 'semibold', None),
-        'large':        cf_font('large', 'blue', 'semibold', None),
-        'alt_large':    cf_font('large', 'blue_dark', 'bold', None),
-        'xlarge':       cf_font('xlarge', 'blue_dark', 'bold', None)
     },
     'tooltip_container': {
         'cf_bg': CF_FILLED_RECT['offblack_on_beige'],
@@ -43,7 +43,7 @@ CF_MENU = {
             'antialias': FONT_ANTIALIAS,
             'color': RGB['bone'],
             'alt_color': RGB['blue_light'],
-            'size': int(20),
+            'size': int(21),
             'title_size': int(26),
             'paths': {
                 'light': get_path('light', None),
@@ -57,13 +57,31 @@ CF_MENU = {
     'buttons': {
         'map_selection': {
             'default': {
-                'bg':   CF_FILLED_RECT['beige_on_orange'],
+                'bg':   CF_FILLED_RECT['red_on_darkred'],
+                'font': cf_font(24, 'dutchwhite', 'bold', None)
+            },
+            'alt': {
+                'bg':   CF_FILLED_RECT['red_on_offblack'],
+                'font': cf_font(25, 'bone', 'bold', None)
+            }
+        },
+        'map_paused_action': {
+            'default': {
+                'bg':   CF_FILLED_RECT['red_on_darkred'],
                 'font': cf_font(24, 'bone', 'bold', None)
             },
             'alt': {
-                'bg':   CF_FILLED_RECT['orange_on_beige'],
-                'font': cf_font(26, 'bone', 'bold', None)
+                'bg':   CF_FILLED_RECT['red_on_offblack'],
+                'font': cf_font(26, 'dutchwhite', 'bold', None)
             }
+            # 'default': {
+            #     'bg':   CF_FILLED_RECT['orange_on_red'],
+            #     'font': cf_font(24, 'earth_black', 'bold', None)
+            # },
+            # 'alt': {
+            #     'bg':   CF_FILLED_RECT['orange_on_offblack'],
+            #     'font': cf_font(26, 'earth_red', 'bold', None)
+            # }
         },
     }
 }

@@ -1,20 +1,6 @@
 from .colors import RGB, RGBA
 
 CF_FILLED_RECT = {
-    'beige_on_orange': {
-        'color': RGB['beige'],
-        'alpha': int(255),
-        'border_color': RGB['orange'],
-        'border_width': int(2),
-        'border_alpha': int(255)
-    },
-    'orange_on_beige': {
-        'color': RGB['orange'],
-        'alpha': int(255),
-        'border_color': RGB['beige'],
-        'border_width': int(4),
-        'border_alpha': int(255)
-    },
     'lightblue_on_blue': {
         'color':            RGB['blue_light'],
         'alpha':            int(255),
@@ -22,7 +8,7 @@ CF_FILLED_RECT = {
         'border_width':     int(5),
         'border_alpha':     int(255),
     },
-    ## VARIANTS WITH ALPHA BELOW ##
+    ## alpha variants ##
     'sage_on_sage': {
         'color': RGB['sage'],
         'alpha': int(100),
@@ -79,11 +65,89 @@ CF_FILLED_RECT = {
         'border_width':     int(1),
         'border_alpha':     int(240),
     },
-    'offblack_on_beige': {
-        'color':            RGB['offblack'],
+    ### earthy colors - https://colorhunt.co/palette/fff4e0ffbf9bb460604d4d4d
+    'beige_on_orange': {
+        'color':            RGB['earth_beige'],
         'alpha':            int(255),
-        'border_color':     RGB['beige'],
-        'border_width':     int(10),
+        'border_color':     RGB['earth_orange'],
+        'border_width':     int(2),
+        'border_alpha':     int(255)
+    },
+    'orange_on_beige': {
+        'color':            RGB['earth_orange'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_beige'],
+        'border_width':     int(4),
+        'border_alpha':     int(255)
+    },
+    'offblack_on_beige': {
+        'color':            RGB['earth_black'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_beige'],
+        'border_width':     int(2),
         'border_alpha':     int(255),
-    }
+    },
+    'beige_on_offblack': {
+        'color':            RGB['earth_beige'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_black'],
+        'border_width':     int(2),
+        'border_alpha':     int(255),
+    },
+    'orange_on_red': {
+        'color':            RGB['earth_orange'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_red'],
+        'border_width':     int(3),
+        'border_alpha':     int(255),
+    },
+    'red_on_orange': {
+        'color':            RGB['earth_red'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_orange'],
+        'border_width':     int(2),
+        'border_alpha':     int(255),
+    },
+    'beige_on_red': {
+        'color':            RGB['earth_beige'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_red'],
+        'border_width':     int(3),
+        'border_alpha':     int(255),
+    },
+    'red_on_offblack': {
+        'color':            RGB['earth_red_dark'],
+        'alpha':            int(255),
+        'border_color':     RGB['offblack'],
+        'border_width':     int(1),
+        'border_alpha':     int(255),
+    },
+    'red_on_beige': {
+        'color':            RGB['earth_red'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_beige'],
+        'border_width':     int(1),
+        'border_alpha':     int(255),
+    },
+    'orange_on_offblack': {
+        'color':            RGB['earth_orange'],
+        'alpha':            int(255),
+        'border_color':     RGB['offblack'],
+        'border_width':     int(1),
+        'border_alpha':     int(255),
+    },
+    'offblack_on_orange': {
+        'color':            RGB['earth_black'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_orange'],
+        'border_width':     int(3),
+        'border_alpha':     int(255),
+    },
+    'red_on_darkred': {
+        'color':            RGB['earth_red'],
+        'alpha':            int(255),
+        'border_color':     RGB['earth_red_dark'],
+        'border_width':     int(3),
+        'border_alpha':     int(255),
+    },
 }

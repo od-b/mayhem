@@ -97,33 +97,8 @@ class PG_App:
         self.set_up_menu()
         self.create_menu_tooltip()
 
-    def init_map(self, cf_maps_key: str):
-        if (self.print_misc_info):
-            print(f'[APP][init_map]:\n> Call to create map from key "{cf_maps_key}"')
-
-        if (self.map_loaded):
-            if (self.print_misc_info):
-                print(f'Map object "{self.map.name}" already loaded. Deleting it')
-            # TODO: Clear up sprites properly, make sure memory is released
-            del self.map
-
-        if not (str(cf_maps_key) in self.valid_cf_maps_keys):
-            raise ValueError(f'> key error: "{cf_maps_key}" not found in config/cf_maps/CF_MAPS')
-
-        # create the map object as an attribute of self
-        self.map = PG_Map(self.cf_global, self.cf_maps[cf_maps_key], self.timer, self.window.map_surface)
-
-        if (self.print_misc_info):
-            print(f'> Map object "{self.map.name}" created from config! Setting up map assets ...')
-
-        # set up the map
-        self.map.set_up_all(True)
-        self.window.set_extended_caption(self.map.name)
-
-        if (self.print_misc_info):
-            print(f'> succesfully created and set up map. Returning ...')
-
-        self.map_loaded = True
+    def get_map_tooltip(self, cf_map: dict):
+        pass
 
     def set_up_menu(self):
         ''' This function has a lot of constants / magic numbers / settings
@@ -139,7 +114,7 @@ class PG_App:
         N_SUBCONTAINERS = 5
         subcontainers_left = int(N_SUBCONTAINERS)
 
-        cf_fonts = self.cf_menu['fonts']
+        cf_default_fonts = self.cf_menu['default_fonts']
         cf_wrapper = self.cf_menu['wrapper']
 
         # create a wrapper to hold other containers
@@ -189,7 +164,7 @@ class PG_App:
         TITLE_CONTAINER = UI_Single_Centered_Container(
             CF_BG_NONE, None, (subcontainer_w, title_container_height), 0, 0,
             UI_Text_Box(
-                cf_fonts['xlarge'], self.cf_global,
+                cf_default_fonts['xlarge'], self.cf_global,
                 None, '', self.get_menu_title_text, None, (0, 0)
             )
         )
@@ -202,7 +177,7 @@ class PG_App:
         SUBTITLE_CONTAINER = UI_Single_Centered_Container(
             CF_BG_NONE, None, (subcontainer_w, subtitle_container_height), 0, 0,
             UI_Text_Box(
-                cf_fonts['large'], self.cf_global,
+                cf_default_fonts['large'], self.cf_global,
                 None, '', self.get_menu_subtitle_text, None, (0, 0)
             )
         )
@@ -233,12 +208,11 @@ class PG_App:
         self.MENU_WRAPPER.add_child(self.MENU_BUTTON_WRAPPER)
 
         ### create main menu buttons ###
-        cf_button = self.cf_menu['buttons']['map_selection']
         for i in range(n_buttons):
             # TODO: map info text containing some of the map_cf info
-            tooltip_text = f't/_b_map::button n/#{i}'
+            tooltip_text = f't/_b_Map::Button n/#{i}'
             BTN = UI_Button(
-                cf_button,
+                self.cf_menu['buttons']['map_selection'],
                 self.cf_global,
                 str(self.valid_cf_maps_keys[i]),
                 '',
@@ -264,7 +238,7 @@ class PG_App:
         # 1) main menu
         btn_return_tooltip = "Return to the main menu. n/t/Warning n/_b_All progress will be lost."
         BTN_RETURN = UI_Button(
-            cf_button,
+            self.cf_menu['buttons']['map_paused_action'],
             self.cf_global,
             ["BUTTON", "PAUSE_MENU", "RETURN"],
             str('Main Menu'),
@@ -279,26 +253,26 @@ class PG_App:
         self.PAUSE_MENU_BUTTONS.append(BTN_RETURN)
 
         # 2) restart
-        btn_restart_tooltip = "Restart the map. /nMap setup will be the same."
-        BTN_RESTART = UI_Button(
-            cf_button,
+        btn_reset_tooltip = "Reset the map. n/Map setup will be the same."
+        BTN_RESET = UI_Button(
+            self.cf_menu['buttons']['map_paused_action'],
             self.cf_global,
             ["BUTTON", "PAUSE_MENU", "RESTART"],
-            str('Restart'),
+            str('Reset'),
             None,
             (btn_width, btn_height),
             dummy_pos,
             self.restart_map,
             None,
             self.button_mouse_over,
-            btn_restart_tooltip
+            btn_reset_tooltip
         )
-        self.PAUSE_MENU_BUTTONS.append(BTN_RESTART)
+        self.PAUSE_MENU_BUTTONS.append(BTN_RESET)
 
         # 3) unpause
         btn_unpause_tooltip = str("Return to the game.")
         BTN_UNPAUSE = UI_Button(
-            cf_button,
+            self.cf_menu['buttons']['map_paused_action'],
             self.cf_global,
             ["BUTTON", "PAUSE_MENU", "UNPAUSE"],
             str('Unpause'),
@@ -371,6 +345,34 @@ class PG_App:
             cf_tooltip['title_padding_y'],
             str("_H_This _N_is a _*_tooltip test. _N_Hello _N_World! 1234 abc")
         )
+
+    def init_map(self, cf_maps_key: str):
+        if (self.print_misc_info):
+            print(f'[APP][init_map]:\n> Call to create map from key "{cf_maps_key}"')
+
+        if (self.map_loaded):
+            if (self.print_misc_info):
+                print(f'Map object "{self.map.name}" already loaded. Deleting it')
+            # TODO: Clear up sprites properly, make sure memory is released
+            del self.map
+
+        if not (str(cf_maps_key) in self.valid_cf_maps_keys):
+            raise ValueError(f'> key error: "{cf_maps_key}" not found in config/cf_maps/CF_MAPS')
+
+        # create the map object as an attribute of self
+        self.map = PG_Map(self.cf_global, self.cf_maps[cf_maps_key], self.timer, self.window.map_surface)
+
+        if (self.print_misc_info):
+            print(f'> Map object "{self.map.name}" created from config! Setting up map assets ...')
+
+        # set up the map
+        self.map.set_up_all(True)
+        self.window.set_extended_caption(self.map.name)
+
+        if (self.print_misc_info):
+            print(f'> succesfully created and set up map. Returning ...')
+
+        self.map_loaded = True
 
     def init_map_exit(self, map_completed: bool):
         # save segment if map was completed
