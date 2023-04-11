@@ -34,6 +34,6 @@ CF_GLOBAL = {
     # improves performance slightly by not needing to iterate over events that are unused
     'blocked_events': [
         pg.TEXTINPUT
-    ],
+    ]
 }
 ''' various settings that didnt fit in anywhere else, or are needed for multiple objects '''

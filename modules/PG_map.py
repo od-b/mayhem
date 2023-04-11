@@ -21,7 +21,6 @@ from .PG_player import Player
 from .PG_coin import Coin
 from .PG_ui_container import UI_Sprite_Container
 from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
-from .PG_ui_text_box import UI_Text_Box
 
 
 class PG_Map:
@@ -110,6 +109,7 @@ class PG_Map:
         # set up bar container
         cf_bar_container = self.cf_ui_containers['bar_container']
         self.BAR_CONTAINER = UI_Sprite_Container(
+            cf_bar_container['cf_bg'],
             cf_bar_container['position'],
             cf_bar_container['size'],
             cf_bar_container['child_anchor'],

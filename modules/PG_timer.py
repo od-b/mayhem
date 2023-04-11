@@ -39,6 +39,7 @@ class PG_Timer(Timer):
 
         cf_text_container = self.cf_timer['text_box_container']
         self.TEXT_CONTAINER = UI_Sprite_Container(
+            cf_text_container['cf_bg'],
             cf_text_container['position'],
             cf_text_container['size'],
             cf_text_container['child_anchor'],

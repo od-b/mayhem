@@ -92,24 +92,13 @@ text_box_pos_y = int(MAP_MIDTOP_POS[1])
 
 MAP_CONTAINERS = {
     'bar_container': {
+        'cf_bg': None,
         'size':             (bar_container_width, bar_container_height),
         'position':         (bar_container_pos_x, bar_container_pos_y),
         'child_anchor':     str("top"),
         'child_anchor_offset_x': int(0),
         'child_anchor_offset_y': int(0),
         'child_align_x':    str("container_left"),
-        'child_align_y':    str("bottom"),
-        'child_padding_x':  int(0),
-        'child_padding_y':  int(10),
-    },
-    'text_container': {
-        'text_box_style':   cf_font('large', 'green', 'bold', None),
-        'size':             (text_box_container_width, text_box_container_height),
-        'position':         (text_box_pos_x, text_box_pos_y),
-        'child_anchor':     str("top"),
-        'child_anchor_offset_x': int(0),
-        'child_anchor_offset_y': int(0),
-        'child_align_x':    str("centerx"),
         'child_align_y':    str("bottom"),
         'child_padding_x':  int(0),
         'child_padding_y':  int(10),

@@ -41,6 +41,7 @@ class UI_Container(Sprite):
     '''
 
     def __init__(self,
+            cf_bg: dict | None,
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
@@ -53,6 +54,7 @@ class UI_Container(Sprite):
         ):
 
         Sprite.__init__(self)
+        self.cf_bg = cf_bg
         self.size            = size
         self.position        = position
         self.CHILD_PADDING_X = child_padding_x
@@ -60,12 +62,12 @@ class UI_Container(Sprite):
         self.CHILD_ANCHOR_OFFSET_X = child_anchor_offset_x
         self.CHILD_ANCHOR_OFFSET_Y = child_anchor_offset_y
 
-        self.set_bg_attributes(None)
 
         self.rect = Rect((self.position), (self.size))
         self.children = []
         ''' group of children with rects, that depend on the container for updates/positioning '''
 
+        self.set_bg_attributes(self.cf_bg)
         self.set_align_funcs(child_align_x, child_align_y)
         self.set_anchor_rect(child_anchor)
 
@@ -246,6 +248,12 @@ class UI_Container(Sprite):
         self.child_fits_self(child)
         self.children.append(child)
 
+    def draw_bg(self, surface: Surface):
+        if (self.bg_color):
+            draw_rect(surface, self.bg_color, self.rect)
+        if (self.border_width):
+            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
+
     def update(self):
         ''' positions children according to the align_func '''
         parent = self.ANCHOR_RECT
@@ -274,6 +282,7 @@ class UI_Sprite_Container(UI_Container):
         * See UI_Container for further info
         '''
     def __init__(self,
+            cf_bg: dict | None,
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
@@ -282,9 +291,9 @@ class UI_Sprite_Container(UI_Container):
             child_align_x: str,
             child_align_y: str,
             child_padding_x: int,
-            child_padding_y: int
+            child_padding_y: int,
         ):
-        super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
+        super().__init__(cf_bg, position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
                          child_align_x, child_align_y, child_padding_x, child_padding_y)
 
         self.children = Group()
@@ -337,42 +346,19 @@ class UI_Sprite_Container(UI_Container):
     def update(self, surface: Surface):
         ''' update childrens positions. draw children to the given surface '''
         super().update()
+        super().draw_bg(surface)
         self.children.draw(surface)
         self.children.update()
 
-
-class UI_Sprite_Container_Filled(UI_Sprite_Container):
-    def __init__(self,
-            position: tuple[int, int],
-            size: tuple[int, int],
-            child_anchor: str,
-            child_anchor_offset_x: int,
-            child_anchor_offset_y: int,
-            child_align_x: str,
-            child_align_y: str,
-            child_padding_x: int,
-            child_padding_y: int,
-            cf_bg: dict | None
-        ):
-        super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
-                         child_align_x, child_align_y, child_padding_x, child_padding_y)
-
-        self.set_bg_attributes(cf_bg)
-
-    def update(self, surface: Surface):
-        if (self.bg_color):
-            draw_rect(surface, self.bg_color, self.rect)
-        if (self.border_width):
-            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
-        super().update(surface)
-
     
 class UI_Single_Centered_Container(UI_Sprite_Container):
-    ''' replaces the sprite group with a GroupSingle, adding a new sprite removes the old
+    ''' replaces the sprite group with a GroupSingle, adding a new sprite kills the old (if any).
+        handles parent anchor and alignment parameters.
         position defaults to (0, 0) if given None.
-        Use exactly like a regular UI_Sprite_Container.
+        Used exactly like a regular UI_Sprite_Container.
     '''
     def __init__(self,
+            cf_bg: dict | None,
             position: tuple[int, int] | None,
             size: tuple[int, int],
             child_padding_x: int,
@@ -385,35 +371,14 @@ class UI_Single_Centered_Container(UI_Sprite_Container):
             given_pos = (int(0), int(0))
 
         super().__init__(
-            given_pos, size, "top", 0, 0,
-            "container_centerx", "container_centery",
+            cf_bg, given_pos, size, 
+            "top", 0, 0, "container_centerx", "container_centery",
             child_padding_x, child_padding_y
         )
 
         self.children = GroupSingle()
         if (child):
             self.children.add(child)
-
-
-class UI_Single_Centered_Container_Filled(UI_Single_Centered_Container):
-    def __init__(self,
-            position: tuple[int, int] | None,
-            size: tuple[int, int],
-            child_padding_x: int,
-            child_padding_y: int,
-            child: Sprite | None,
-            cf_bg: dict
-        ):
-        super().__init__(position, size, child_padding_x, child_padding_y, child)
-        self.set_bg_attributes(cf_bg)
-
-    def update(self, surface):
-        if (self.bg_color):
-            draw_rect(surface, self.bg_color, self.rect)
-        if (self.border_width):
-            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
-        super().update()
-
 
 #### SPECIALIZED CONTAINERS ####
 
@@ -423,6 +388,7 @@ class UI_Container_Wrapper(UI_Sprite_Container):
         * may have UI_Container_Wrapper as child(ren), if so updates all/any subcontainers + their children.
     '''
     def __init__(self,
+            cf_bg: dict | None,
             position: tuple[int, int],
             size: tuple[int, int],
             child_anchor: str,
@@ -431,19 +397,13 @@ class UI_Container_Wrapper(UI_Sprite_Container):
             child_align_x: str,
             child_align_y: str,
             child_padding_x: int,
-            child_padding_y: int,
-            cf_bg: dict | None
+            child_padding_y: int
         ):
-        super().__init__(position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
+        super().__init__(cf_bg, position, size, child_anchor, child_anchor_offset_x, child_anchor_offset_y,
                          child_align_x, child_align_y, child_padding_x, child_padding_y)
 
-        self.set_bg_attributes(cf_bg)
-
     def update(self, surface: Surface):
-        if (self.bg_color):
-            draw_rect(surface, self.bg_color, self.rect)
-        if (self.border_width):
-            draw_rect(surface, self.border_color, self.rect, width=self.border_width)
+        super().draw_bg(surface)
 
         parent = self.ANCHOR_RECT
         for child in self.children:
@@ -463,18 +423,27 @@ class UI_Container_Wrapper(UI_Sprite_Container):
 
 
 class UI_Text_Container(Sprite):
-    ''' uses trigger phrases to format text.
-        see config.fonts->CF_FONT_TRIGGERS.
+    ''' Not related to other containers.
         
+        If given a cf_bg, will automatically adjust the visible rect area to fit the
+        realized text renders
+        * Change position through .move() or by positioning self.rect
+
+        ---
+        Uses trigger phrases to format text, see config.fonts->FORMATTING_TRIGGERS.
+        Title trigger increases size and centers the word horizontally.
+        title should be followed by a newline
+
         e.g;
-            "Hello _N_World"
+            "Hello n/World"
         will result in:
             "Hello
              World"
 
-        Certain trigger phases can be combined, like _N__B_ for newline + bold word
+        Certain trigger phases can be combined. See FORMATTING_TRIGGERS docstring.
     '''
     def __init__(self,
+            cf_bg: dict | None,
             cf_fonts: dict,
             cf_triggers: dict,
             position: tuple[int, int],
@@ -483,73 +452,84 @@ class UI_Text_Container(Sprite):
             child_padding_x: int,
             child_padding_y: int,
             title_padding_y: int,
-            cf_bg: dict | None,
-            text: str,
+            text: str
         ):
         Sprite.__init__(self)
-        self.set_bg_attributes(cf_bg)
 
         self.position = position
+        ''' Do not change this attribute externally. Position .rect instead, or use .move() '''
         self.child_padding_x = child_padding_x
         self.child_padding_y = child_padding_y
         self.title_padding_y = title_padding_y
-
-        # self.rect = Rect((position), (max_width, max_height))
         self.max_width = max_width
         self.max_height = max_height
         self.text = text
+        self.rect = Rect((position), (max_width, max_height))
+        self.set_bg_attributes(cf_bg)
+        self.set_content_rect()
+        self.set_trigger_strings(cf_triggers)
+        self.set_font_attributes(cf_fonts)
         self.text_box_group = Group()
 
-        # shared font values
-        self.font_color = Color(cf_fonts['color'])
-        self.font_alt_color = Color(cf_fonts['alt_color'])
-        self.font_size = int(cf_fonts['size'])
-        self.font_title_size = int(cf_fonts['title_size'])
-        self.font_bg_color = cf_fonts['bg_color']
-        self.font_antialias = cf_fonts['antialias']
+    def set_bg_attributes(self, cf_bg: dict | None):
+        self.bg_color = None
+        self.border_color = None
+        self.border_width = int(0)
+        if (cf_bg != None):
+            if (cf_bg['color'] != None):
+                self.bg_color = Color(cf_bg['color'])
+            if (cf_bg['border_color'] != None):
+                self.border_color = Color(cf_bg['border_color'])
+            if (cf_bg['border_width']):
+                self.border_width = int(cf_bg['border_width'])
 
-        # load the different fonts
-        self.font_default = Font(cf_fonts['paths']['default'], self.font_size)
-        self.font_italic = Font(cf_fonts['paths']['italic'], self.font_size)
-        self.font_bold = Font(cf_fonts['paths']['bold'], self.font_size)
-        self.font_title_default = Font(cf_fonts['paths']['default'], self.font_title_size)
-        self.font_title_italic = Font(cf_fonts['paths']['italic'], self.font_title_size)
-        self.font_title_bold = Font(cf_fonts['paths']['bold'], self.font_title_size)
-
-        self.title_font_size_diff = int(self.font_title_size - self.font_size)
-
-        # triggers for applying different styles for certain words
+    def set_trigger_strings(self, cf_triggers: dict):
+        ''' set triggers for applying different styles for certain words '''
         self.BOLD_TRIGGER = str(cf_triggers['bold'])
         self.NEWLINE_TRIGGER = str(cf_triggers['newline'])
         self.ITALIC_TRIGGER = str(cf_triggers['italic'])
         self.ALT_COLOR_TRIGGER = str(cf_triggers['alt_color'])
         self.TITLE_TRIGGER = str(cf_triggers['title'])
-        
-        self.CONTENT_MAX_WIDTH = int(self.max_width - (2 * (self.child_padding_x + self.border_width)))
+        self.LIGHT_TRIGGER = str(cf_triggers['light'])
+        self.NOSPLIT_TRIGGER = str(cf_triggers['nosplit'])
 
-    def set_bg_attributes(self, cf_bg):
-        if (cf_bg == None):
-            self.bg_color = None
-            self.border_color = None
-            self.border_width = 0
+    def set_font_attributes(self, cf_fonts: dict):
+        ''' set font-related attributes. load and set the various available fonts. '''
+        # shared font values
+        self.font_color = Color(cf_fonts['color'])
+        self.font_alt_color = Color(cf_fonts['alt_color'])
+        self.font_size = int(cf_fonts['size'])
+        self.font_title_size = int(cf_fonts['title_size'])
+        self.font_title_size_diff = int(self.font_title_size - self.font_size)
+        self.font_antialias = cf_fonts['antialias']
+        if (cf_fonts['bg_color'] != None):
+            self.font_bg_color = Color(cf_fonts['bg_color'])
         else:
-            self.bg_color = cf_bg['color']
-            if (self.bg_color != None):
-                self.bg_color = Color(self.bg_color)
-            self.border_color = cf_bg['border_color']
-            if (self.border_color != None):
-                self.border_color = Color(self.border_color)
-            self.border_width = cf_bg['border_width']
+            self.font_bg_color = None
+
+        # load fonts
+        self.FONT_LIGHT = Font(cf_fonts['paths']['light'], self.font_size)
+        self.FONT_DEFAULT = Font(cf_fonts['paths']['default'], self.font_size)
+        self.FONT_ITALIC = Font(cf_fonts['paths']['italic'], self.font_size)
+        self.FONT_BOLD = Font(cf_fonts['paths']['bold'], self.font_size)
+        self.FONT_TITLE_LIGHT = Font(cf_fonts['paths']['light'], self.font_title_size)
+        self.FONT_TITLE_DEFAULT = Font(cf_fonts['paths']['default'], self.font_title_size)
+        self.FONT_TITLE_ITALIC = Font(cf_fonts['paths']['italic'], self.font_title_size)
+        self.FONT_TITLE_BOLD = Font(cf_fonts['paths']['bold'], self.font_title_size)
+
+    def set_content_rect(self):
+        ''' create a rect used internally for the content, adjusted for border & padding '''
+        self.content_relative_y = int(self.child_padding_y + self.border_width)
+        self.content_relative_x = int(self.child_padding_x + self.border_width)
+        self.content_rect = Rect(
+            int(self.rect.x + self.content_relative_x),
+            int(self.rect.y + self.content_relative_y),
+            int(self.max_width - (2 * (self.child_padding_x + self.border_width))),
+            int(self.max_height - (2 * (self.child_padding_x + self.border_width)))
+        )
 
     def set_text(self, text):
         self.text = text
-
-    def move(self, pos: tuple[int, int]):
-        ''' move this container to a different position '''
-        self.position = pos
-        self.content_y = int(self.position[1] + self.child_padding_y)
-        self.content_x = int(self.position[0] + self.child_padding_x + self.border_width)
-        self.content_max_x = int(self.content_x + self.CONTENT_MAX_WIDTH)
 
     def render_text(self):
         ''' returns a list of lists
@@ -564,7 +544,7 @@ class UI_Text_Container(Sprite):
             chosen_color = self.font_color
             newline = False
             title = False
-            chosen_font = self.font_default
+            chosen_font = self.FONT_DEFAULT
 
             if (self.ALT_COLOR_TRIGGER in word):
                 word = word.replace(self.ALT_COLOR_TRIGGER, '')
@@ -572,7 +552,7 @@ class UI_Text_Container(Sprite):
 
             if (self.TITLE_TRIGGER in word):
                 word = word.replace(self.TITLE_TRIGGER, '')
-                chosen_font = self.font_title_default
+                chosen_font = self.FONT_TITLE_DEFAULT
                 title = True
 
             if (self.NEWLINE_TRIGGER in word):
@@ -582,30 +562,74 @@ class UI_Text_Container(Sprite):
             if (self.BOLD_TRIGGER in word):
                 word = word.replace(self.BOLD_TRIGGER, '')
                 if (title):
-                    chosen_font = self.font_title_bold
+                    chosen_font = self.FONT_TITLE_BOLD
                 else:
-                    chosen_font = self.font_bold
+                    chosen_font = self.FONT_BOLD
             elif (self.ITALIC_TRIGGER in word):
                 word = word.replace(self.ITALIC_TRIGGER, '')
                 if (title):
-                    chosen_font = self.font_title_italic
+                    chosen_font = self.FONT_TITLE_ITALIC
                 else:
-                    chosen_font = self.font_italic
+                    chosen_font = self.FONT_ITALIC
 
-            RENDER = chosen_font.render(
-                word,
-                self.font_antialias,
-                chosen_color,
-                self.font_bg_color
-            )
-            rendered_words.append([RENDER, newline, title])
+            if (self.NOSPLIT_TRIGGER in word):
+                word = word.replace(self.NOSPLIT_TRIGGER, ' ')
+                word = word.split()
+
+                # loop words and render individually
+                _surf_w = 0
+                _renders: list[Surface] = []
+                for _txt in word:
+                    RENDER = chosen_font.render(
+                        _txt,
+                        self.font_antialias,
+                        chosen_color,
+                        self.font_bg_color
+                    )
+                    _renders.append(RENDER)
+                    _surf_w += RENDER.get_width()
+
+                # create a surface for the words
+                extra_padding = int(self.font_title_size_diff / 3)
+                _padding = int((self.child_padding_x + extra_padding) * (len(_renders) - 1))
+                _SURF = Surface((int(_surf_w + _padding), _renders[0].get_height()), flags=SRCALPHA)
+                _SURF.fill(Color(255,255,255))
+                # _SURF.fill(Color(0,0,0,0))
+                pos_x = int()
+                pos_y = int()
+
+                # blit each word onto the surface, applying the standard padding
+                for img in _renders:
+                    _SURF.blit(img, (pos_x, pos_y))
+                    pos_x += int(img.get_width() + self.child_padding_x + extra_padding)
+
+                # append like a normal word
+                rendered_words.append([_SURF, newline, title])
+            else:
+                RENDER = chosen_font.render(
+                    word,
+                    self.font_antialias,
+                    chosen_color,
+                    self.font_bg_color
+                )
+                rendered_words.append([RENDER, newline, title])
 
         return rendered_words
 
+    def move(self, pos: tuple[int, int]):
+        ''' moves self.rect topleft position '''
+        self.rect.topleft = pos
+
     def update(self, surface: Surface):
+        # check if self has been moved since the last update, if so, redefine content bounds
+        if (self.rect.topleft != self.position):
+            self.position = self.rect.topleft
+            self.content_rect.x = (self.rect.x + self.content_relative_x)
+            self.content_rect.y = (self.rect.y + self.content_relative_y)
+
         rendered_words = self.render_text()
-        pos_x = self.content_x
-        pos_y = self.content_y
+        pos_x = self.content_rect.x
+        pos_y = self.content_rect.y
         furthest_right = pos_x
 
         # loop thorugh the list and determine positioning
@@ -617,8 +641,8 @@ class UI_Text_Container(Sprite):
             RE = img.get_rect()
 
             # add a newline if set, or out of w-space
-            if (newline) or ((pos_x + RE.w) > self.content_max_x):
-                pos_x = self.content_x
+            if (newline) or ((pos_x + RE.w) > self.content_rect.right):
+                pos_x = self.content_rect.x
                 pos_y += (RE.h + self.child_padding_y)
 
             # set rect position. newline is not needed further on, so use its list space for rect
@@ -629,7 +653,7 @@ class UI_Text_Container(Sprite):
                 furthest_right = RE.right
 
             if (title):
-                pos_y += (self.title_font_size_diff + self.title_padding_y)
+                pos_y += (self.font_title_size_diff + self.title_padding_y)
 
             pos_x += (self.child_padding_x + RE.w)
 

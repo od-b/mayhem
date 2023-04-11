@@ -19,6 +19,7 @@ CF_TIMER = {
     'fps_text_style':            cf_font('large', 'green', 'bold', None),
     'segment_time_text_style':   cf_font('normal', 'dutchwhite', 'semibold', None),
     'text_box_container': {
+        'cf_bg': None,
         'position':        (text_box_container_pos_x, text_box_container_pos_y),
         'size':            (text_box_container_width, text_box_container_height),
         'child_anchor':    str("top"),

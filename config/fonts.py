@@ -1,7 +1,34 @@
 from os.path import join as os_path_join
-from pygame import Color
 from .colors import RGB, RGBA
 
+FORMATTING_TRIGGERS = {
+    # one of | none:
+    'bold': str("_b_"),
+    'italic': str("_i_"),
+    'light': str("_l_"),
+    # may be combined:
+    'alt_color': str("a/"),
+    'title': str("t/"),
+    'newline': str("n/"),
+    'nosplit': str('::')    # renders words together. applies formatting to all. useful for titles.
+}
+''' Defined string triggers for applying different styles/fonts/colors/effects, for certain modules.
+    * The positioning of triggers within a word is irrelevant, even if in the middle of a word.
+    * Any style triggers are removed from the string before rendering/printing.\n
+    see modules.PG_ui_container.py -> UI_Text_Container for an example use case '''
+
+# global toggle for whether or not to apply font aliasing
+FONT_ANTIALIAS = True
+FONT_RECT_BG_COLOR = None
+# FONT_RECT_BG_COLOR = RGB['P_pink']
+
+STANDARDIZED_SIZES = {
+    'small': 20,
+    'normal': 24,
+    'medium': 26,
+    'large': 30,
+    'xlarge': 40
+}
 
 PATHS = {
     'light': {
@@ -21,20 +48,6 @@ PATHS = {
         'italic': os_path_join('assets','fonts','JetBrainsMono-BoldItalic.ttf')
     },
 }
-
-STANDARDIZED_SIZES = {
-    'small': 20,
-    'normal': 24,
-    'medium': 26,
-    'large': 30,
-    'xlarge': 40
-}
-
-# global toggle for whether or not to apply font aliasing
-FONT_ANTIALIAS = True
-# FONT_RECT_BG_COLOR = None
-FONT_RECT_BG_COLOR = RGB['P_pink']
-
 
 def get_path(style: str, style_weight: str | None):
     ''' get path of the fonts used '''
@@ -94,11 +107,3 @@ def cf_font(size: int | str, color: str | tuple, style: str, style_weight: str |
 
     return CF
 
-# triggers for applying different styles for certain words
-CF_FONT_TRIGGERS = {
-    'bold': str("_B_"),
-    'newline': str("_N_"),
-    'italic': str("_I_"),
-    'alt_color': str("_*_"),
-    'title': str("_H_")
-}

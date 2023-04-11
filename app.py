@@ -21,9 +21,7 @@ from modules.PG_timer import PG_Timer
 from modules.PG_ui_container import (
     UI_Sprite_Container,
     UI_Container_Wrapper,
-    UI_Sprite_Container_Filled,
     UI_Single_Centered_Container,
-    UI_Single_Centered_Container_Filled,
     UI_Text_Container
 )
 from modules.PG_ui_text_box import UI_Text_Box
@@ -137,7 +135,7 @@ class PG_App:
             As a compromise, I chose to do the very size of the menu frame in config, then 
             dynamically position all the subcontainers within the set bounds,
         '''
-
+        CF_BG_NONE = None
         N_SUBCONTAINERS = 5
         subcontainers_left = int(N_SUBCONTAINERS)
 
@@ -146,6 +144,7 @@ class PG_App:
 
         # create a wrapper to hold other containers
         self.MENU_WRAPPER = UI_Container_Wrapper(
+            cf_wrapper['cf_bg'],
             cf_wrapper['position'],
             cf_wrapper['size'],
             cf_wrapper['child_anchor'],
@@ -154,8 +153,7 @@ class PG_App:
             cf_wrapper['child_align_x'],
             cf_wrapper['child_align_y'],
             cf_wrapper['child_padding_x'],
-            cf_wrapper['child_padding_y'],
-            cf_wrapper['bg']
+            cf_wrapper['child_padding_y']
         )
         # add wrapper to the apps groupsingle for updates
         self.menu_wrapper_group.add(self.MENU_WRAPPER)
@@ -189,7 +187,7 @@ class PG_App:
 
         # create text box within a single-container to keep it centered
         TITLE_CONTAINER = UI_Single_Centered_Container(
-            None, (subcontainer_w, title_container_height), 0, 0,
+            CF_BG_NONE, None, (subcontainer_w, title_container_height), 0, 0,
             UI_Text_Box(
                 cf_fonts['xlarge'], self.cf_global,
                 None, '', self.get_menu_title_text, None, (0, 0)
@@ -197,13 +195,12 @@ class PG_App:
         )
         self.MENU_WRAPPER.add_child(TITLE_CONTAINER)
 
-
         ### subcontainer 2 --> subtitle text ###
         subtitle_container_height = int(subcontainer_h / 1.5)
         unclaimed_height += int(subcontainer_h - subtitle_container_height)
 
         SUBTITLE_CONTAINER = UI_Single_Centered_Container(
-            None, (subcontainer_w, subtitle_container_height), 0, 0,
+            CF_BG_NONE, None, (subcontainer_w, subtitle_container_height), 0, 0,
             UI_Text_Box(
                 cf_fonts['large'], self.cf_global,
                 None, '', self.get_menu_subtitle_text, None, (0, 0)
@@ -227,10 +224,11 @@ class PG_App:
         btn_height = int(sub_3_height)
 
         self.MENU_BUTTON_WRAPPER = UI_Container_Wrapper(
+            CF_BG_NONE,
             dummy_pos, (subcontainer_w, sub_3_height),
             "left", int(-btn_padding_x), 0,
             "right", "container_centery",
-            btn_padding_x, btn_padding_y, None
+            btn_padding_x, btn_padding_y
         )
         self.MENU_WRAPPER.add_child(self.MENU_BUTTON_WRAPPER)
 
@@ -238,7 +236,7 @@ class PG_App:
         cf_button = self.cf_menu['buttons']['map_selection']
         for i in range(n_buttons):
             # TODO: map info text containing some of the map_cf info
-            tooltip_text = f'map button! #{i}'
+            tooltip_text = f't/_b_map::button n/#{i}'
             BTN = UI_Button(
                 cf_button,
                 self.cf_global,
@@ -264,7 +262,7 @@ class PG_App:
         btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
 
         # 1) main menu
-        btn_return_tooltip = "Return to the main menu. _N__B_All progress will be lost."
+        btn_return_tooltip = "Return to the main menu. n/t/Warning n/_b_All progress will be lost."
         BTN_RETURN = UI_Button(
             cf_button,
             self.cf_global,
@@ -281,7 +279,7 @@ class PG_App:
         self.PAUSE_MENU_BUTTONS.append(BTN_RETURN)
 
         # 2) restart
-        btn_restart_tooltip = "Restart the map. _N_Map setup will be the same."
+        btn_restart_tooltip = "Restart the map. /nMap setup will be the same."
         BTN_RESTART = UI_Button(
             cf_button,
             self.cf_global,
@@ -329,12 +327,12 @@ class PG_App:
 
         ### create the rest as regular subcontainers ###
         # give the freed space from title back to the remaining subcontainers
-        subcontainers_left -= len(self.MENU_BUTTON_WRAPPER.children.sprites())
+        subcontainers_left -= len(self.MENU_WRAPPER.children.sprites())
         subcontainer_h += int(unclaimed_height / subcontainers_left)
 
         for _ in range(subcontainers_left):
             subcontainer = UI_Sprite_Container(
-                dummy_pos,
+                CF_BG_NONE, dummy_pos,
                 (subcontainer_w, subcontainer_h),
                 "left", 0, 0,
                 "right", "centery", int(4), int(0)
@@ -362,15 +360,15 @@ class PG_App:
         cf_tooltip = self.cf_menu['tooltip_container']
 
         self.TOOLTIP = UI_Text_Container(
-            cf_tooltip['fonts'],
-            cf_tooltip['triggers'],
+            cf_tooltip['cf_bg'],
+            cf_tooltip['cf_fonts'],
+            cf_tooltip['cf_formatting_triggers'],
             self.MENU_WRAPPER.rect.topleft,
             cf_tooltip['max_width'],
             cf_tooltip['max_height'],
             cf_tooltip['child_padding_x'],
             cf_tooltip['child_padding_y'],
             cf_tooltip['title_padding_y'],
-            cf_tooltip['cf_bg'],
             str("_H_This _N_is a _*_tooltip test. _N_Hello _N_World! 1234 abc")
         )
 
