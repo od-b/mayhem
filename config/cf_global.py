@@ -30,20 +30,9 @@ CF_GLOBAL = {
     #   (i'm not entirely sure why this happens, but it's not really an issue.)
     #   fps limit must be set to a value for sprites to behave properly
     'fps_limit': int(125),      # default: 125
-    'menu_controls': {
-        'up':       pg.K_w,
-        'left':     pg.K_a,
-        'down':     pg.K_s,
-        'right':    pg.K_d,
-        'confirm':  pg.K_SPACE,
-        'back':     pg.K_ESCAPE,
-    },
     # blocked_events are a list of pg.event.type that will be blocked from the event queue
     # improves performance slightly by not needing to iterate over events that are unused
     'blocked_events': [
-        # pg.MOUSEMOTION,
-        # pg.MOUSEBUTTONUP,
-        # pg.MOUSEBUTTONDOWN,
         pg.TEXTINPUT
     ],
 }

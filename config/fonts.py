@@ -35,6 +35,14 @@ FONT_ANTIALIAS = True
 # FONT_RECT_BG_COLOR = None
 FONT_RECT_BG_COLOR = RGB['P_pink']
 
+
+def get_path(style: str, style_weight: str | None):
+    ''' get path of the fonts used '''
+    if (style_weight == None):
+        return str(PATHS[style]['default'])
+    return str(PATHS[style][style_weight])
+
+
 def cf_font(size: int | str, color: str | tuple, style: str, style_weight: str | None):
     ''' choose from standardized font values or specify font color and/or size 
         * weight => ['None'=='default', 'italic']
@@ -81,10 +89,16 @@ def cf_font(size: int | str, color: str | tuple, style: str, style_weight: str |
             raise KeyError(f'key="{color}" not in config.colors RGB | RGBA')
     else:
         CF['color'] = color
-    
-    if (style_weight == None):
-        CF['path'] = str(PATHS[style]['default'])
-    else:
-        CF['path'] = str(PATHS[style][style_weight])
+
+    CF['path'] = get_path(style, style_weight)
 
     return CF
+
+# triggers for applying different styles for certain words
+CF_FONT_TRIGGERS = {
+    'bold': str("_B_"),
+    'newline': str("_N_"),
+    'italic': str("_I_"),
+    'alt_color': str("_*_"),
+    'title': str("_H_")
+}

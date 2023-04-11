@@ -490,12 +490,12 @@ class PG_Map:
     #### RECURRING METHODS ####
 
     def pause(self):
-        # self.pause_time = self.timer.active_segment.get_duration_int()
+        self.timer.pause()
         self.paused = True
         self.looping = False
 
     def unpause(self):
-        # self.timer.update()
+        self.timer.unpause()
         self.paused = False
         self.looping = True
 
@@ -574,18 +574,21 @@ class PG_Map:
 
     #### LOOP ####
 
+    def draw(self):
+        self.surface.fill(self.fill_color)
+
+        if (self.debug_player_visuals):
+            self.debug__draw_player_all_info()
+        else:
+            self.player_group.draw(self.surface)
+        self.block_group.draw(self.surface)
+        self.coin_group.draw(self.surface)
+
     def loop(self):
         # if a map was initiated by the menu, launch the main loop
         while (self.looping):
-            self.surface.fill(self.fill_color)
+            self.draw()
             self.timer.draw_ui(self.surface)
-
-            if (self.debug_player_visuals):
-                self.debug__draw_player_all_info()
-            else:
-                self.player_group.draw(self.surface)
-            self.block_group.draw(self.surface)
-            self.coin_group.draw(self.surface)
 
             # collision checks
             self.check_player_block_collision()
@@ -619,6 +622,7 @@ class PG_Map:
                         case self.THRUST:
                             self.player.init_phase_thrust_begin()
                         case pg.K_ESCAPE:
+                            print("pause called")
                             self.pause()
                         case _:
                             pass
@@ -640,6 +644,7 @@ class PG_Map:
                 case pg.QUIT:
                     # break both loops and quit program
                     self.looping = False
+                    self.paused = False
                     self.quit_called = True
                 case _:
                     pass

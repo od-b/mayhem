@@ -23,7 +23,8 @@ from modules.PG_ui_container import (
     UI_Container_Wrapper,
     UI_Sprite_Container_Filled,
     UI_Single_Centered_Container,
-    UI_Single_Centered_Container_Filled
+    UI_Single_Centered_Container_Filled,
+    UI_Text_Container
 )
 from modules.PG_ui_text_box import UI_Text_Box
 from modules.PG_ui_button import UI_Button
@@ -79,32 +80,24 @@ class PG_App:
         ''' pygame specific timer object '''
 
         self.timer.block_events(self.cf_global['blocked_events'])
-        self.fetch_menu_controls()
+        self.PG_MOUSE_EVENTS = [pg.MOUSEMOTION, pg.MOUSEBUTTONUP, pg.MOUSEBUTTONDOWN]
 
+        # ui groups / lists
         self.menu_wrapper_group = GroupSingle()
-        ''' group of ui sprites that may be run at any point '''
-        self.main_menu_buttons = []
-        self.pause_menu_buttons = []
+        self.tooltip_group = GroupSingle()
+        self.MAIN_MENU_BUTTONS = []
+        self.PAUSE_MENU_BUTTONS = []
 
         self.menu_title_text = str("<GameName>")
-
         self.curr_mouse_pos = pg.mouse.get_pos()
+
         self.looping = True
         self.map_loaded = False
         self.run_map_on_launch = False
         self.print_misc_info = True
 
         self.set_up_menu()
-
-    def fetch_menu_controls(self):
-        ''' fetch and store player controls from the global config '''
-        cf_controls = self.cf_global['menu_controls']
-        self.MENU_UP      = int(cf_controls['up'])
-        self.MENU_LEFT    = int(cf_controls['left'])
-        self.MENU_DOWN    = int(cf_controls['down'])
-        self.MENU_RIGHT   = int(cf_controls['right'])
-        self.MENU_CONFIRM = int(cf_controls['confirm'])
-        self.MENU_BACK    = int(cf_controls['back'])
+        self.create_menu_tooltip()
 
     def init_map(self, cf_maps_key: str):
         if (self.print_misc_info):
@@ -133,33 +126,6 @@ class PG_App:
             print(f'> succesfully created and set up map. Returning ...')
 
         self.map_loaded = True
-
-    def check_events(self):
-        for event in pg.event.get():
-            match (event.type):
-                case pg.MOUSEBUTTONUP:
-                    self.check_button_onclick()
-                case pg.KEYDOWN:
-                    # TODO: MENU CONTROLS
-                    match (event.key):
-                        case self.MENU_UP:
-                            pass
-                        case self.MENU_DOWN:
-                            pass
-                        case self.MENU_LEFT:
-                            pass
-                        case self.MENU_RIGHT:
-                            pass
-                        case self.MENU_CONFIRM:
-                            pass
-                        case self.MENU_BACK:
-                            pass
-                        case _:
-                            pass
-                case pg.QUIT:
-                   self.looping = False
-                case _:
-                    pass
 
     def set_up_menu(self):
         ''' This function has a lot of constants / magic numbers / settings
@@ -271,6 +237,7 @@ class PG_App:
         ### create main menu buttons ###
         cf_button = self.cf_menu['buttons']['map_selection']
         for i in range(n_buttons):
+            tooltip_text = f'map button! #{i}'
             BTN = UI_Button(
                 cf_button,
                 self.cf_global,
@@ -281,11 +248,12 @@ class PG_App:
                 dummy_pos,
                 self.init_map,
                 str(self.valid_cf_maps_keys[i]),
-                self.mouse_is_over
+                self.button_mouse_over,
+                tooltip_text
             )
-            self.main_menu_buttons.append(BTN)
+            self.MAIN_MENU_BUTTONS.append(BTN)
 
-        # self.MENU_BUTTON_WRAPPER.add_child(self.main_menu_buttons)
+        self.MENU_BUTTON_WRAPPER.add_child(self.MAIN_MENU_BUTTONS)
 
 
         ### create pause menu buttons ###
@@ -296,6 +264,7 @@ class PG_App:
 
 
         # 1) restart
+        btn_restart_tooltip = "BTN_RESTART"
         BTN_RESTART = UI_Button(
             cf_button,
             self.cf_global,
@@ -306,11 +275,13 @@ class PG_App:
             dummy_pos,
             self.restart_map,
             None,
-            self.mouse_is_over
+            self.button_mouse_over,
+            btn_restart_tooltip
         )
-        self.pause_menu_buttons.append(BTN_RESTART)
+        self.PAUSE_MENU_BUTTONS.append(BTN_RESTART)
 
         # 2) main menu
+        btn_return_tooltip = "BTN_RETURN"
         BTN_RETURN = UI_Button(
             cf_button,
             self.cf_global,
@@ -319,13 +290,15 @@ class PG_App:
             None,
             (btn_width, btn_height),
             dummy_pos,
-            self.exit_map,
+            self.init_map_exit,
             False,
-            self.mouse_is_over
+            self.button_mouse_over,
+            btn_return_tooltip
         )
-        self.pause_menu_buttons.append(BTN_RETURN)
+        self.PAUSE_MENU_BUTTONS.append(BTN_RETURN)
 
         # 3) unpause
+        btn_unpause_tooltip = "BTN_UNPAUSE"
         BTN_UNPAUSE = UI_Button(
             cf_button,
             self.cf_global,
@@ -336,12 +309,13 @@ class PG_App:
             dummy_pos,
             self.return_to_map,
             False,
-            self.mouse_is_over
+            self.button_mouse_over,
+            btn_unpause_tooltip
         )
-        self.pause_menu_buttons.append(BTN_UNPAUSE)
-        
+        self.PAUSE_MENU_BUTTONS.append(BTN_UNPAUSE)
 
-        self.MENU_BUTTON_WRAPPER.add_child(self.pause_menu_buttons)
+
+        # self.MENU_BUTTON_WRAPPER.add_child(self.PAUSE_MENU_BUTTONS)
 
         ### subcontainer 4 --> button tooltip panel ###
 
@@ -376,11 +350,29 @@ class PG_App:
         # last_btn_i = len(btn_list)-1
         # btn_list[last_btn_i].rect.width += int(self.MENU_BUTTON_WRAPPER.rect.right - btn_list[last_btn_i].rect.right)
 
-    def exit_map(self, map_completed: bool):
+    def create_menu_tooltip(self):
+        ''' create a text container that will dynamically change its size to fit the given text '''
+        cf_tooltip = self.cf_menu['tooltip_container']
+
+        self.TOOLTIP = UI_Text_Container(
+            cf_tooltip['fonts'],
+            cf_tooltip['triggers'],
+            self.MENU_WRAPPER.rect.topleft,
+            cf_tooltip['max_width'],
+            cf_tooltip['max_height'],
+            cf_tooltip['child_padding_x'],
+            cf_tooltip['child_padding_y'],
+            cf_tooltip['title_padding_y'],
+            cf_tooltip['cf_bg'],
+            str("_H_This _N_is a _*_tooltip test. _N_Hello _N_World! 1234 abc")
+        )
+
+    def init_map_exit(self, map_completed: bool):
         # save segment if map was completed
         self.timer.new_segment("menu", map_completed)
         self.map_loaded = False
         del self.map
+        self.MENU_BUTTON_WRAPPER.replace_children(self.MAIN_MENU_BUTTONS)
 
     def return_to_map(self):
         self.map.unpause()
@@ -394,19 +386,28 @@ class PG_App:
             return True
         return False
 
-    def get_menu_button_text(self, ref_id):
-        if not (self.map_loaded):
-            return str(self.cf_maps[ref_id]['name'])
-        else:
-            # TODO -> EXIT MAP ETC
-            pass
+    def button_mouse_over(self, button: UI_Button):
+        hovering = self.mouse_is_over(button)
+        if (hovering):
+            if (hasattr(button, "tooltip_text")):
+                self.TOOLTIP.set_text(button.tooltip_text)
+                self.TOOLTIP.move(self.curr_mouse_pos)
+                self.tooltip_group.add(self.TOOLTIP)
+        return hovering
 
     def check_button_onclick(self):
+        ''' check if mouse is above a button when mouse1 clicked '''
         if not (self.map_loaded):
-            for button in self.main_menu_buttons:
+            for button in self.MAIN_MENU_BUTTONS:
                 if self.mouse_is_over(button):
                     button.trigger()
                     break
+
+    def get_menu_button_text(self, ref_id):
+        ''' could be omitted and set text on creation, but leaving for now,
+            seeing as performance during menu is not an issue whatsoever
+        '''
+        return str(self.cf_maps[ref_id]['name'])
 
     def get_menu_title_text(self):
         if (self.map_loaded):
@@ -418,16 +419,43 @@ class PG_App:
             return str("Map Paused. Select an action")
         return str("Hover over the maps for more info")
 
+    def check_events(self):
+        for event in pg.event.get():
+            match (event.type):
+                case pg.MOUSEBUTTONUP:
+                    self.check_button_onclick()
+                case pg.KEYDOWN:
+                    # TODO: MENU CONTROLS
+                    match (event.key):
+                        case pg.K_ESCAPE:
+                            print("unpause called")
+                            if (self.map_loaded):
+                                if (self.map.paused):
+                                    self.map.unpause()
+                        case _:
+                            pass
+                case pg.QUIT:
+                   self.looping = False
+                case _:
+                    pass
+
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
+        self.window.fill_surface()
+        self.tooltip_group.add(self.TOOLTIP)
 
         while (self.looping):
-            self.window.fill_surface()
+            self.timer.update_paused()
             self.curr_mouse_pos = pg.mouse.get_pos()
+ 
             self.menu_wrapper_group.update(self.window.surface)
+            self.timer.draw_ui(self.window.map_surface)
             self.check_events()
+            self.TOOLTIP.move(self.curr_mouse_pos)
+            self.tooltip_group.update(self.window.surface)
             pg.display.update()
 
+            self.tooltip_group.empty()
             if (self.run_map_on_launch):
                 self.run_map_on_launch = False
                 self.init_map(self.valid_cf_maps_keys[0])
@@ -435,10 +463,23 @@ class PG_App:
 
             if (self.map_loaded):
                 if not (self.map.paused):
-                    # cProfile.run('APP.map.loop()')
+                    # ignore mouse events when map is active
+                    self.timer.activate_duration_text()
+                    self.timer.block_events(self.PG_MOUSE_EVENTS)
                     self.map.loop()
                     if (self.map.quit_called):
                         self.looping = False
+                    else:
+                        self.timer.allow_events(self.PG_MOUSE_EVENTS)
+                        if (self.map.paused):
+                            self.MENU_BUTTON_WRAPPER.replace_children(self.PAUSE_MENU_BUTTONS)
+                        else:
+                            self.timer.kill_duration_text()
+                else:
+                    self.map.draw()
+                    self.map.ui_container_group.update(self.map.surface)
+            else:
+                self.window.fill_surface()
 
         if (self.print_misc_info):
             print('[APP][loop] App exiting through main loop')

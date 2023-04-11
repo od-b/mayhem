@@ -8,9 +8,19 @@ class Segment:
     def __init__(self, start: int, ref):
         self.ref = ref
         self.start = start
-        self.duration = int()
+        self.duration = int(0)
+        self.paused = False
+        self.pause_timestamp = int(0)
 
-    def get_duration_int(self):
+    def pause(self):
+        self.pause_timestamp = int(self.duration)
+
+    def unpause(self, curr_time):
+        self.update_duration(curr_time)
+        time_diff = int(self.duration - self.pause_timestamp)
+        self.start += time_diff 
+
+    def get_duration(self):
         ''' returns milliseconds that have passed since segment started '''
         return self.duration
 

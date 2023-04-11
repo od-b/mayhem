@@ -9,6 +9,9 @@ from pygame.draw import rect as draw_rect
 from .PG_ui_text_box import UI_Text_Box
 
 class UI_Button(Sprite):
+    ''' functions like a container in the sense that it should not be drawn, rather just updated.
+        * -> put in a container wrapper if containing the button
+    '''
     def __init__(self,
             cf_button: dict,
             cf_global: dict,
@@ -19,13 +22,15 @@ class UI_Button(Sprite):
             position: tuple,
             trigger_func: Callable,
             trigger_parameter,
-            alt_state_bool_func: Callable
+            alt_state_bool_func: Callable,
+            tooltip_text: str | None
         ):
         Sprite.__init__(self)
         
-        
         cf_default = cf_button['default']
         cf_alt = cf_button['alt']
+        if (tooltip_text):
+            self.tooltip_text = tooltip_text
 
         self.text_box = UI_Text_Box(cf_default['font'], cf_global, ref_id, text, text_getter_func, ref_id, position)
         self.alt_text_box = UI_Text_Box(cf_alt['font'], cf_global, ref_id, text, text_getter_func, ref_id, position)
@@ -85,8 +90,9 @@ class UI_Button(Sprite):
             self.trigger_func()
 
     def update(self, surface: Surface):
-        ''' update rendering if text has changed '''
-
+        # call the alt state decider. if true, use alt color. if not, regular.
+        # this approach is not really optimized, however, there's a overflow of cpu capacity
+        # when the menu is open, since no map sprites are being updated.
         if (self.alt_state_bool_func(self)):
             surface.blit(self.alt_bg_surf, self.rect)
             self.alt_text_box.update()
@@ -99,4 +105,3 @@ class UI_Button(Sprite):
             self.text_rect = self.text_box.image.get_rect(center=self.rect.center)
 
         surface.blit(self.text_render, self.text_rect)
-

@@ -1,5 +1,5 @@
 from .colors import RGB, RGBA
-from .fonts import cf_font
+from .fonts import cf_font, get_path, FONT_ANTIALIAS, FONT_RECT_BG_COLOR, CF_FONT_TRIGGERS
 from .cf_window import WINDOW_CENTER
 from .rect_styles import CF_FILLED_RECT
 
@@ -29,6 +29,28 @@ CF_MENU = {
         'large':        cf_font('large', 'blue', 'semibold', None),
         'alt_large':    cf_font('large', 'blue_dark', 'bold', None),
         'xlarge':       cf_font('xlarge', 'blue_dark', 'bold', None)
+    },
+    'tooltip_container': {
+        'max_width': int(300),
+        'max_height': int(200),
+        'child_padding_x': int(10),
+        'child_padding_y': int(10),
+        'cf_bg': CF_FILLED_RECT['offblack_on_beige'],
+        'triggers': CF_FONT_TRIGGERS,
+        'title_padding_y': int(4),
+        'fonts': {
+            'bg_color': FONT_RECT_BG_COLOR,
+            'antialias': FONT_ANTIALIAS,
+            'color': RGB['bone'],
+            'alt_color': RGB['blue_light'],
+            'size': int(20),
+            'title_size': int(28),
+            'paths': {
+                'default': get_path('regular', None),
+                'italic': get_path('regular', 'italic'),
+                'bold': get_path('bold', None),
+            }
+        }
     },
     # buttons combine two backgrounds and two fonts
     'buttons': {

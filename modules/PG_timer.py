@@ -7,6 +7,7 @@ from .timer import Timer
 from .PG_ui_text_box import UI_Text_Box
 from .PG_ui_container import UI_Sprite_Container
 
+
 class PG_Timer(Timer):
     ''' Segment based time tracking. Extends .general/Timer
         * relies on the pygame clock to provide time values
@@ -27,7 +28,6 @@ class PG_Timer(Timer):
         self.clock = time.Clock()
         self.first_init_done: bool = False
         self.custom_events = []
-        self.blocked_events = []
 
         # create a function pointer instead of checking conditions every frame
         if (self.busy_loop):
@@ -50,33 +50,54 @@ class PG_Timer(Timer):
             cf_text_container['child_padding_y']
         )
         self.container_group.add(self.TEXT_CONTAINER)
+        self.UI_ELEMENTS: list[Sprite] = []
         
+        self.duration_text_ref_id = ["DURATION", "TEXT_BOX", "TEMP"]
+        self.fps_text_ref_id = ["FPS", "TEXT_BOX", "CONST"]
+
         self.set_up_textboxes()
+
+    def pause(self):
+        self.active_segment.pause()
+
+    def unpause(self):
+        ''' resume or create a new segment. does not save the old segment. '''
+        curr_time = time.get_ticks()
+        self.active_segment.unpause(curr_time)
 
     def set_up_textboxes(self):
         if (self.cf_timer['display_fps_text']):
             FPS_TEXT = UI_Text_Box(
                 self.cf_timer['fps_text_style'],
                 self.cf_global,
-                ["FPS", "TEXT_BOX", "CONST"],
+                self.fps_text_ref_id,
                 'FPS: ',
                 self.get_fps_string,
                 None,
                 self.TEXT_CONTAINER.rect.center
             )
+            self.UI_ELEMENTS.append(FPS_TEXT)
             self.TEXT_CONTAINER.add_child(FPS_TEXT)
 
         if (self.cf_timer['display_segment_time_text']):
             DURATION_TEXT = UI_Text_Box(
                 self.cf_timer['segment_time_text_style'],
                 self.cf_global,
-                ["DURATION", "TEXT_BOX", "CONST"],
+                self.duration_text_ref_id,
                 'Time: ',
                 self.get_segment_duration_formatted,
                 None,
                 self.TEXT_CONTAINER.rect.center
             )
-            self.TEXT_CONTAINER.add_child(DURATION_TEXT)
+            self.UI_ELEMENTS.append(DURATION_TEXT)
+
+    def kill_duration_text(self):
+        if (len(self.UI_ELEMENTS) > 0):
+            self.TEXT_CONTAINER.kill_children_by_ref_id_interesction(self.duration_text_ref_id)
+
+    def activate_duration_text(self):
+        if (len(self.UI_ELEMENTS) > 0):
+            self.TEXT_CONTAINER.add_children_by_ref_id(self.duration_text_ref_id, self.UI_ELEMENTS)
 
     def new_segment(self, ref: int | None, archive_active_segment: bool):
         ''' overwrites parent method.
@@ -94,26 +115,25 @@ class PG_Timer(Timer):
     def get_custom_events(self):
         return self.custom_events
 
-    def get_blocked_events(self):
-        return self.blocked_events
-
     def get_segment_duration(self):
-        return self.active_segment.get_duration_int()
+        return self.active_segment.get_duration()
 
-    def allow_event(self, event_id):
-        event.set_allowed(event_id)
-        if (event_id) in self.blocked_events:
-            self.blocked_events.remove(event_id)
+    def allow_event(self, event_id_single):
+        event.set_allowed(event_id_single)
 
-    def block_events(self, events: list):
+    def allow_events(self, event_id_iterable):
+        for e in event_id_iterable:
+            self.allow_event(e)
+
+    def block_event(self, event_id_single):
+        event.set_blocked(event_id_single)
+
+    def block_events(self, event_id_iterable):
         ''' blocks the given events from entering the event queue
-            * saves some time when iterating over pg.event.get()
-            * custom added events can be removed through this function
-            * blocked events are stored in self.blocked_events
+            * saves some resources when iterating over pg.event.get()
         '''
-        for EVENT_ID in events:
-            event.set_blocked(EVENT_ID)
-            self.blocked_events.append(EVENT_ID)
+        for e in event_id_iterable:
+            self.block_event(e)
 
     def create_event_timer(self, ms_interval: int, n_loops: int):
         ''' creates a custom event+timer with an unique integer reference
@@ -169,3 +189,10 @@ class PG_Timer(Timer):
         curr_time = time.get_ticks()
         super().update(curr_time)
 
+    def update_paused(self):
+        ''' update timer without updating the segment, if any '''
+        if not (self.first_init_done):
+            self.new_segment(None, False)
+        self.tick_func()
+        curr_time = time.get_ticks()
+        self.total_time = (curr_time - self.start_time)
