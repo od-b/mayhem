@@ -56,11 +56,14 @@ class PG_Map:
 
         #### SPRITE GROUPS & LISTS ####
         # groups for setup / spawn purposes
-        self.obstacle_group = Group()
+        self.obstacle_block_group = Group()
         ''' group specifically containing the randomly placed obstacle core blocks '''
-        self.map_edge_group = Group()
+        self.map_edge_block_group = Group()
         ''' group specifically containing the map surface outline blocks '''
         self.terrain_group = Group()
+        ''' blocks and potentially other terrain sprites '''
+        self.spawn_collide_group = Group()
+        ''' group used as a combined no-go spawn position for various sprites '''
 
         # main groups
         self.player_group = GroupSingle()
@@ -91,14 +94,14 @@ class PG_Map:
         ''' bundle of function calls to set up the map '''
         self.set_update_intervals()
         self.store_player_controls()
+        self.set_up_ui_containers()
 
         # sprite creation
         self.spawn_terrain_blocks()
         self.spawn_coins()
-        self.create_player((400, 400))
+        self.spawn_player()
 
         # UI creation
-        self.set_up_ui_containers()
         self.create_all_ui_bars()
 
         if (start_loop):
@@ -121,6 +124,8 @@ class PG_Map:
             cf_bar_container['child_padding_y'],
         )
         self.ui_container_group.add(self.BAR_CONTAINER)
+        # prevent coins & player from spawning below the bars:
+        self.spawn_collide_group.add(self.BAR_CONTAINER)
 
     def set_update_intervals(self):
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_intervals']['terrain'], 0)
@@ -140,30 +145,31 @@ class PG_Map:
         terrain_facing = -1
         self.spawn_outline_blocks(
             self.cf_blocks['edge_outline'],
-            self.map_edge_group, self.rect, terrain_facing, None
+            self.map_edge_block_group, self.rect, terrain_facing, None
         )
         # add map bounds outline blocks to the general map group
-        self.block_group.add(self.map_edge_group)
+        self.block_group.add(self.map_edge_block_group)
 
         # place obstacle_blocks within the game area
-        self.spawn_obstacle_blocks(self.cf_blocks['obstacle'], self.obstacle_group)
+        self.spawn_obstacle_blocks(self.cf_blocks['obstacle'], self.obstacle_block_group)
 
         # outline the obstacles with smaller rects to create more jagged terrain
         terrain_facing = 1
-        for OBSTACLE_BLOCK in self.obstacle_group:
-            # for each block in obstacle_group, outline the block rect
+        for OBSTACLE_BLOCK in self.obstacle_block_group:
+            # for each block in obstacle_block_group, outline the block rect
             alt_pallette = [OBSTACLE_BLOCK.color]
             self.spawn_outline_blocks(
                 self.cf_blocks['obstacle_outline'],
-                self.obstacle_group, 
+                self.obstacle_block_group, 
                 OBSTACLE_BLOCK.rect, 
                 terrain_facing,
                 alt_pallette
             )
 
         # add obstacle blocks and their outline blocks to the general map group
-        self.block_group.add(self.obstacle_group)
+        self.block_group.add(self.obstacle_block_group)
         self.terrain_group.add(self.block_group)
+        self.spawn_collide_group.add(self.block_group)
 
     def spawn_outline_blocks(self, cf_block: dict, group: Group, bounds: Rect,
                               facing: int, alt_pallette: None | list[Color]):
@@ -365,11 +371,14 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def create_player(self, spawn_pos: tuple[int, int]):
-        ''' create and spawn a player sprite
-            * if a player already exists, replaces and removes it
-            * updates the self.player reference
-        '''
+    def spawn_player(self):
+        ''' create and spawn the player sprite '''
+        player_width = int(self.cf_player['surface']['width'])
+        player_height = int(self.cf_player['surface']['height'])
+        tmp_rect = Rect((0, 0), (player_width, player_height))
+        spawn_pos = self.get_rand_pos_no_collide(tmp_rect, player_width, player_height, self.spawn_collide_group)
+        del tmp_rect
+
         # create the player sprite, then update player_group
         self.player = Player(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
         self.player_group.add(self.player)
@@ -462,7 +471,7 @@ class PG_Map:
             coin_collision = False
 
             # check terrain collision
-            for obj in self.terrain_group:
+            for obj in self.spawn_collide_group:
                 if (offset_rect.colliderect(obj.rect)):
                     terrain_collision = True
                     break
@@ -485,7 +494,8 @@ class PG_Map:
                 if (failed_attempts >= self.LOOP_LIMIT):
                     msg = 'cannot place coins using the corring config'
                     raise LoopError(msg, placed_coins, self.N_COINS, self.LOOP_LIMIT)
-
+        
+        self.spawn_collide_group.add(self.coin_group)
 
     #### RECURRING METHODS ####
 

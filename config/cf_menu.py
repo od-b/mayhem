@@ -5,8 +5,8 @@ from .rect_styles import CF_FILLED_RECT
 
 menu_width = 800
 menu_height = 600
-menu_pos_x = WINDOW_CENTER[0] - int(menu_width / 2)
-menu_pos_y = WINDOW_CENTER[1] - int(menu_height / 2)
+menu_pos_x = int(WINDOW_CENTER[0] - (menu_width / 2))
+menu_pos_y = int(WINDOW_CENTER[1] - (menu_height / 2))
 menu_border_width = 4
 
 CF_MENU = {
@@ -31,12 +31,12 @@ CF_MENU = {
         'child_padding_y': int(10)
     },
     'tooltip_container': {
-        'cf_bg': CF_FILLED_RECT['offblack_on_beige'],
+        'cf_bg': CF_FILLED_RECT['offblack_on_offblack'],
+        'cf_formatting_triggers': FORMATTING_TRIGGERS,
         'max_width': int(300),
         'max_height': int(300),
         'child_padding_x': int(10),
         'child_padding_y': int(10),
-        'cf_formatting_triggers': FORMATTING_TRIGGERS,
         'title_padding_y': int(4),
         'cf_fonts': {
             'bg_color': FONT_RECT_BG_COLOR,

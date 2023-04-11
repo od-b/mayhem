@@ -5,6 +5,9 @@ from pygame.sprite import Sprite, Group, GroupSingle
 from pygame.draw import rect as draw_rect
 
 
+PRINT_DEBUG_INFO = False
+
+
 class UI_Container(Sprite):
     ''' Surface container. Automatically handles positioning of rects within self.\n
         The general idea here is creating a framework that is easy to modify and 
@@ -109,19 +112,33 @@ class UI_Container(Sprite):
 
     #### CALLABLE METHODS ####
 
-    def set_bg_attributes(self, cf_bg):
-        if (cf_bg == None):
-            self.bg_color = None
-            self.border_color = None
-            self.border_width = 0
-        else:
-            self.bg_color = cf_bg['color']
-            if (self.bg_color != None):
-                self.bg_color = Color(self.bg_color)
-            self.border_color = cf_bg['border_color']
-            if (self.border_color != None):
-                self.border_color = Color(self.border_color)
-            self.border_width = cf_bg['border_width']
+    def set_bg_attributes(self, cf_bg: dict | None):
+        self.bg_color = None
+        self.border_color = None
+        self.border_width = int(0)
+    
+        if (cf_bg != None):
+            col = cf_bg['color']
+            alpha = cf_bg['alpha']
+            b_col = cf_bg['border_color']
+            b_alpha = cf_bg['border_alpha']
+            
+            self.border_width = int(cf_bg['border_width'])
+
+            if (col != None):
+                if (alpha != None) and (alpha != 255):
+                    self.bg_color = Color(col[0], col[1], col[2], int(alpha))
+                else:
+                    self.bg_color = Color(col)
+                    
+            if (b_col != None):
+                if (b_alpha != None) and (b_alpha != 255):
+                    # self.border_color = Color(b_col[0], b_col[1], b_col[2], int(b_alpha))
+                    if (PRINT_DEBUG_INFO):
+                        msg = f'NOTE: [{self}] does not support alpha borders. setting alpha to 255.'
+                        msg += 'this might be due to a shared rect config, and is not an issue.'
+                        print(msg)
+                self.border_color = Color(b_col)
 
     def set_align_funcs(self, child_align_x, child_align_y):
         ''' updates the internally used self.ALIGN_FUNC_X & Y '''
@@ -195,7 +212,7 @@ class UI_Container(Sprite):
             * ref_id can be a list or single reference
 
             Example usage:
-            for child in MY_CONTAINER.get_children_by_ref_id("APP"):
+            for child in MY_CONTAINER.get_children_by_ref_id("BAR", spriteGroup):
                 print(child)
         '''
         matching_children = []
@@ -446,6 +463,7 @@ class UI_Text_Container(Sprite):
             cf_bg: dict | None,
             cf_fonts: dict,
             cf_triggers: dict,
+            window,
             position: tuple[int, int],
             max_width: int,
             max_height: int,
@@ -456,6 +474,7 @@ class UI_Text_Container(Sprite):
         ):
         Sprite.__init__(self)
 
+        self.window = window
         self.position = position
         ''' Do not change this attribute externally. Position .rect instead, or use .move() '''
         self.child_padding_x = child_padding_x
@@ -471,17 +490,43 @@ class UI_Text_Container(Sprite):
         self.set_font_attributes(cf_fonts)
         self.text_box_group = Group()
 
+        self.BG_ALPHA = False
+        if (self.bg_color):
+            if (self.bg_color.a != 255):
+                # create a bg surface as large as the window. 
+                # allows blitting alpha portions of it to where the container is
+                window_re = window.surface.get_rect()
+                self.bg_surf = Surface((window_re.w, window_re.h), flags=SRCALPHA)
+                self.bg_surf.fill(self.bg_color)
+                self.BG_ALPHA = True
+
     def set_bg_attributes(self, cf_bg: dict | None):
         self.bg_color = None
         self.border_color = None
         self.border_width = int(0)
+
         if (cf_bg != None):
-            if (cf_bg['color'] != None):
-                self.bg_color = Color(cf_bg['color'])
-            if (cf_bg['border_color'] != None):
-                self.border_color = Color(cf_bg['border_color'])
-            if (cf_bg['border_width']):
-                self.border_width = int(cf_bg['border_width'])
+            col = cf_bg['color']
+            alpha = cf_bg['alpha']
+            b_col = cf_bg['border_color']
+            b_alpha = cf_bg['border_alpha']
+            
+            self.border_width = int(cf_bg['border_width'])
+
+            if (col != None):
+                if (alpha != None) and (alpha != 255):
+                    self.bg_color = Color(col[0], col[1], col[2], int(alpha))
+                else:
+                    self.bg_color = Color(col)
+                    
+            if (b_col != None):
+                if (b_alpha != None) and (b_alpha != 255):
+                    # self.border_color = Color(b_col[0], b_col[1], b_col[2], int(b_alpha))
+                    if (PRINT_DEBUG_INFO):
+                        msg = f'NOTE: [{self}] does not support alpha borders. setting alpha to 255.'
+                        msg += 'this might be due to a shared rect config, and is not an issue.'
+                        print(msg)
+                self.border_color = Color(b_col)
 
     def set_trigger_strings(self, cf_triggers: dict):
         ''' set triggers for applying different styles for certain words '''
@@ -666,7 +711,10 @@ class UI_Text_Container(Sprite):
 
         # draw bg / border
         if (self.bg_color):
-            draw_rect(surface, self.bg_color, bg_rect)
+            if (self.BG_ALPHA):
+                surface.blit(self.bg_surf, bg_rect, area=bg_rect)
+            else:
+                draw_rect(surface, self.bg_color, bg_rect)
         if (self.border_width):
             draw_rect(surface, self.border_color, bg_rect, width=self.border_width)
 
@@ -680,3 +728,6 @@ class UI_Text_Container(Sprite):
                 surface.blit(elem[0], elem[1].topleft)
             else:
                 surface.blit(elem[0], elem[1].topleft)
+
+    def __str__(self):
+        return f'[{super().__str__()} : Rect="{self.rect}", text="{self.text}"'

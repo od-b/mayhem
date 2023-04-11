@@ -98,7 +98,7 @@ class PG_App:
         self.create_menu_tooltip()
 
     def get_map_tooltip(self, cf_map: dict):
-        pass
+        return str("TESTDADWDA")
 
     def set_up_menu(self):
         ''' This function has a lot of constants / magic numbers / settings
@@ -184,43 +184,46 @@ class PG_App:
         self.MENU_WRAPPER.add_child(SUBTITLE_CONTAINER)
 
 
-        ### subcontainer 3 --> button wrapper
+        ### subcontainer 3 --> all-purpose button wrapper
         # create an internal wrapper for containing buttons
-        sub_3_height = int(subcontainer_h / 2)
-        unclaimed_height += int(subcontainer_h - sub_3_height)
+        btn_wrapper_height = int(subcontainer_h / 2)
+        unclaimed_height += int(subcontainer_h - btn_wrapper_height)
 
         n_buttons = len(self.valid_cf_maps_keys)
-        # n_buttons = int(4)
-
-        btn_padding_x = self.MENU_WRAPPER.border_width
+        btn_padding_x = int(self.MENU_WRAPPER.border_width)
         btn_padding_y = int(0)
-
-        btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
-        btn_height = int(sub_3_height)
 
         self.MENU_BUTTON_WRAPPER = UI_Container_Wrapper(
             CF_BG_NONE,
-            dummy_pos, (subcontainer_w, sub_3_height),
+            dummy_pos, (subcontainer_w, btn_wrapper_height),
             "left", int(-btn_padding_x), 0,
             "right", "container_centery",
             btn_padding_x, btn_padding_y
         )
         self.MENU_WRAPPER.add_child(self.MENU_BUTTON_WRAPPER)
 
-        ### create main menu buttons ###
+        ### create MENU_BUTTON_WRAPPER's buttons ###
+
+        # calculate width of map selection buttons
+        btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
+        btn_height = int(btn_wrapper_height)
+
         for i in range(n_buttons):
-            # TODO: map info text containing some of the map_cf info
-            tooltip_text = f't/_b_Map::Button n/#{i}'
+            cf_map_key = self.valid_cf_maps_keys[i]
+            trigger_parameter = cf_map_key
+            ref_id = cf_map_key
+            tooltip_text = self.get_map_tooltip(self.cf_maps[cf_map_key])
+
             BTN = UI_Button(
                 self.cf_menu['buttons']['map_selection'],
                 self.cf_global,
-                str(self.valid_cf_maps_keys[i]),
+                ref_id,
                 '',
                 self.get_menu_button_text,
                 (btn_width, btn_height),
                 dummy_pos,
                 self.init_map,
-                str(self.valid_cf_maps_keys[i]),
+                trigger_parameter,
                 self.button_mouse_over,
                 tooltip_text
             )
@@ -228,10 +231,7 @@ class PG_App:
 
         self.MENU_BUTTON_WRAPPER.add_child(self.MAIN_MENU_BUTTONS)
 
-
-        ### create pause menu buttons ###
-
-        # recalculate width
+        # recalculate width for the map pause buttons
         n_buttons = int(3)
         btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
 
@@ -333,6 +333,7 @@ class PG_App:
             cf_tooltip['cf_bg'],
             cf_tooltip['cf_fonts'],
             cf_tooltip['cf_formatting_triggers'],
+            self.window,
             self.MENU_WRAPPER.rect.topleft,
             cf_tooltip['max_width'],
             cf_tooltip['max_height'],
@@ -453,17 +454,15 @@ class PG_App:
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
         self.window.fill_surface()
-        self.tooltip_group.add(self.TOOLTIP)
 
         while (self.looping):
             self.timer.update_paused()
             self.curr_mouse_pos = pg.mouse.get_pos()
- 
             self.menu_wrapper_group.update(self.window.surface)
-            self.timer.draw_ui(self.window.map_surface)
-            self.check_events()
-            self.TOOLTIP.move(self.curr_mouse_pos)
             self.tooltip_group.update(self.window.surface)
+ 
+            self.check_events()
+            self.timer.draw_ui(self.window.map_surface)
             pg.display.update()
 
             self.tooltip_group.empty()
