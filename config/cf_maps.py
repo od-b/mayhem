@@ -6,6 +6,8 @@ from .map_ui import MAP_CONTAINERS, PLAYER_STATUS_BARS
 
 MAP_UPDATE_INTERVALS = {
     'terrain': int(100),
+    'player_img_cycle': int(30),
+    'coin_img_cycle': int(10),
 }
 
 
@@ -23,11 +25,13 @@ CF_MAPS = {
         'player_fuel_consumption': float(0.02),
         'n_obstacles':     int(13),
         'n_coins':         int(20),
+        'n_turrets':       int(1),
         'min_coin_offset': int(11),      # min. offset to terrain
         'min_coin_spread': int(120),    # min. distance to another coin
         # nested configs; sets the config dicts of "children". can be shared or unique
         'game_sprites': {
-            'player': CF_PLAYERS['polygon'],
+            # 'player': CF_PLAYERS['polygon'],
+            'player': CF_PLAYERS['corvette'],
             'blocks': {
                 'edge_outline':     CF_BLOCKS['small_gray_block'],
                 'obstacle':         CF_BLOCKS['pastel_block'],

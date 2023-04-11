@@ -95,9 +95,9 @@ class PG_App:
         self.print_misc_info = True
 
         self.set_up_menu()
-        self.create_menu_tooltip()
+        self.create_tooltip_container()
 
-    def get_map_tooltip(self, cf_map: dict):
+    def get_map_tooltip_text(self, cf_map: dict):
         return str("TESTDADWDA")
 
     def set_up_menu(self):
@@ -212,7 +212,7 @@ class PG_App:
             cf_map_key = self.valid_cf_maps_keys[i]
             trigger_parameter = cf_map_key
             ref_id = cf_map_key
-            tooltip_text = self.get_map_tooltip(self.cf_maps[cf_map_key])
+            tooltip_text = self.get_map_tooltip_text(self.cf_maps[cf_map_key])
 
             BTN = UI_Button(
                 self.cf_menu['buttons']['map_selection'],
@@ -325,7 +325,7 @@ class PG_App:
         # last_btn_i = len(btn_list)-1
         # btn_list[last_btn_i].rect.width += int(self.MENU_BUTTON_WRAPPER.rect.right - btn_list[last_btn_i].rect.right)
 
-    def create_menu_tooltip(self):
+    def create_tooltip_container(self):
         ''' create a text container that will dynamically change its size to fit the given text '''
         cf_tooltip = self.cf_menu['tooltip_container']
 

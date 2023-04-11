@@ -1,8 +1,11 @@
-from pygame import Color, Surface, transform, mask, math as pg_math
+from pygame import Color, Surface, transform, mask, image, Rect, SRCALPHA, math as pg_math
+from pygame.transform import scale
 from pygame.math import Vector2 as Vec2, lerp
 from pygame.sprite import Sprite
 from pygame.draw import polygon as draw_polygon
 # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
+
+from .PG_common import load_sprites
 
 
 class Player(Sprite):
@@ -16,8 +19,6 @@ class Player(Sprite):
         cf_physics:  dict = cf_player['physics']
         cf_gameplay: dict = cf_player['gameplay']
         cf_phases:   dict = cf_player['phase_durations']
-        
-        
 
         #### CONSTANTS ####
         self.SPAWN_POS          = spawn_pos
@@ -67,9 +68,13 @@ class Player(Sprite):
         ''' multiplier used when applying gravity to velocity '''
         self.VEC_CENTER  = Vec2(0.0, 0.0)
         ''' used for relative angle calculation '''
+        
+        self.cf_spritesheets: dict = cf_surface['spritesheets']
 
-        self.DEFAULT_IMAGE      = self.set_up_image(cf_surface['colors']['default'])
-        self.COLLISION_CD_IMAGE = self.set_up_image(cf_surface['colors']['collision_cooldown'])
+        # if not self.cf_spritesheets:
+        #     self.IDLE_IMAGES = self.set_up_polygon_image(cf_surface['colors']['default'])
+        # else:
+        self.set_up_sprite_images()
 
         # initialize all attributes through the reset function
         self.reset_all_attributes()
@@ -78,6 +83,61 @@ class Player(Sprite):
         self.update_image()
 
         self.PHASE_DEBUG_PRINT = False
+
+    def set_up_sprite_images(self):
+        scalar = self.cf_spritesheets['image_scalar']
+
+        cf_idle: dict = self.cf_spritesheets['idle']
+        cf_shield: dict = self.cf_spritesheets['shield']
+        cf_destroyed: dict = self.cf_spritesheets['destroyed']
+        cf_thrust_a: dict = self.cf_spritesheets['thrust_a']
+        cf_thrust_b: dict = self.cf_spritesheets['thrust_b']
+        cf_thrust_c: dict = self.cf_spritesheets['thrust_c']
+
+        _N_IDLE_IMAGES = int(cf_idle['n_images'])
+        _N_SHIELD_IMAGES = int(cf_shield['n_images'])
+        _N_DESTROYED_IMAGES = int(cf_destroyed['n_images'])
+        _N_THRUST_A_IMAGES = int(cf_thrust_a['n_images'])
+        _N_THRUST_B_IMAGES = int(cf_thrust_b['n_images'])
+        _N_THRUST_C_IMAGES = int(cf_thrust_c['n_images'])
+
+        _IDLE_IMAGES = load_sprites(cf_idle['path'], _N_IDLE_IMAGES, scalar)
+        _SHIELD_IMAGES = load_sprites(cf_shield['path'], _N_SHIELD_IMAGES, scalar)
+        _DESTROYED_IMAGES = load_sprites(cf_destroyed['path'], _N_DESTROYED_IMAGES, scalar)
+        _THRUST_A_IMAGES = load_sprites(cf_thrust_a['path'], _N_THRUST_A_IMAGES, scalar)
+        _THRUST_B_IMAGES = load_sprites(cf_thrust_b['path'], _N_THRUST_B_IMAGES, scalar)
+        _THRUST_C_IMAGES = load_sprites(cf_thrust_c['path'], _N_THRUST_C_IMAGES, scalar)
+
+        # store the tuples nested in tuples, along with the max allowed index
+        self.IDLE_IMAGES        = (_IDLE_IMAGES, int(_N_IDLE_IMAGES - 1))
+        self.SHIELD_IMAGES      = (_SHIELD_IMAGES, int(_N_SHIELD_IMAGES - 1))
+        self.DESTROYED_IMAGES   = (_DESTROYED_IMAGES, int(_N_DESTROYED_IMAGES - 1))
+        self.THRUST_A_IMAGES    = (_THRUST_A_IMAGES, int(_N_THRUST_A_IMAGES - 1))
+        self.THRUST_B_IMAGES    = (_THRUST_B_IMAGES, int(_N_THRUST_B_IMAGES - 1))
+        self.THRUST_C_IMAGES    = (_THRUST_C_IMAGES, int(_N_THRUST_C_IMAGES - 1))
+
+        self.special_image_set = False
+        self.curr_image_index = 0
+        self.curr_image_type: tuple[tuple[Surface, ...], int] = self.IDLE_IMAGES
+        self.curr_image: Surface = self.curr_image_type[0][self.curr_image_index]
+
+    def cycle_active_image(self):
+        if (self.curr_image_index >= self.curr_image_type[1]):
+            self.curr_image_index = 0
+        else:
+            self.curr_image_index += 1
+        self.curr_image = self.curr_image_type[0][self.curr_image_index]
+
+    def set_special_image_type(self, image_type: tuple[tuple[Surface, ...], int]):
+        self.curr_image_type = image_type
+        self.special_image_set = True
+        self.cycle_active_image()
+
+    def set_idle_image_type(self):
+        self.special_image_set = False
+        self.curr_image_index = 0
+        self.curr_image_type = self.IDLE_IMAGES
+        self.curr_image = self.curr_image_type[0][self.curr_image_index]
 
     def reset_all_attributes(self):
         ''' reset (or set) all attributes used across all methods '''
@@ -110,13 +170,11 @@ class Player(Sprite):
         self.temp_max_accel: float = 0.0
         ''' temporary max acceleration '''
 
-        # misc // setup
-        self.health         = self.MAX_HEALTH
-        self.fuel           = self.MAX_FUEL
-        self.curr_image_src = self.DEFAULT_IMAGE
-        ''' which of the loaded images is currently in use '''
+        self.health = self.MAX_HEALTH
+        self.fuel   = self.MAX_FUEL
+        self.set_idle_image_type()
 
-    def set_up_image(self, color: Color):
+    def set_up_polygon_image(self, color: Color):
         ''' get the the original image used for later transformation
             * ensures the original image is rotated, not the rotated one.
                 if this is not done, two things will happen:
@@ -164,8 +222,16 @@ class Player(Sprite):
             else:
                 self.velocity.y = -0.1
 
+        # TODO: fix impact weight health scaling by a bit
         # scale recoil frames to how fast the sprite was going
+        # if (self.velocity.y > 0):
+        #     grav_w = self.grav_force / self.TERMINAL_VELO
+        #     reduct_w = lerp(self.velocity.y, self.MAX_VELO, grav_w)
+        #     self.velocity.y *= reduct_w
+        # print(f'grav_force: {self.grav_force}')
+        # print(f'velocity.y: {self.velocity.y}')
         impact_velo = self.velocity.length()
+        # print(f'impact_velo: {impact_velo}')
         self.collision_recoil_frames_left = round(impact_velo * self.COLLISION_FRAMES_M)
         self.collision_cooldown_frames_left = self.COLLISION_COOLDOWN_FRAMES + self.collision_recoil_frames_left
 
@@ -191,15 +257,16 @@ class Player(Sprite):
         self.thrust_end_frames_left = 0
 
         # reset thrust phase if currently in a thrust phase
-        if (self.key_thrusting):
-            self.init_phase_thrust_begin()
 
         # print(f'health_loss={health_loss}')
         self.health -= health_loss
         if (self.health <= 0.0):
             return None
 
-        self.curr_image_src = self.COLLISION_CD_IMAGE
+        if (self.key_thrusting):
+            self.init_phase_thrust_begin()
+
+        self.set_special_image_type(self.SHIELD_IMAGES)
         return self.collision_cooldown_frames_left
 
     def init_phase_thrust_begin(self):
@@ -221,9 +288,11 @@ class Player(Sprite):
             self.thrust_begin_frames_left = int(1)
         self.thrust_begin_lerp_increase = 1.0 / self.thrust_begin_frames_left
 
-        if (self.PHASE_DEBUG_PRINT):
-            print(f'thrust_begin_lerp_increase={self.thrust_begin_lerp_increase}')
-            print(f'self.thrust_begin_frames_left: {self.thrust_begin_frames_left}')
+        self.set_special_image_type(self.THRUST_A_IMAGES)
+
+        # if (self.PHASE_DEBUG_PRINT):
+        #     print(f'thrust_begin_lerp_increase={self.thrust_begin_lerp_increase}')
+        #     print(f'self.thrust_begin_frames_left: {self.thrust_begin_frames_left}')
 
     def init_phase_thrust_end(self):
         ''' call to end thrust phase, starting transition to normal acceleration limits
@@ -235,6 +304,7 @@ class Player(Sprite):
         self.thrust_end_frames_left = self.THRUST_END_FRAMES
         self.thrust_end_curr_lerp_weight = 1.0
         self.temp_max_accel = self.acceleration.length()
+        self.set_special_image_type(self.THRUST_C_IMAGES)
 
     def apply_thrust_begin_frame(self):
         ''' gradually increase to thrust acceleration over the set frames '''
@@ -248,12 +318,12 @@ class Player(Sprite):
         new_accel = lerp(self.thrust_begin_accel_length, self.THRUST_MAGNITUDE, (self.thrust_begin_curr_lerp_weight))
         self.thrust_begin_curr_lerp_weight += self.thrust_begin_lerp_increase
 
-        if (self.PHASE_DEBUG_PRINT):
-            if (self.thrust_begin_frames_left < 5):
-                print(f'thrust_begin_frames_left={self.thrust_begin_frames_left}; new_accel={new_accel}')
-                print(f'thrust_begin_curr_lerp_weight={self.thrust_begin_curr_lerp_weight}')
-                if (self.thrust_begin_frames_left == 0):
-                    print(f'[thrust_begin_summary] start: {self.thrust_begin_accel_length}; now={new_accel}')
+        # if (self.PHASE_DEBUG_PRINT):
+        #     if (self.thrust_begin_frames_left < 5):
+        #         print(f'thrust_begin_frames_left={self.thrust_begin_frames_left}; new_accel={new_accel}')
+        #         print(f'thrust_begin_curr_lerp_weight={self.thrust_begin_curr_lerp_weight}')
+        #         if (self.thrust_begin_frames_left == 0):
+        #             print(f'[thrust_begin_summary] start: {self.thrust_begin_accel_length}; now={new_accel}')
 
         # scale up acceleration
         self.acceleration.scale_to_length(new_accel)
@@ -264,6 +334,9 @@ class Player(Sprite):
         # update velocity. apply the current gravity effect.
         self.velocity.update(self.acceleration)
         self.velocity.y += (self.MASS * self.grav_force)
+
+        if (self.thrust_begin_frames_left == 0):
+            self.set_special_image_type(self.THRUST_B_IMAGES)
 
     def thrust_frame(self):
         ''' applies acceleration directly to velocity at increased handling and force.'''
@@ -295,6 +368,10 @@ class Player(Sprite):
         # update velocity. apply the current gravity effect.
         self.velocity.update(self.acceleration)
         self.velocity.y += (self.MASS * self.grav_force)
+        
+        if (self.thrust_end_frames_left == 0):
+            self.set_idle_image_type()
+
 
     def default_frame(self):
         ''' update acceleration, velocity and compounding gravity '''
@@ -321,7 +398,7 @@ class Player(Sprite):
         ''' update self.image, transforming it to the current angle. Update self .rect, .mask. '''
 
         # get a new image by rotating the original image
-        self.image = transform.rotate(self.curr_image_src, -self.angle)
+        self.image = transform.rotate(self.curr_image, -self.angle)
 
         # get new mask for collision checking purposes
         #   > "A new mask needs to be recreated each time a sprite's image is changed  
@@ -333,9 +410,7 @@ class Player(Sprite):
         self.rect = self.image.get_rect(center=self.position)
 
     def update(self):
-
         # note: map handles collision cooldown frames
-
         if (self.collision_recoil_frames_left):
             self.collision_recoil_frames_left -= 1
             # essentially; block any other events during collision recoil

@@ -3,7 +3,7 @@ from typing import Callable
 
 # installed library imports
 import pygame as pg
-from pygame import Color, Surface, Rect, display, SRCALPHA, transform
+from pygame import Color, Surface, Rect, display
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
@@ -21,7 +21,11 @@ from .PG_player import Player
 from .PG_coin import Coin
 from .PG_ui_containers import UI_Sprite_Container
 from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
+from .PG_common import partition_spritesheet
 
+
+DEBUG_PLAYER_VISUALS = False
+DEBUG_CHEAT_MODE = True
 
 class PG_Map:
     def __init__(self, cf_global: dict, cf_map: dict, timer: PG_Timer, surface: Surface):
@@ -83,12 +87,7 @@ class PG_Map:
         self.completed = False
         self.quit_called = False
 
-        # debug // misc toggles
-        self.debug_player_visuals = True
-        self.cheat_mode = True
-
-
-    #### NON-RECURRING SETUP METHODS ####
+    #### NON-RECURRING SETUP METHODS // HELPER FUNCTIONS ####
 
     def set_up_all(self, start_loop: bool):
         ''' bundle of function calls to set up the map '''
@@ -130,6 +129,8 @@ class PG_Map:
     def set_update_intervals(self):
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_intervals']['terrain'], 0)
         ''' custom pygame event call to update terrain '''
+        self.EVENT_PLAYER_IMG_CYCLE = self.timer.create_event_timer(self.cf_map['upd_intervals']['player_img_cycle'], 0)
+        # self.EVENT_COIN_IMG_CYCLE = self.timer.create_event_timer(self.cf_map['upd_intervals']['coin_img_cycle'], 0)
 
     def store_player_controls(self) -> dict[str, int]:
         self.STEER_UP    = int(self.cf_player['controls']['steer_up'])
@@ -329,7 +330,7 @@ class PG_Map:
             # set random height/width from within the ranges
             width = randint(cf_block['min_width'], cf_block['max_width'])
             height = randint(cf_block['min_height'], cf_block['max_height'])
-            
+
             # get a random position within the map
             position = self.get_rand_pos(width, height)
 
@@ -417,26 +418,6 @@ class PG_Map:
         # auto add all const bars
         self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_STATUS_BARS)
 
-    def partition_spritesheet(self, spritesheet: Surface, n_images: int, scale: float) -> tuple[Surface, ...]:
-        ''' partition a horizontal spritesheet into equal sized segments '''
-        images = []
-        rect = spritesheet.get_rect()
-        img_height = int(rect.h)
-        img_width = int(rect.w / n_images)
-
-        for x in range(0, rect.w, img_width):
-            # create a new surface
-            SURF = Surface((img_width, img_height), flags=SRCALPHA)
-            # create a rect of the spritesheet area we want
-            area_rect = Rect(x, 0, x+img_width, img_height)
-            # blit that area from the sheet onto the surface, then scale
-            SURF.blit(spritesheet, SURF.get_rect(), area_rect)
-            IMG = transform.scale_by(SURF, scale)
-            images.append(IMG)
-
-        # return list as a tuple
-        return tuple(images)
-
     def spawn_coins(self):
         ''' create and position the coin sprite various places around the screen '''
         cf_coin = self.cf_game_sprites['coin']
@@ -447,7 +428,7 @@ class PG_Map:
 
         # all the coins share a single tuple containing their images
         COIN_SPRITESHEET_IMG = pg.image.load(spritesheet_path)
-        IMAGES = self.partition_spritesheet(COIN_SPRITESHEET_IMG, spritesheet_variants, scalar)
+        IMAGES = partition_spritesheet(COIN_SPRITESHEET_IMG, spritesheet_variants, scalar)
 
         # place the coins according to settings
         min_offset = int(self.cf_map['min_coin_offset'])
@@ -497,6 +478,9 @@ class PG_Map:
         
         self.spawn_collide_group.add(self.coin_group)
 
+    def spawn_turrets(self):
+        pass
+
     #### RECURRING METHODS ####
 
     def pause(self):
@@ -532,16 +516,20 @@ class PG_Map:
                 BAR.max_val = float(max_val)
 
     def init_player_death_event(self):
-        if (self.cheat_mode):
-            self.player.health = self.player.MAX_HEALTH
-            self.player.fuel = self.player.MAX_FUEL
-            self.player.curr_image_src = self.player.COLLISION_CD_IMAGE
-            return
+        # if (DEBUG_CHEAT_MODE):
+        #     self.player.health = self.player.MAX_HEALTH
+        #     self.player.fuel = self.player.MAX_FUEL
+        #     self.player.set_idle_image_type()
+        #     return
 
         self.player.fuel = 0.0
         self.player.velocity.y = self.player.TERMINAL_VELO
-        self.player.collision_recoil_frames_left = 10000
-        self.player.collision_cooldown_frames_left = 10000
+        self.player.thrust_begin_frames_left = 0
+        self.player.thrust_end_frames_left = 0
+        self.player.key_thrusting = False
+        self.player.collision_recoil_frames_left = 100000
+        self.player.collision_cooldown_frames_left = 100000
+        self.player.set_special_image_type(self.player.DESTROYED_IMAGES) 
         # TODO: SCORE + START AGAIN POPUP
 
     def check_player_block_collision(self):
@@ -556,7 +544,8 @@ class PG_Map:
             self.player.collision_cooldown_frames_left -= 1
             # check if its time to swap the player image back
             if (self.player.collision_cooldown_frames_left == 0):
-                self.player.curr_image_src = self.player.DEFAULT_IMAGE
+                if not self.player.key_thrusting:
+                    self.player.set_idle_image_type()
         elif spritecollideany(self.player, self.block_group):
             # if player rect collides with any block rects, check detailed mask collision
             collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
@@ -587,7 +576,7 @@ class PG_Map:
     def draw(self):
         self.surface.fill(self.fill_color)
 
-        if (self.debug_player_visuals):
+        if (DEBUG_PLAYER_VISUALS):
             self.debug__draw_player_all_info()
         else:
             self.player_group.draw(self.surface)
@@ -616,6 +605,8 @@ class PG_Map:
         for event in pg.event.get():
             # check if the event type matches any relevant types
             match (event.type):
+                case self.EVENT_PLAYER_IMG_CYCLE:
+                    self.player.cycle_active_image()
                 case self.EVENT_UPDATE_TERRAIN:
                     # update blocks, swapping back if highlighted and timer is up
                     self.block_group.update()
@@ -630,7 +621,8 @@ class PG_Map:
                         case self.STEER_RIGHT:
                             self.player.key_direction.x += 1.0
                         case self.THRUST:
-                            self.player.init_phase_thrust_begin()
+                            if (self.player.health > 0):
+                                self.player.init_phase_thrust_begin()
                         case pg.K_ESCAPE:
                             print("pause called")
                             self.pause()
@@ -648,7 +640,8 @@ class PG_Map:
                         case self.STEER_RIGHT:
                             self.player.key_direction.x -= 1.0
                         case self.THRUST:
-                            self.player.init_phase_thrust_end()
+                            if (self.player.health > 0):
+                                self.player.init_phase_thrust_end()
                         case _:
                             pass
                 case pg.QUIT:
