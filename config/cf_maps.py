@@ -20,7 +20,6 @@ CF_MAPS = {
         'gravity_c':       float(0.003),     # every frame gravitational incrementor
         # nested configs; sets the config dicts of "children". can be shared or unique
         'cf_spawning': {
-            'n_turrets':       int(1),
             'coins': {
                 'n_coins':         int(20),
                 'min_terrain_offset': int(11),      # min. offset to terrain

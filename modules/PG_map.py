@@ -474,9 +474,6 @@ class PG_Map:
         
         self.spawn_collide_group.add(self.coin_group)
 
-    def spawn_turrets(self):
-        pass
-
     #### RECURRING METHODS ####
 
     def pause(self):
