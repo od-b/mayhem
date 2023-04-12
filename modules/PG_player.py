@@ -372,6 +372,16 @@ class Player(Sprite):
         self.angle = self.VEC_CENTER.angle_to(self.acceleration)
         self.update_image()
 
+    def init_death_event(self):
+        self.fuel = 0.0
+        self.velocity.y = (self.MAX_VELO * 1.5)
+        self.thrust_begin_frames_left = 0
+        self.thrust_end_frames_left = 0
+        self.key_thrusting = False
+        self.collision_recoil_frames_left = 100000
+        self.collision_cooldown_frames_left = 100000
+        self.set_special_image_type(self.DESTROYED_IMAGES) 
+
     #### FORMATTED STRING GETTERS ####
 
     def get_str_dir_x(self):

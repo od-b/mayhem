@@ -59,31 +59,43 @@ CF_MENU = {
             'cf_button': {
                 'default': CF_FILLED_RECT['red_on_darkred'],
                 'hovering':CF_FILLED_RECT['red_on_offblack'],
-                'clicked': CF_FILLED_RECT['darkred_on_bone'],
+                'toggled': CF_FILLED_RECT['darkred_on_bone'],
             },
             'cf_fonts': {
                 'default': cf_font(24, 'dutchwhite', 'bold', None),
                 'hovering': cf_font(25, 'bone', 'bold', None),
-                'clicked': cf_font(25, 'bone', 'semibold', 'italic'),
+                'toggled': cf_font(25, 'bone', 'semibold', 'italic'),
             }
         },
         'map_paused_action': {
             'cf_button': {
                 'default': CF_FILLED_RECT['red_on_darkred'],
                 'hovering':CF_FILLED_RECT['red_on_offblack'],
-                'clicked': CF_FILLED_RECT['darkred_on_bone'],
+                'toggled': CF_FILLED_RECT['darkred_on_bone'],
             },
             'cf_fonts': {
                 'default': cf_font(24, 'dutchwhite', 'bold', None),
                 'hovering': cf_font(25, 'bone', 'bold', None),
-                'clicked': cf_font(25, 'bone', 'semibold', 'italic'),
+                'toggled': cf_font(25, 'bone', 'semibold', 'italic'),
             }
         },
         'player_selection': {
             'cf_button': {
                 'default': CF_FILLED_RECT['red_on_darkred'],
                 'hovering':CF_FILLED_RECT['red_on_offblack'],
-                'clicked': CF_FILLED_RECT['darkred_on_bone'],
+                'toggled': CF_FILLED_RECT['darkred_on_bone'],
+            }
+        },
+        'start_game': {
+            'cf_button': {
+                'default': CF_FILLED_RECT['red_on_darkred'],
+                'hovering':CF_FILLED_RECT['red_on_offblack'],
+                'toggled': CF_FILLED_RECT['offblack_on_gray'],
+            },
+            'cf_fonts': {
+                'default': cf_font(24, 'dutchwhite', 'bold', None),
+                'hovering': cf_font(25, 'bone', 'bold', None),
+                'toggled': cf_font(25, 'bone', 'semibold', 'italic'),
             }
         },
     }

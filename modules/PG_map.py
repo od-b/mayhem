@@ -58,6 +58,8 @@ class PG_Map:
         self.N_COINS         = int(self.cf_spawning['coins']['n_coins'])
 
         #### SPRITE GROUPS & LISTS ####
+        self.ALL_SPRITES: list[Sprite] = []
+
         # groups for setup / spawn purposes
         self.obstacle_block_group = Group()
         ''' group specifically containing the randomly placed obstacle core blocks '''
@@ -98,6 +100,8 @@ class PG_Map:
         # sprite creation
         self.spawn_terrain_blocks()
         self.spawn_coins()
+        
+        self.ALL_SPRITES.extend(self.block_group.sprites() + self.coin_group.sprites())
 
     def spawn_player(self, cf_player: dict):
         self.player = Player(cf_player, self.cf_map, self.cf_global)
@@ -111,6 +115,7 @@ class PG_Map:
 
         self.set_up_ui_status_bars()
         self.store_player_controls(cf_player)
+        self.ALL_SPRITES.append(self.player)
 
     def start(self):
         self.looping = True
@@ -508,23 +513,6 @@ class PG_Map:
             if (max_val):
                 BAR.max_val = float(max_val)
 
-    def init_player_death_event(self):
-        # if (DEBUG_CHEAT_MODE):
-        #     self.player.health = self.player.MAX_HEALTH
-        #     self.player.fuel = self.player.MAX_FUEL
-        #     self.player.set_idle_image_type()
-        #     return
-
-        self.player.fuel = 0.0
-        self.player.velocity.y = (self.player.MAX_VELO + self.player.MAX_GRAV_FORCE)
-        self.player.thrust_begin_frames_left = 0
-        self.player.thrust_end_frames_left = 0
-        self.player.key_thrusting = False
-        self.player.collision_recoil_frames_left = 100000
-        self.player.collision_cooldown_frames_left = 100000
-        self.player.set_special_image_type(self.player.DESTROYED_IMAGES) 
-        # TODO: SCORE + START AGAIN POPUP
-
     def check_player_block_collision(self):
         ''' since collision is based on image masks, call this after draw, but before update
             * if player collides with a block, init the recoil sequence for the player 
@@ -548,13 +536,12 @@ class PG_Map:
                 if (cd_frames):
                     self.activate_temp_bar('GHOST', 0, cd_frames)
                 else:
-                    self.init_player_death_event()
+                    self.player.init_death_event()
                 # highlight blocks that player collided with
                 self.block_update_group.empty()
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
                     self.block_update_group.add(BLOCK)
-
 
     def check_player_coin_collision(self):
         # check rect collide

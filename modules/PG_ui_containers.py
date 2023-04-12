@@ -397,6 +397,7 @@ class UI_Single_Centered_Container(UI_Sprite_Container):
         if (child):
             self.children.add(child)
 
+
 #### SPECIALIZED CONTAINERS ####
 
 

@@ -21,13 +21,13 @@ class UI_Button(Sprite):
             trigger_parameter,
             hover_state_bool_func: Callable,
             tooltip_text: str | None,
-            has_toggle: bool
+            allow_trigger: bool
         ):
         Sprite.__init__(self)
 
         cf_default = cf_button['default']
         cf_hovering = cf_button['hovering']
-        cf_clicked = cf_button['clicked']
+        cf_toggled = cf_button['toggled']
 
         if (tooltip_text):
             self.tooltip_text = tooltip_text
@@ -35,7 +35,7 @@ class UI_Button(Sprite):
         self.cf_global = cf_global
         self.hover_state_bool_func = hover_state_bool_func
         self.position = position
-        self.has_toggle = has_toggle
+        self.allow_trigger = allow_trigger
         self.ref_id = ref_id
         self.trigger_func = trigger_func
         self.trigger_parameter = trigger_parameter
@@ -49,18 +49,18 @@ class UI_Button(Sprite):
         self.hover_border_color = self.col_or_none(cf_hovering['border_color'])
         self.hover_border_width = self.int_or_none(cf_hovering['border_width'])
 
-        self.click_bg_color = self.col_or_none(cf_clicked['color'])
-        self.click_border_color = self.col_or_none(cf_clicked['border_color'])
-        self.click_border_width = self.int_or_none(cf_clicked['border_width'])
+        self.toggle_bg_color = self.col_or_none(cf_toggled['color'])
+        self.toggle_border_color = self.col_or_none(cf_toggled['border_color'])
+        self.toggle_border_width = self.int_or_none(cf_toggled['border_width'])
 
         self.image = Surface(self.size, flags=SRCALPHA)
         self.bg_surf = Surface(self.size, flags=SRCALPHA)
         self.hover_bg_surf = Surface(self.size, flags=SRCALPHA)
-        self.click_bg_surf = Surface(self.size, flags=SRCALPHA)
+        self.toggle_bg_surf = Surface(self.size, flags=SRCALPHA)
 
         self.bg_surf.fill(Color(0,0,0,0))
         self.hover_bg_surf.fill(Color(0,0,0,0))
-        self.click_bg_surf.fill(Color(0,0,0,0))
+        self.toggle_bg_surf.fill(Color(0,0,0,0))
 
         if (self.bg_color):
             self.bg_surf.fill(self.bg_color)
@@ -72,17 +72,17 @@ class UI_Button(Sprite):
         if (self.hover_border_width):
             draw_rect(self.hover_bg_surf, self.hover_border_color, self.hover_bg_surf.get_rect(), width=self.hover_border_width)
 
-        if (self.click_bg_color):
-            self.click_bg_surf.fill(self.click_bg_color)
-        if (self.click_border_width):
-            draw_rect(self.click_bg_surf, self.click_border_color, self.click_bg_surf.get_rect(), width=self.click_border_width)
+        if (self.toggle_bg_color):
+            self.toggle_bg_surf.fill(self.toggle_bg_color)
+        if (self.toggle_border_width):
+            draw_rect(self.toggle_bg_surf, self.toggle_border_color, self.toggle_bg_surf.get_rect(), width=self.toggle_border_width)
 
         self.rect = self.image.get_rect(topleft=self.position)
         self.bg_rect = self.bg_surf.get_rect(topleft=self.position)
         self.hover_bg_rect = self.hover_bg_surf.get_rect(topleft=self.position)
-        self.click_bg_rect = self.click_bg_surf.get_rect(topleft=self.position)
+        self.toggle_bg_rect = self.toggle_bg_surf.get_rect(topleft=self.position)
 
-        self.click_state_active = False
+        self.toggle_state_active = False
 
     def int_or_none(self, cf_val):
         if (cf_val != None) and (cf_val != 0):
@@ -95,7 +95,7 @@ class UI_Button(Sprite):
         return None
 
     def trigger(self):
-        self.click_state_active = True
+        self.toggle_state_active = True
         if (self.trigger_parameter != None):
             self.trigger_func(self.trigger_parameter)
         else:
@@ -107,13 +107,13 @@ class UI_Button(Sprite):
     def update_hovering(self, surface: Surface):
         surface.blit(self.hover_bg_surf, self.rect)
 
-    def update_clicked(self, surface: Surface):
-        surface.blit(self.click_bg_surf, self.rect)
+    def update_toggled(self, surface: Surface):
+        surface.blit(self.toggle_bg_surf, self.rect)
         self.hover_state_bool_func(self)
 
     def update(self, surface: Surface):
-        if (self.click_state_active):
-            self.update_clicked(surface)
+        if (self.toggle_state_active):
+            self.update_toggled(surface)
         elif (self.hover_state_bool_func(self)):
             self.update_hovering(surface)
         else:
@@ -136,13 +136,13 @@ class UI_Image_Button(UI_Button):
             trigger_parameter,
             hover_state_bool_func: Callable,
             tooltip_text: str | None,
-            has_toggle: bool,
+            allow_trigger: bool,
             image_path: str,
             image_padding_x: int,
             image_padding_y: int,
         ):
         super().__init__(cf_button, cf_global, ref_id, size, position, trigger_func, trigger_parameter,
-                         hover_state_bool_func, tooltip_text, has_toggle)
+                         hover_state_bool_func, tooltip_text, allow_trigger)
 
         # load the image
         IMG_SURF = image_load(image_path).convert_alpha()
@@ -155,7 +155,7 @@ class UI_Image_Button(UI_Button):
         blit_pos = (image_padding_x, image_padding_y)
         self.bg_surf.blit(SCALED_IMG, blit_pos)
         self.hover_bg_surf.blit(SCALED_IMG, blit_pos)
-        self.click_bg_surf.blit(SCALED_IMG, blit_pos)
+        self.toggle_bg_surf.blit(SCALED_IMG, blit_pos)
 
 
 class UI_Text_Button(UI_Button):
@@ -172,28 +172,29 @@ class UI_Text_Button(UI_Button):
             trigger_parameter,
             hover_state_bool_func: Callable,
             tooltip_text: str | None,
-            has_toggle: bool,
+            allow_trigger: bool,
             cf_fonts: dict,
             text: str,
             text_getter_func: Callable | None,
+            text_getter_param
         ):
         super().__init__(cf_button, cf_global, ref_id, size, position, trigger_func, trigger_parameter,
-                         hover_state_bool_func, tooltip_text, has_toggle)
+                         hover_state_bool_func, tooltip_text, allow_trigger)
 
         # create text boxes to hold and/or update the given text
-        self.text_box = UI_Text_Box(cf_fonts['default'], cf_global, ref_id, text, text_getter_func, ref_id, position)
-        self.hover_text_box = UI_Text_Box(cf_fonts['hovering'], cf_global, ref_id, text, text_getter_func, ref_id, position)
-        self.click_text_box = UI_Text_Box(cf_fonts['clicked'], cf_global, ref_id, text, text_getter_func, ref_id, position)
+        self.text_box = UI_Text_Box(cf_fonts['default'], cf_global, ref_id, text, text_getter_func, text_getter_param, position)
+        self.hover_text_box = UI_Text_Box(cf_fonts['hovering'], cf_global, ref_id, text, text_getter_func, text_getter_param, position)
+        self.toggle_text_box = UI_Text_Box(cf_fonts['toggled'], cf_global, ref_id, text, text_getter_func, text_getter_param, position)
 
     def update(self, surface: Surface):
         # call the alt state decider. if true, use alt color. if not, regular.
         # this approach is not really optimized, however, there's a overflow of cpu capacity
         # when the menu is open, since no map sprites are being updated.
-        if (self.click_state_active):
-            self.update_clicked(surface)
-            self.click_text_box.update()
-            self.text_render = self.click_text_box.image
-            self.text_rect = self.click_text_box.image.get_rect(center=self.rect.center)
+        if (self.toggle_state_active):
+            self.update_toggled(surface)
+            self.toggle_text_box.update()
+            self.text_render = self.toggle_text_box.image
+            self.text_rect = self.toggle_text_box.image.get_rect(center=self.rect.center)
         elif (self.hover_state_bool_func(self)):
             self.update_hovering(surface)
             self.hover_text_box.update()

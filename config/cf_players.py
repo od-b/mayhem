@@ -175,6 +175,7 @@ CF_PLAYERS = {
             }
         },
         'gameplay': {
+            'fuel_consumption': float(0.02),
             'max_health': float(100),       # maximum and initial health
             'max_fuel':   float(100),       # maximum and initial mana
             'min_collision_health_loss': float(30),

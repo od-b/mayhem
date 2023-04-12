@@ -156,4 +156,11 @@ CF_FILLED_RECT = {
         'border_width':     int(3),
         'border_alpha':     int(255),
     },
+    'offblack_on_gray': {
+        'color':            RGB['earth_black'],
+        'alpha':            int(255),
+        'border_color':     RGB['gray_108'],
+        'border_width':     int(3),
+        'border_alpha':     int(255),
+    },
 }
