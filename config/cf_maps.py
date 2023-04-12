@@ -17,7 +17,8 @@ CF_MAPS = {
         'name':            str('Map 1'),
         'fill_color':      RGB['offblack'],
         'overlap_color':   RGB['signal_red'],  # used for visualizing overlapping masks / misc
-        'gravity_c':       float(0.003),     # every frame gravitational incrementor
+        'gravity_c':       float(0),     # every frame gravitational incrementor
+        # 'gravity_c':       float(0.003),     # every frame gravitational incrementor
         # nested configs; sets the config dicts of "children". can be shared or unique
         'cf_spawning': {
             'coins': {

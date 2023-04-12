@@ -30,7 +30,8 @@ class Player(Sprite):
         cf_phases:   dict = cf_player['phase_durations']
         cf_spritesheets: dict = cf_player['spritesheets']
 
-        self.FPS                = int(cf_global['fps_limit'])
+        # self.MAP_HAS_GRAVITY = cf_map['has_gravity']
+        self.FPS = int(cf_global['fps_limit'])
         ''' global fps limit '''
 
         ### raw constants ###
@@ -41,12 +42,12 @@ class Player(Sprite):
         self.MIN_COLL_HP_LOSS   = float(cf_gameplay['min_collision_health_loss'])
         self.MAX_COLL_HP_LOSS   = float(cf_gameplay['max_collision_health_loss'])
         # acceleration & velocity
-        self.MASS               = float(cf_physics['mass'])
         self.HANDLING           = float(cf_physics['handling'])
         self.MAX_ACCEL          = float(cf_physics['max_acceleration'])
         self.THRUST_MAGNITUDE   = float(cf_physics['thrust_magnitude'])
         self.MAX_VELO           = float(cf_physics['max_velocity'])
         self.COLLISION_RECOIL_W = float(cf_physics['collision_recoil_w'])
+        self.MASS               = float(cf_physics['mass'])
         ''' how drastic the recoil of collision will be '''
         
         self.GRAV_C = float(self.MASS * cf_map['gravity_c'])

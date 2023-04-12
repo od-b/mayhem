@@ -26,7 +26,9 @@ from modules.PG_ui_containers import (
     UI_Text_Container
 )
 from modules.PG_ui_text_box import UI_Text_Box
-from modules.PG_ui_button import UI_Button
+from modules.PG_ui_button import UI_Button, UI_Text_Button
+
+INFO_PRINT = False
 
 
 class PG_App:
@@ -70,7 +72,14 @@ class PG_App:
         self.valid_cf_maps_keys = []
         for key, _ in self.cf_maps.items():
             self.valid_cf_maps_keys.append(str(key))
-        print(f'loaded maps (config map keys): {self.valid_cf_maps_keys}')
+
+        self.valid_cf_player_keys = []
+        for key, _ in self.cf_players.items():
+            self.valid_cf_player_keys.append(str(key))
+
+        if INFO_PRINT:
+            print(f'loaded maps (config map keys): {self.valid_cf_maps_keys}')
+            print(f'loaded players (config map keys): {self.valid_cf_player_keys}')
 
         # create the window
         self.window = PG_Window(self.cf_global, self.cf_window)
@@ -94,18 +103,59 @@ class PG_App:
 
         self.looping: bool = True
         self.map_loaded: bool = False
-        self.awaiting_player_selection: bool = False
-        
-        self.selected_map_key: str | None = None
-        self.selected_player_key: str | None = str('corvette')
-
-        self.print_misc_info = True
+        self.selected_cf_player: str | None = None
+        self.selected_cf_map: str| None = None
 
         self.set_up_menu()
         self.create_tooltip_container()
 
-    def get_map_tooltip_text(self, cf_map: dict):
-        return str("TESTDADWDA")
+    def btn_onclick_start_map(self):
+        if self.selected_cf_player and self.selected_cf_map:
+            if INFO_PRINT:
+                map_name = self.selected_cf_map['name']
+                player_name = self.selected_cf_player['name']
+                print(f'starting map "{map_name}" using player "{player_name}"')
+            self.init_map()
+
+    def btn_onclick_select_map(self, map_key: str):
+        self.selected_cf_map = self.cf_maps[map_key]
+        if INFO_PRINT:
+            print(f'selected map: cf_maps["{map_key}"]')
+
+    def btn_onclick_select_player(self, player_key: str):
+        self.selected_cf_player = self.cf_players[player_key]
+        if INFO_PRINT:
+            print(f'selected player: cf_players["{player_key}"]')
+
+    def mouse_is_over(self, has_rect):
+        if has_rect.rect.collidepoint(self.curr_mouse_pos):
+            return True
+        return False
+
+    def button_mouse_over(self, button: UI_Button):
+        hovering = self.mouse_is_over(button)
+        if (hovering):
+            if (hasattr(button, "tooltip_text")):
+                self.TOOLTIP.set_text(button.tooltip_text)
+                self.TOOLTIP.move(self.curr_mouse_pos)
+                self.tooltip_group.add(self.TOOLTIP)
+        return hovering
+
+    def check_button_onclick(self, buttons: list[UI_Button]):
+        ''' check if mouse is above a button when mouse1 clicked '''
+        for btn in buttons:
+            if self.mouse_is_over(btn):
+                # turn off click state for other buttons in the list
+                for _btn in buttons:
+                    _btn.click_state_active = False
+                btn.trigger()
+                break
+
+    def get_map_tooltip_text(self, map_key: str):
+        return str(f'{map_key}')
+
+    def get_player_tooltip_text(self, player_key: str):
+        return str(f'{player_key}')
 
     def set_up_menu(self):
         ''' This function has a lot of constants / magic numbers / settings
@@ -151,6 +201,7 @@ class PG_App:
         wrapper_cum_padding_x = int(20)
         wrapper_cum_padding_y = int(cf_wrapper['child_padding_y'] * (N_SUBCONTAINERS + 1))
 
+        # calculate container size, assuming all are equally sized
         subcontainer_w = int(
             MENU_WIDTH - wrapper_cum_padding_x - (2 * cf_wrapper['child_anchor_offset_x'])
         )
@@ -190,107 +241,67 @@ class PG_App:
         )
         self.MENU_WRAPPER.add_child(SUBTITLE_CONTAINER)
 
+        ### subcontainer 3 --> button wrapper for map selection || pause actions
+        top_btn_wrapper_height = int(subcontainer_h / 2)
+        top_button_wrapper_width = subcontainer_w
+        unclaimed_height += int(subcontainer_h - top_btn_wrapper_height)
 
-        ### subcontainer 3 --> all-purpose button wrapper
-        # create an internal wrapper for containing buttons
-        btn_wrapper_height = int(subcontainer_h / 2)
-        unclaimed_height += int(subcontainer_h - btn_wrapper_height)
+        top_btn_padding_x = int(self.MENU_WRAPPER.border_width)
+        top_btn_padding_y = int(0)
 
-        n_buttons = len(self.valid_cf_maps_keys)
-        btn_padding_x = int(self.MENU_WRAPPER.border_width)
-        btn_padding_y = int(0)
-
-        self.MENU_BUTTON_WRAPPER = UI_Container_Wrapper(
+        self.BTN_WRAPPER_TOP = UI_Container_Wrapper(
             CF_BG_NONE,
-            dummy_pos, (subcontainer_w, btn_wrapper_height),
-            "left", int(-btn_padding_x), 0,
+            dummy_pos, (top_button_wrapper_width, top_btn_wrapper_height),
+            "left", int(-top_btn_padding_x), 0,
             "right", "container_centery",
-            btn_padding_x, btn_padding_y
+            top_btn_padding_x, top_btn_padding_y
         )
-        self.MENU_WRAPPER.add_child(self.MENU_BUTTON_WRAPPER)
+        self.MENU_WRAPPER.add_child(self.BTN_WRAPPER_TOP)
 
-        ### create MENU_BUTTON_WRAPPER's buttons ###
-
-        # calculate width of map selection buttons
-        btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
-        btn_height = int(btn_wrapper_height)
-
-        for i in range(n_buttons):
-            cf_map_key = self.valid_cf_maps_keys[i]
-            trigger_parameter = cf_map_key
-            ref_id = cf_map_key
-            tooltip_text = self.get_map_tooltip_text(self.cf_maps[cf_map_key])
-
-            BTN = UI_Button(
-                self.cf_menu['buttons']['map_selection'],
-                self.cf_global,
-                ref_id,
-                '',
-                self.get_menu_button_text,
-                (btn_width, btn_height),
-                dummy_pos,
-                self.init_map,
-                trigger_parameter,
-                self.button_mouse_over,
-                tooltip_text
-            )
-            self.MAIN_MENU_BUTTONS.append(BTN)
-
-        self.MENU_BUTTON_WRAPPER.add_child(self.MAIN_MENU_BUTTONS)
-
-        # recalculate width for the map pause buttons
-        n_buttons = int(3)
-        btn_width = int((subcontainer_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
-
-        # 1) main menu
-        btn_return_tooltip = "Return to the main menu. n/t/Warning n/_b_All progress will be lost."
-        BTN_RETURN = UI_Button(
-            self.cf_menu['buttons']['map_paused_action'],
-            self.cf_global,
-            ["BUTTON", "PAUSE_MENU", "RETURN"],
-            str('Main Menu'),
-            None,
-            (btn_width, btn_height),
-            dummy_pos,
-            self.exit_map,
-            False,
-            self.button_mouse_over,
-            btn_return_tooltip
+        # create map selection buttons
+        self.MAP_SELECT_BUTTONS = self.create_map_selection_buttons(
+            top_button_wrapper_width, top_btn_wrapper_height,
+            top_btn_padding_x, top_btn_padding_y
         )
 
-        # 2) restart
-        btn_reset_tooltip = "Reset the map. n/Map setup will be the same."
-        BTN_RESET = UI_Button(
-            self.cf_menu['buttons']['map_paused_action'],
-            self.cf_global,
-            ["BUTTON", "PAUSE_MENU", "RESET"],
-            str('Reset'),
-            None,
-            (btn_width, btn_height),
-            dummy_pos,
-            self.reset_map,
-            None,
-            self.button_mouse_over,
-            btn_reset_tooltip
+        # create buttons to display instead of map selection when map is paused
+        self.PAUSE_ACTION_BUTTONS = self.create_map_paused_buttons(
+            subcontainer_w, top_btn_wrapper_height,
+            top_btn_padding_x, top_btn_padding_y
         )
 
-        # 3) unpause
-        btn_unpause_tooltip = str("Return to the game.")
-        BTN_UNPAUSE = UI_Button(
-            self.cf_menu['buttons']['map_paused_action'],
-            self.cf_global,
-            ["BUTTON", "PAUSE_MENU", "UNPAUSE"],
-            str('Unpause'),
-            None,
-            (btn_width, btn_height),
-            dummy_pos,
-            self.unpause_map,
-            None,
-            self.button_mouse_over,
-            btn_unpause_tooltip
+        # store in respective lists
+        self.MAIN_MENU_BUTTONS.extend(self.MAP_SELECT_BUTTONS)
+        self.PAUSE_MENU_BUTTONS.extend(self.PAUSE_ACTION_BUTTONS)
+        # initialize with main menu buttons as children
+        self.BTN_WRAPPER_TOP.add_child(self.MAP_SELECT_BUTTONS)
+
+        ### subcontainer 4 --> select desired player
+        mid_button_wrapper_height = int(subcontainer_h / 2)
+        mid_button_wrapper_width = subcontainer_w
+        unclaimed_height += int(subcontainer_h - mid_button_wrapper_height)
+
+        mid_btn_padding_x = int(self.MENU_WRAPPER.border_width)
+        mid_btn_padding_y = int(0)
+
+        self.BTN_WRAPPER_MID = UI_Container_Wrapper(
+            CF_BG_NONE,
+            dummy_pos, (mid_button_wrapper_width, mid_button_wrapper_height),
+            "left", int(-mid_btn_padding_x), 0,
+            "right", "container_centery",
+            mid_btn_padding_x, mid_btn_padding_y
+        )
+        self.MENU_WRAPPER.add_child(self.BTN_WRAPPER_MID)
+
+        self.PLAYER_SELECT_BUTTONS = self.create_player_selection_buttons(
+            mid_button_wrapper_width, mid_button_wrapper_height,
+            mid_btn_padding_x, mid_btn_padding_y
         )
 
-        self.PAUSE_MENU_BUTTONS.extend([BTN_RETURN, BTN_RESET, BTN_UNPAUSE])
+        # store in respective lists
+        self.MAIN_MENU_BUTTONS.extend(self.PLAYER_SELECT_BUTTONS)
+        # initialize with main menu buttons 
+        self.BTN_WRAPPER_MID.add_child(self.PLAYER_SELECT_BUTTONS)
 
         # TODO
         ## out of map 
@@ -323,14 +334,149 @@ class PG_App:
 
         # correct last subcontainer height
         target_y_pos = int(
-            self.MENU_WRAPPER.rect.bottom - self.MENU_WRAPPER.border_width - self.MENU_WRAPPER.CHILD_PADDING_Y)
+            self.MENU_WRAPPER.rect.bottom - self.MENU_WRAPPER.border_width - self.MENU_WRAPPER.CHILD_PADDING_Y
+        )
         SUBC_LIST = self.MENU_WRAPPER.children.sprites()
         actual_y_pos = SUBC_LIST[len(SUBC_LIST)-1].rect.bottom
         SUBC_LIST[len(SUBC_LIST)-1].rect.height += (target_y_pos - actual_y_pos)
 
         # # correct btn width
         # last_btn_i = len(btn_list)-1
-        # btn_list[last_btn_i].rect.width += int(self.MENU_BUTTON_WRAPPER.rect.right - btn_list[last_btn_i].rect.right)
+        # btn_list[last_btn_i].rect.width += int(self.BTN_WRAPPER_TOP.rect.right - btn_list[last_btn_i].rect.right)
+
+    def create_player_selection_buttons(self, container_w, container_h, btn_padding_x, btn_padding_y):
+        n_buttons = len(self.valid_cf_player_keys)
+
+        # calculate size of map selection buttons
+        btn_width = int((container_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
+        btn_height = int(container_h - (btn_padding_y * 2))
+
+        PLAYER_SELECT_BUTTONS: list[UI_Button] = []
+
+        for player_key in self.valid_cf_player_keys:
+            tooltip_text = self.get_player_tooltip_text(player_key)
+            trigger_func = self.btn_onclick_select_player
+            trigger_parameter = player_key
+            btn_text = str(self.cf_players[player_key]['name'])
+            hover_bool_func = self.button_mouse_over
+            text_getter_func = None
+            ref_id = player_key
+            has_toggle = True
+
+            BTN = UI_Text_Button(
+                self.cf_menu['buttons']['player_selection'],
+                self.cf_global,
+                ref_id,
+                (btn_width, btn_height),
+                self.MENU_WRAPPER.rect.center,
+                trigger_func,
+                trigger_parameter,
+                hover_bool_func,
+                tooltip_text,
+                has_toggle,
+                btn_text,
+                text_getter_func
+            )
+            PLAYER_SELECT_BUTTONS.append(BTN)
+
+        return PLAYER_SELECT_BUTTONS
+
+    def create_map_selection_buttons(self, container_w, container_h, btn_padding_x, btn_padding_y):
+        n_buttons = len(self.valid_cf_maps_keys)
+
+        # calculate size of map selection buttons
+        btn_width = int((container_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
+        btn_height = int(container_h - (btn_padding_y * 2))
+
+        MAP_SELECT_BUTTONS: list[UI_Button] = []
+
+        for map_key in self.valid_cf_maps_keys:
+            tooltip_text = self.get_map_tooltip_text(map_key)
+            trigger_func = self.btn_onclick_select_map
+            trigger_parameter = map_key
+            btn_text = str(self.cf_maps[map_key]['name'])
+            hover_bool_func = self.button_mouse_over
+            text_getter_func = None
+            ref_id = map_key
+            has_toggle = True
+
+            BTN = UI_Text_Button(
+                self.cf_menu['buttons']['map_selection'],
+                self.cf_global,
+                ref_id,
+                (btn_width, btn_height),
+                self.MENU_WRAPPER.rect.center,
+                trigger_func,
+                trigger_parameter,
+                hover_bool_func,
+                tooltip_text,
+                has_toggle,
+                btn_text,
+                text_getter_func
+            )
+            MAP_SELECT_BUTTONS.append(BTN)
+
+        return MAP_SELECT_BUTTONS
+
+    def create_map_paused_buttons(self, container_w, container_h, btn_padding_x, btn_padding_y):
+        # recalculate width for the map pause buttons
+        n_buttons = int(3)
+        btn_width = int((container_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
+        btn_height = int(container_h - (btn_padding_y * 2))
+        btn_has_toggle = False
+
+        # 1) main menu
+        btn_return_tooltip = "Return to the main menu. n/t/Warning n/_b_All progress will be lost."
+        BTN_RETURN = UI_Text_Button(
+            self.cf_menu['buttons']['map_paused_action'],
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "RETURN"],
+            (btn_width, btn_height),
+            self.MENU_WRAPPER.rect.center,
+            self.exit_map,
+            False,
+            self.button_mouse_over,
+            btn_return_tooltip,
+            btn_has_toggle,
+            str('Main Menu'),
+            None
+        )
+
+        # 2) restart
+        btn_reset_tooltip = "Reset the map. n/Map setup will be the same."
+        BTN_RESET = UI_Text_Button(
+            self.cf_menu['buttons']['map_paused_action'],
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "RESET"],
+            (btn_width, btn_height),
+            self.MENU_WRAPPER.rect.center,
+            self.reset_map,
+            None,
+            self.button_mouse_over,
+            btn_reset_tooltip,
+            btn_has_toggle,
+            str('Reset'),
+            None
+        )
+
+        # 3) unpause
+        btn_unpause_tooltip = str("Return to the game.")
+        BTN_UNPAUSE = UI_Text_Button(
+            self.cf_menu['buttons']['map_paused_action'],
+            self.cf_global,
+            ["BUTTON", "PAUSE_MENU", "UNPAUSE"],
+            (btn_width, btn_height),
+            self.MENU_WRAPPER.rect.center,
+            self.unpause_map,
+            None,
+            self.button_mouse_over,
+            btn_unpause_tooltip,
+            btn_has_toggle,
+            str('Unpause'),
+            None
+        )
+
+        return [BTN_RETURN, BTN_RESET, BTN_UNPAUSE]
 
     def create_tooltip_container(self):
         ''' create a text container that will dynamically change its size to fit the given text '''
@@ -351,11 +497,11 @@ class PG_App:
         )
 
     def init_map(self, cf_maps_key: str):
-        if (self.print_misc_info):
+        if INFO_PRINT:
             print(f'[APP][init_map]:\n> Call to create map from key "{cf_maps_key}"')
 
         if (self.map_loaded):
-            if (self.print_misc_info):
+            if INFO_PRINT:
                 print(f'Map object "{self.map.name}" already loaded. Deleting it')
             # TODO: Clear up sprites properly, make sure memory is released
             del self.map
@@ -366,14 +512,14 @@ class PG_App:
         # create the map object as an attribute of self
         self.map = PG_Map(self.cf_global, self.cf_maps[cf_maps_key], self.timer, self.window.map_surface)
 
-        if (self.print_misc_info):
+        if INFO_PRINT:
             print(f'> Map object "{self.map.name}" created from config! Setting up map assets ...')
 
         # set up the map
         self.map.set_up_all()
         self.window.set_extended_caption(self.map.name)
 
-        if (self.print_misc_info):
+        if INFO_PRINT:
             print(f'> succesfully created and set up map. Returning ...')
 
         self.map_loaded = True
@@ -387,8 +533,7 @@ class PG_App:
         self.timer.new_segment("menu", map_completed)
         self.map_loaded = False
         del self.map
-        self.MENU_BUTTON_WRAPPER.replace_children(self.MAIN_MENU_BUTTONS)
-        self.timer.kill_duration_text()
+        self.swap_to_main_menu()
 
     def reset_map(self):
         self.map.reset()
@@ -397,39 +542,6 @@ class PG_App:
 
     def unpause_map(self):
         self.map.unpause()
-
-    def mouse_is_over(self, has_rect):
-        if has_rect.rect.collidepoint(self.curr_mouse_pos):
-            return True
-        return False
-
-    def button_mouse_over(self, button: UI_Button):
-        hovering = self.mouse_is_over(button)
-        if (hovering):
-            if (hasattr(button, "tooltip_text")):
-                self.TOOLTIP.set_text(button.tooltip_text)
-                self.TOOLTIP.move(self.curr_mouse_pos)
-                self.tooltip_group.add(self.TOOLTIP)
-        return hovering
-
-    def check_button_onclick(self):
-        ''' check if mouse is above a button when mouse1 clicked '''
-        if (self.map_loaded):
-            for button in self.PAUSE_MENU_BUTTONS:
-                if self.mouse_is_over(button):
-                    button.trigger()
-                    break
-        else:
-            for button in self.MAIN_MENU_BUTTONS:
-                if self.mouse_is_over(button):
-                    button.trigger()
-                    break
-
-    def get_menu_button_text(self, ref_id):
-        ''' could be omitted and set text on creation, but leaving for now,
-            seeing as performance during menu is not an issue whatsoever
-        '''
-        return str(self.cf_maps[ref_id]['name'])
 
     def get_menu_title_text(self):
         if (self.map_loaded):
@@ -441,16 +553,28 @@ class PG_App:
             return str("Map Paused. Select an action")
         return str("Hover over the maps for more info")
 
+    def swap_to_pause_menu(self):
+        self.BTN_WRAPPER_TOP.replace_children(self.PAUSE_ACTION_BUTTONS)
+        self.BTN_WRAPPER_MID.kill_all_children()
+
+    def swap_to_main_menu(self):
+        self.BTN_WRAPPER_TOP.replace_children(self.MAP_SELECT_BUTTONS)
+        self.BTN_WRAPPER_MID.replace_children(self.PLAYER_SELECT_BUTTONS)
+        self.timer.kill_duration_text()
+
     def check_events(self):
         for event in pg.event.get():
             match (event.type):
                 case pg.MOUSEBUTTONUP:
-                    self.check_button_onclick()
+                    if (self.map_loaded):
+                        self.check_button_onclick(self.PAUSE_ACTION_BUTTONS)
+                    else:
+                        self.check_button_onclick(self.MAP_SELECT_BUTTONS)
+                        self.check_button_onclick(self.PLAYER_SELECT_BUTTONS)
                 case pg.KEYDOWN:
                     # TODO: MENU CONTROLS
                     match (event.key):
                         case pg.K_ESCAPE:
-                            print("unpause called")
                             if (self.map_loaded):
                                 if (self.map.paused):
                                     self.map.unpause()
@@ -471,8 +595,8 @@ class PG_App:
             self.menu_wrapper_group.update(self.window.surface)
             self.tooltip_group.update(self.window.surface)
  
-            self.check_events()
             self.timer.draw_ui(self.window.map_surface)
+            self.check_events()
             pg.display.update()
 
             self.tooltip_group.empty()
@@ -487,14 +611,14 @@ class PG_App:
                     else:
                         self.timer.allow_events(self.PG_MOUSE_EVENTS)
                         if (self.map.paused):
-                            self.MENU_BUTTON_WRAPPER.replace_children(self.PAUSE_MENU_BUTTONS)
+                            self.swap_to_pause_menu()
                 else:
                     self.map.draw()
                     self.map.ui_container_group.update(self.map.surface)
             else:
                 self.window.fill_surface()
 
-        if (self.print_misc_info):
+        if INFO_PRINT:
             print('[APP][loop] App exiting through main loop')
 
 

@@ -121,6 +121,13 @@ CF_FILLED_RECT = {
         'border_width':     int(1),
         'border_alpha':     int(255),
     },
+    'darkred_on_bone': {
+        'color':            RGB['earth_red_darker'],
+        'alpha':            int(255),
+        'border_color':     RGB['bone'],
+        'border_width':     int(2),
+        'border_alpha':     int(255),
+    },
     'red_on_beige': {
         'color':            RGB['earth_red'],
         'alpha':            int(255),

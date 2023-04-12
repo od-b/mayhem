@@ -60,9 +60,13 @@ CF_MENU = {
                 'bg':   CF_FILLED_RECT['red_on_darkred'],
                 'font': cf_font(24, 'dutchwhite', 'bold', None)
             },
-            'alt': {
+            'hovering': {
                 'bg':   CF_FILLED_RECT['red_on_offblack'],
                 'font': cf_font(25, 'bone', 'bold', None)
+            },
+            'clicked': {
+                'bg':   CF_FILLED_RECT['darkred_on_bone'],
+                'font': cf_font(25, 'bone', 'semibold', 'italic')
             }
         },
         'map_paused_action': {
@@ -70,18 +74,28 @@ CF_MENU = {
                 'bg':   CF_FILLED_RECT['red_on_darkred'],
                 'font': cf_font(24, 'bone', 'bold', None)
             },
-            'alt': {
+            'hovering': {
                 'bg':   CF_FILLED_RECT['red_on_offblack'],
-                'font': cf_font(26, 'dutchwhite', 'bold', None)
+                'font': cf_font(25, 'bone', 'bold', None)
+            },
+            'clicked': {
+                'bg':   CF_FILLED_RECT['darkred_on_bone'],
+                'font': cf_font(25, 'bone', 'semibold', 'italic')
             }
-            # 'default': {
-            #     'bg':   CF_FILLED_RECT['orange_on_red'],
-            #     'font': cf_font(24, 'earth_black', 'bold', None)
-            # },
-            # 'alt': {
-            #     'bg':   CF_FILLED_RECT['orange_on_offblack'],
-            #     'font': cf_font(26, 'earth_red', 'bold', None)
-            # }
+        },
+        'player_selection': {
+            'default': {
+                'bg':   CF_FILLED_RECT['red_on_darkred'],
+                'font': cf_font(24, 'dutchwhite', 'bold', None)
+            },
+            'hovering': {
+                'bg':   CF_FILLED_RECT['red_on_offblack'],
+                'font': cf_font(25, 'bone', 'bold', None)
+            },
+            'clicked': {
+                'bg':   CF_FILLED_RECT['darkred_on_bone'],
+                'font': cf_font(25, 'bone', 'semibold', 'italic')
+            }
         },
     }
 }
