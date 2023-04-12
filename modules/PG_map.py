@@ -69,13 +69,15 @@ class PG_Map:
         ''' group used as a combined no-go spawn position for various sprites '''
 
         # main groups
+        self.block_update_group = Group()
+        ''' group containing blocks to be updated, if any '''
         self.player_group = GroupSingle()
         ''' player sprite group. If a new sprite is added, the old is removed. '''
         self.block_group = Group()
         ''' combined group of constant, map-anchored rectangular sprites '''
         self.coin_group = Group()
         self.ui_container_group = Group()
-    
+
         # create a list to hold all created bars. can be needed for search after .kill()
         self.STATUS_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
@@ -517,7 +519,7 @@ class PG_Map:
         #     return
 
         self.player.fuel = 0.0
-        self.player.velocity.y = self.player.TERMINAL_VELO
+        self.player.velocity.y = (self.player.MAX_VELO + self.player.MAX_GRAV_FORCE)
         self.player.thrust_begin_frames_left = 0
         self.player.thrust_end_frames_left = 0
         self.player.key_thrusting = False
@@ -551,8 +553,11 @@ class PG_Map:
                 else:
                     self.init_player_death_event()
                 # highlight blocks that player collided with
+                self.block_update_group.empty()
                 for BLOCK in collidelist:
                     BLOCK.init_timed_highlight()
+                    self.block_update_group.add(BLOCK)
+
 
     def check_player_coin_collision(self):
         # check rect collide
@@ -600,10 +605,11 @@ class PG_Map:
             # check if the event type matches any relevant types
             match (event.type):
                 case self.EVENT_PLAYER_IMG_CYCLE:
-                    self.player.cycle_active_image()
+                    if (self.player.special_image_active):
+                        self.player.cycle_active_image()
                 case self.EVENT_UPDATE_TERRAIN:
                     # update blocks, swapping back if highlighted and timer is up
-                    self.block_group.update()
+                    self.block_update_group.update()
                 case pg.KEYDOWN:
                     match (event.key):
                         case self.STEER_UP:

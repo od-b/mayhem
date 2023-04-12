@@ -2,6 +2,15 @@ from os.path import join as os_path_join
 import pygame as pg
 from .colors import RGB, RGBA, PALLETTES
 
+# MIN_MAX_PHYSICS = {
+#     'mass':                   (0.8, 1.15),    # M;  more mass => more & faster gravity, slower acceleration
+#     'handling':               (, 0.022),   # W;  how responsive steering will be
+#     'thrust_handling_m':      (, 1.6),     # M;  handling multiplier during thrust. may reduce or increase handling.
+#     'max_acceleration':       (, 0.3),     # M;  non-thrust only => limit non-thrust movement (links controls to accel)
+#     'thrust_magnitude':       (, 1.4),     # R;  max magnitude of acceleration during thrust
+#     'max_velocity':           (, 0.7),     # R;  general max velocity
+#     'collision_recoil_w':     (, 0.3),     # W;  how drastic the bounce-back of a crash will be
+# }
 
 CF_PLAYERS = {
     'test_polygon': {
@@ -38,7 +47,6 @@ CF_PLAYERS = {
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
             'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
-            'terminal_velocity':        float(1.0),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
             'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
         'phase_durations': {
@@ -100,7 +108,6 @@ CF_PLAYERS = {
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
             'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
-            'terminal_velocity':        float(1.0),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
             'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
         'phase_durations': {
@@ -156,13 +163,12 @@ CF_PLAYERS = {
             'max_collision_health_loss': float(60)
         },
         'physics': {
-            'mass':                     float(1.15),  # M;  more mass => more gravity, faster
+            'mass':                     float(1.0),  # M;  more mass => more gravity, faster
             'handling':                 float(0.022), # W;  how responsive steering will be
             'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
             'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
-            'terminal_velocity':        float(1.0),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
             'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
         'phase_durations': {
@@ -217,13 +223,12 @@ CF_PLAYERS = {
             'max_collision_health_loss': float(60)
         },
         'physics': {
-            'mass':                     float(1),     # M;  more mass => more gravity, faster
-            'handling':                 float(0.035), # W;  how responsive steering will be
+            'mass':                     float(0.8),     # M;  more mass => more gravity, faster
+            'handling':                 float(0.03), # W;  how responsive steering will be
             'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
             'thrust_magnitude':         float(1.5),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
-            'terminal_velocity':        float(0.8),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
             'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
         'phase_durations': {

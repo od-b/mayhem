@@ -1,5 +1,5 @@
 from pygame import Surface, transform, mask, math as pg_math
-from pygame.math import Vector2 as Vec2, lerp
+from pygame.math import Vector2 as Vec2, lerp, clamp
 from pygame.sprite import Sprite
 
 from .PG_common import load_sprites_tuple
@@ -32,31 +32,27 @@ class Player(Sprite):
 
         self.FPS                = int(cf_global['fps_limit'])
         ''' global fps limit '''
-        self.MAP_GRAV_C         = float(cf_map['gravity_c'])
-        ''' map gravity constant '''
-        self.MAP_GRAV_W         = float(cf_map['gravity_w'])
-        ''' map gravity multiplier '''
 
+        ### raw constants ###
         # gameplay
         self.FUEL_CONSUMPTION   = float(cf_gameplay['fuel_consumption'])
         self.MAX_HEALTH         = float(cf_gameplay['max_health'])
         self.MAX_FUEL           = float(cf_gameplay['max_fuel'])
         self.MIN_COLL_HP_LOSS   = float(cf_gameplay['min_collision_health_loss'])
         self.MAX_COLL_HP_LOSS   = float(cf_gameplay['max_collision_health_loss'])
-
         # acceleration & velocity
+        self.MASS               = float(cf_physics['mass'])
+        self.HANDLING           = float(cf_physics['handling'])
         self.MAX_ACCEL          = float(cf_physics['max_acceleration'])
         self.THRUST_MAGNITUDE   = float(cf_physics['thrust_magnitude'])
         self.MAX_VELO           = float(cf_physics['max_velocity'])
-        self.TERMINAL_VELO      = float(cf_physics['terminal_velocity'])
-
-        # misc
-        self.HANDLING           = float(cf_physics['handling'])
-        self.THRUST_HANDLING_M  = float(cf_physics['thrust_handling_m'] * self.HANDLING)
-        self.MASS               = float(cf_physics['mass'])
-        ''' multiplier used when applying gravity to velocity '''
         self.COLLISION_RECOIL_W = float(cf_physics['collision_recoil_w'])
         ''' how drastic the recoil of collision will be '''
+        
+        self.GRAV_C = float(self.MASS * cf_map['gravity_c'])
+
+        ### secondary /dependant constants ###
+        self.THRUST_HANDLING_M  = float(cf_physics['thrust_handling_m'] * self.HANDLING)
 
         # phases / durations; for time related settings, calculate the frames needed
         self.THRUST_BEGIN_FRAMES_M      = int(cf_phases['thrust_begin'] * self.FPS)
@@ -76,9 +72,7 @@ class Player(Sprite):
 
         self.PHASE_DEBUG_PRINT = False
 
-        ''' set up all spritesheets '''
         scalar = cf_spritesheets['image_scalar']
-
         cf_idle: dict = cf_spritesheets['idle']
         cf_shield: dict = cf_spritesheets['shield']
         cf_destroyed: dict = cf_spritesheets['destroyed']
@@ -132,14 +126,15 @@ class Player(Sprite):
         ''' direction and speed '''
         self.angle:          float = 0.0
         ''' angle in degrees '''
-        self.grav_force:     float = 0.0
-        ''' accumulation of gravity '''
         self.temp_max_accel: float = 0.0
         ''' temporary max acceleration '''
+        self.cumulative_grav_c = float(0)
+        ''' cumulative gravity constant '''
 
         self.health = self.MAX_HEALTH
         self.fuel   = self.MAX_FUEL
 
+        self.special_image_active = False
         self.curr_image_type: tuple[tuple[Surface, ...], int] = self.IDLE_IMAGES
         self.curr_image_index = 0
         self.curr_image: Surface = self.curr_image_type[0][self.curr_image_index]
@@ -152,10 +147,12 @@ class Player(Sprite):
         self.curr_image = self.curr_image_type[0][self.curr_image_index]
 
     def set_special_image_type(self, image_type: tuple[tuple[Surface, ...], int]):
+        self.special_image_active = True
         self.curr_image_type = image_type
         self.cycle_active_image()
 
     def set_idle_image_type(self):
+        self.special_image_active = False
         self.curr_image_type = self.IDLE_IMAGES
         self.curr_image_index = 0
         self.curr_image = self.curr_image_type[0][self.curr_image_index]
@@ -184,15 +181,8 @@ class Player(Sprite):
                 self.velocity.y = -0.1
 
         # TODO: fix impact weight health scaling by a bit
-        # scale recoil frames to how fast the sprite was going
-        # if (self.velocity.y > 0):
-        #     grav_w = self.grav_force / self.TERMINAL_VELO
-        #     reduct_w = lerp(self.velocity.y, self.MAX_VELO, grav_w)
-        #     self.velocity.y *= reduct_w
-        # print(f'grav_force: {self.grav_force}')
-        # print(f'velocity.y: {self.velocity.y}')
+
         impact_velo = self.velocity.length()
-        # print(f'impact_velo: {impact_velo}')
         self.collision_recoil_frames_left = round(impact_velo * self.COLLISION_FRAMES_M)
         self.collision_cooldown_frames_left = self.COLLISION_COOLDOWN_FRAMES + self.collision_recoil_frames_left
 
@@ -202,9 +192,9 @@ class Player(Sprite):
 
         # if the object we crashed into is below is, "reset" the compounding gravity effect
         if (self.velocity.y < 0):
-            self.grav_force *= 0.01
+            self.cumulative_grav_c  *= 0.01
         else:
-            self.grav_force *= 0.8
+            self.cumulative_grav_c  *= 0.2
 
         # calculate health loss based on velocity and the set weights
         health_loss: float
@@ -267,6 +257,12 @@ class Player(Sprite):
         self.temp_max_accel = self.acceleration.length()
         self.set_special_image_type(self.THRUST_C_IMAGES)
 
+    def set_velocity_with_gravity(self, multiplier):
+        self.velocity.update(self.acceleration)
+
+        # update velocity. apply the current gravity effect.
+        self.velocity.y += (multiplier * self.cumulative_grav_c)
+
     def apply_thrust_begin_frame(self):
         ''' gradually increase to thrust acceleration over the set frames '''
         self.thrust_begin_frames_left -= 1
@@ -290,11 +286,10 @@ class Player(Sprite):
         self.acceleration.scale_to_length(new_accel)
 
         # apply gravity
-        self.grav_force *= 0.99
+        self.cumulative_grav_c *= 0.99
 
         # update velocity. apply the current gravity effect.
-        self.velocity.update(self.acceleration)
-        self.velocity.y += (self.MASS * self.grav_force)
+        self.set_velocity_with_gravity(0.75)
 
         if (self.thrust_begin_frames_left == 0):
             self.set_special_image_type(self.THRUST_B_IMAGES)
@@ -303,10 +298,8 @@ class Player(Sprite):
         ''' applies acceleration directly to velocity at increased handling and force.'''
         self.acceleration += (self.key_direction * self.THRUST_HANDLING_M)
         self.acceleration.scale_to_length(self.THRUST_MAGNITUDE)
-        self.grav_force *= 0.99
-        self.velocity.update(self.acceleration)
-        self.velocity.y += (self.MASS * self.grav_force)
-        # self.velocity.y = pg_math.clamp(self.velocity.y, -self.MAX_VELO, self.TERMINAL_VELO)
+        self.cumulative_grav_c *= 0.98
+        self.set_velocity_with_gravity(0.4)
 
     def apply_thrust_end_frame(self):
         ''' gradually reduce the max acceleration. apply gravity. 
@@ -324,12 +317,9 @@ class Player(Sprite):
         self.thrust_end_curr_lerp_weight -= self.THRUST_END_LERP_DECREASE
 
         # increase compounding gravity
-        self.grav_force = lerp((self.grav_force + self.MAP_GRAV_C), self.TERMINAL_VELO, self.MAP_GRAV_W)
+        self.cumulative_grav_c += self.GRAV_C
+        self.set_velocity_with_gravity(0.9)
 
-        # update velocity. apply the current gravity effect.
-        self.velocity.update(self.acceleration)
-        self.velocity.y += (self.MASS * self.grav_force)
-        
         if (self.thrust_end_frames_left == 0):
             self.set_idle_image_type()
 
@@ -340,22 +330,12 @@ class Player(Sprite):
             pg_math.clamp(self.acceleration.x, -self.MAX_ACCEL, self.MAX_ACCEL),
             pg_math.clamp(self.acceleration.y, -self.MAX_ACCEL, self.MAX_ACCEL)
         )
-        # self.acceleration *= self.ACCEL_FALLOFF
+        self.cumulative_grav_c += self.GRAV_C
 
-        # increase compounding gravity and add constant
-        self.grav_force = lerp(self.grav_force, self.TERMINAL_VELO, self.MAP_GRAV_W) + self.MAP_GRAV_C
-
-        # update velocity. apply the current gravity effect.
-        self.velocity.update(self.acceleration)
-        self.velocity.y += (self.MASS * self.grav_force)
-
-        if (self.key_direction.y == -1.0) and (self.grav_force >= self.TERMINAL_VELO):
-            # this is not a great solution, but, it *almost* completely counteracts upwards accel without thrust
-            # TODO: TEST WITH A VARIETY OF MASS; or find a better solution
-            self.velocity.y -= (0.2 * self.grav_force) * (self.acceleration.y / self.MASS)
+        self.set_velocity_with_gravity(1.0)
 
     def update_image(self):
-        ''' update self.image, transforming it to the current angle. Update self .rect, .mask. '''
+        ''' update self.image, transforming it to the current angle. Recreate self .rect, .mask. '''
 
         # get a new image by rotating the original image
         self.image = transform.rotate(self.curr_image, -self.angle)
@@ -402,9 +382,6 @@ class Player(Sprite):
     def get_str_angle(self):
         return f'{self.angle():.1f}'
 
-    def get_str_gravity(self):
-        return f'{self.grav_force():.3f}'
-
     #### ORDINARY GETTERS ####
 
     def get_collision_cooldown_frames_left(self):
@@ -415,12 +392,6 @@ class Player(Sprite):
 
     def get_curr_fuel(self):
         return self.fuel
-
-    def get_max_grav_effect(self):
-        return self.TERMINAL_VELO
-
-    def get_grav_effect(self):
-        return self.grav_force
 
 
 ''' DEPRECATED METHODS + RELEVANT IMPORTS

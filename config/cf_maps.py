@@ -17,11 +17,7 @@ CF_MAPS = {
         'name':            str('Map 1'),
         'fill_color':      RGB['offblack'],
         'overlap_color':   RGB['signal_red'],  # used for visualizing overlapping masks / misc
-        ### difficulty settings ###
-        # gravity_c -> gravity constant; gravity_c -> gravity multiplier
-        # gravity_w stops being applied when terminal velocity is reached. gravity_c is always added.
-        'gravity_c':       float(0.003),      # every frame gravitational incrementor
-        'gravity_w':       float(0.004),      # gravity weight (percent multiplier), calced after curr_grav+constant
+        'gravity_c':       float(0.003),     # every frame gravitational incrementor
         # nested configs; sets the config dicts of "children". can be shared or unique
         'cf_spawning': {
             'n_turrets':       int(1),
