@@ -1,5 +1,5 @@
 from .colors import RGB
-from .map_sprites import CF_PLAYERS, CF_BLOCKS, CF_COINS
+from .map_sprites import CF_BLOCKS, CF_COINS
 from .map_ui import MAP_CONTAINERS, PLAYER_STATUS_BARS
 
 #### MISC ####
@@ -22,17 +22,28 @@ CF_MAPS = {
         # gravity_w stops being applied when terminal velocity is reached. gravity_c is always added.
         'gravity_c':       float(0.003),      # every frame gravitational incrementor
         'gravity_w':       float(0.004),      # gravity weight (percent multiplier), calced after curr_grav+constant
-        'player_fuel_consumption': float(0.02),
-        'n_obstacles':     int(13),
-        'n_coins':         int(20),
-        'n_turrets':       int(1),
-        'min_coin_offset': int(11),      # min. offset to terrain
-        'min_coin_spread': int(120),    # min. distance to another coin
         # nested configs; sets the config dicts of "children". can be shared or unique
-        'game_sprites': {
-            # 'player': CF_PLAYERS['corvette'],
-            'player': CF_PLAYERS['fighter'],
-            # 'player': CF_PLAYERS['bomber'],
+        'cf_spawning': {
+            'n_turrets':       int(1),
+            'coins': {
+                'n_coins':         int(20),
+                'min_terrain_offset': int(11),      # min. offset to terrain
+                'min_spread': int(120),     # min. distance to another coin
+            },
+            'obstacles': {
+                'n_obstacles':     int(13),
+                # min/max distance inbetween generated obstacles
+                'min_spacing_x': int(45),
+                'min_spacing_y': int(45)
+            },
+            'player': {
+                # how close to an existing sprite the player can spawn
+                # values are padded ON TOP OF players idle image bounding rect
+                'min_terrain_offset_x': int(20),
+                'min_terrain_offset_y': int(20)
+            }
+        },
+        'map_sprites': {
             'blocks': {
                 'edge_outline':     CF_BLOCKS['small_gray_block'],
                 'obstacle':         CF_BLOCKS['pastel_block'],

@@ -1,50 +1,60 @@
-from pygame import Color, Surface, transform, mask, image, Rect, SRCALPHA, math as pg_math
-from pygame.transform import scale
+from pygame import Surface, transform, mask, math as pg_math
 from pygame.math import Vector2 as Vec2, lerp
 from pygame.sprite import Sprite
-from pygame.draw import polygon as draw_polygon
-# from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
 
 from .PG_common import load_sprites_tuple
 
 
 class Player(Sprite):
-    def __init__(self, cf_player: dict, cf_map: dict, cf_global: dict, spawn_pos: tuple[int, int]):
-        # initalize as pygame sprite
+    ''' 
+        The init ONLY sets up constants. all variables are set through .reset_all_attributes()
+        this allows the map to determine an appropriate spawn position depending on size,
+        as well as providing an extremely easy way to reset to a default state if desired.
+
+        For readability purposes, ALL constants in this class are defined in caps, 
+        and are strictly never modified.
+        
+        ---
+        Setup
+        ---
+        1) Create the player object. constants and spritesheets are set up.
+            The methods get_idle_bounds and spawn are now callable.
+            Calling other methods prior to spawning will result in a crash.
+        2) Call .spawn() when ready
+    '''
+    def __init__(self, cf_player: dict, cf_map: dict, cf_global: dict):
         Sprite.__init__(self)
 
-        #### NESTED DICTS ####
-        # note that these are not stored in self, and are only read during init
-        cf_surface:  dict = cf_player['surface']
         cf_physics:  dict = cf_player['physics']
         cf_gameplay: dict = cf_player['gameplay']
         cf_phases:   dict = cf_player['phase_durations']
+        cf_spritesheets: dict = cf_player['spritesheets']
 
-        #### CONSTANTS ####
-        self.SPAWN_POS          = spawn_pos
         self.FPS                = int(cf_global['fps_limit'])
         ''' global fps limit '''
         self.MAP_GRAV_C         = float(cf_map['gravity_c'])
         ''' map gravity constant '''
         self.MAP_GRAV_W         = float(cf_map['gravity_w'])
         ''' map gravity multiplier '''
-        self.FUEL_CONSUMPTION   = float(cf_map['player_fuel_consumption'])
 
         # gameplay
+        self.FUEL_CONSUMPTION   = float(cf_gameplay['fuel_consumption'])
         self.MAX_HEALTH         = float(cf_gameplay['max_health'])
         self.MAX_FUEL           = float(cf_gameplay['max_fuel'])
         self.MIN_COLL_HP_LOSS   = float(cf_gameplay['min_collision_health_loss'])
         self.MAX_COLL_HP_LOSS   = float(cf_gameplay['max_collision_health_loss'])
 
-        # acceleration
+        # acceleration & velocity
         self.MAX_ACCEL          = float(cf_physics['max_acceleration'])
         self.THRUST_MAGNITUDE   = float(cf_physics['thrust_magnitude'])
-        # velocity
         self.MAX_VELO           = float(cf_physics['max_velocity'])
         self.TERMINAL_VELO      = float(cf_physics['terminal_velocity'])
-        # steering
+
+        # misc
         self.HANDLING           = float(cf_physics['handling'])
         self.THRUST_HANDLING_M  = float(cf_physics['thrust_handling_m'] * self.HANDLING)
+        self.MASS               = float(cf_physics['mass'])
+        ''' multiplier used when applying gravity to velocity '''
         self.COLLISION_RECOIL_W = float(cf_physics['collision_recoil_w'])
         ''' how drastic the recoil of collision will be '''
 
@@ -61,35 +71,20 @@ class Player(Sprite):
         # misc constants
         self.THRUST_END_LERP_DECREASE   = float(1.0 / self.THRUST_END_FRAMES)
         ''' weight used for linear interpolation during post thrust transition '''
-        self.MASS = float(cf_physics['mass'])
-        ''' multiplier used when applying gravity to velocity '''
         self.VEC_CENTER  = Vec2(0.0, 0.0)
         ''' used for relative angle calculation '''
-        
-        self.cf_spritesheets: dict = cf_surface['spritesheets']
-
-        # if not self.cf_spritesheets:
-        #     self.IDLE_IMAGES = self.set_up_polygon_image(cf_surface['colors']['default'])
-        # else:
-        self.set_up_sprite_images()
-
-        # initialize all attributes through the reset function
-        self.reset_all_attributes()
-
-        # initialize image, rect and mask through the update function
-        self.update_image()
 
         self.PHASE_DEBUG_PRINT = False
 
-    def set_up_sprite_images(self):
-        scalar = self.cf_spritesheets['image_scalar']
+        ''' set up all spritesheets '''
+        scalar = cf_spritesheets['image_scalar']
 
-        cf_idle: dict = self.cf_spritesheets['idle']
-        cf_shield: dict = self.cf_spritesheets['shield']
-        cf_destroyed: dict = self.cf_spritesheets['destroyed']
-        cf_thrust_a: dict = self.cf_spritesheets['thrust_a']
-        cf_thrust_b: dict = self.cf_spritesheets['thrust_b']
-        cf_thrust_c: dict = self.cf_spritesheets['thrust_c']
+        cf_idle: dict = cf_spritesheets['idle']
+        cf_shield: dict = cf_spritesheets['shield']
+        cf_destroyed: dict = cf_spritesheets['destroyed']
+        cf_thrust_a: dict = cf_spritesheets['thrust_a']
+        cf_thrust_b: dict = cf_spritesheets['thrust_b']
+        cf_thrust_c: dict = cf_spritesheets['thrust_c']
 
         self.IDLE_IMAGES      = load_sprites_tuple(cf_idle['path'], cf_idle['n_images'], scalar)
         self.SHIELD_IMAGES    = load_sprites_tuple(cf_shield['path'], cf_shield['n_images'], scalar)
@@ -98,28 +93,21 @@ class Player(Sprite):
         self.THRUST_B_IMAGES  = load_sprites_tuple(cf_thrust_b['path'], cf_thrust_b['n_images'], scalar)
         self.THRUST_C_IMAGES  = load_sprites_tuple(cf_thrust_c['path'], cf_thrust_c['n_images'], scalar)
 
-        self.curr_image_index = 0
-        self.curr_image_type: tuple[tuple[Surface, ...], int] = self.IDLE_IMAGES
-        self.curr_image: Surface = self.curr_image_type[0][self.curr_image_index]
+    def get_idle_bounds(self):
+        return self.IDLE_IMAGES[0][0].get_rect().copy()
 
-    def cycle_active_image(self):
-        if (self.curr_image_index >= self.curr_image_type[1]):
-            self.curr_image_index = 0
-        else:
-            self.curr_image_index += 1
-        self.curr_image = self.curr_image_type[0][self.curr_image_index]
+    def spawn(self, position: tuple[int, int]):
+        # store the position as spawn position
+        self.SPAWN_POS = position
 
-    def set_special_image_type(self, image_type: tuple[tuple[Surface, ...], int]):
-        self.curr_image_type = image_type
-        self.cycle_active_image()
+        # initialize all attributes through the reset function
+        self.reset_all_attributes()
 
-    def set_idle_image_type(self):
-        self.curr_image_index = 0
-        self.curr_image_type = self.IDLE_IMAGES
-        self.curr_image = self.curr_image_type[0][self.curr_image_index]
+        # initialize image, rect and mask through the update function
+        self.update_image()
 
     def reset_all_attributes(self):
-        ''' reset (or set) all attributes used across all methods '''
+        ''' reset (or set) all variable attributes used across all player methods '''
         # phase transitions
         self.thrust_begin_frames_left:         int = int(0)
         self.thrust_end_frames_left:           int = int(0)
@@ -151,33 +139,26 @@ class Player(Sprite):
 
         self.health = self.MAX_HEALTH
         self.fuel   = self.MAX_FUEL
-        self.set_idle_image_type()
 
-    def set_up_polygon_image(self, color: Color):
-        ''' TEST // DEBUG PURPOSES
-            get the the original image used for later transformation
-            * ensures the original image is rotated, not the rotated one.
-                if this is not done, two things will happen:
-                1) The image will become larger after each rotation at an exponential rate
-                   this will cause the program to crash when the image takes up too much memory.
-                2) The image quality will deteriorate after each rotation
-        '''
-        # create a surface
-        SURF = Surface((self.IMAGE_WIDTH, self.IMAGE_HEIGHT)).convert_alpha()
+        self.curr_image_type: tuple[tuple[Surface, ...], int] = self.IDLE_IMAGES
+        self.curr_image_index = 0
+        self.curr_image: Surface = self.curr_image_type[0][self.curr_image_index]
 
-        # fill the surface with transparent pixels
-        SURF.fill(Color(0, 0, 0, 0))
+    def cycle_active_image(self):
+        if (self.curr_image_index >= self.curr_image_type[1]):
+            self.curr_image_index = 0
+        else:
+            self.curr_image_index += 1
+        self.curr_image = self.curr_image_type[0][self.curr_image_index]
 
-        # create a polygon using the surface bounds as reference points
-        SURF_RECT = SURF.get_rect()
-        p1 = SURF_RECT.midtop
-        p2 = SURF_RECT.bottomright
-        p3 = SURF_RECT.bottomleft
-        draw_polygon(SURF, Color(color), (p1, p2, p3))
+    def set_special_image_type(self, image_type: tuple[tuple[Surface, ...], int]):
+        self.curr_image_type = image_type
+        self.cycle_active_image()
 
-        # rotating to -90 means there's no need to flip later. (pg inverted y-axis)
-        IMG = transform.rotate(SURF, -90.0)
-        return IMG
+    def set_idle_image_type(self):
+        self.curr_image_type = self.IDLE_IMAGES
+        self.curr_image_index = 0
+        self.curr_image = self.curr_image_type[0][self.curr_image_index]
 
     def init_phase_collision_recoil(self):
         ''' call to begin recoil phase. Rather naive solution, inverting velocity by a multiplier
@@ -352,7 +333,6 @@ class Player(Sprite):
         if (self.thrust_end_frames_left == 0):
             self.set_idle_image_type()
 
-
     def default_frame(self):
         ''' update acceleration, velocity and compounding gravity '''
         self.acceleration += (self.key_direction * self.HANDLING)
@@ -443,9 +423,35 @@ class Player(Sprite):
         return self.grav_force
 
 
-''' TODO
+''' DEPRECATED METHODS + RELEVANT IMPORTS
+    # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
+    # from pygame.transform import scale
+    from pygame import Color, image, Rect, SRCALPHA
+    from pygame.draw import polygon as draw_polygon
 
-* visualizing information:
-    - animate thrust -> 
-    - 
+    def set_up_polygon_image(self, color: Color):
+        #### get the the original image used for later transformation
+        #### * ensures the original image is rotated, not the rotated one.
+        ####     if this is not done, two things will happen:
+        ####     1) The image will become larger after each rotation at an exponential rate
+        ####        this will cause the program to crash when the image takes up too much memory.
+        ####     2) The image quality will deteriorate after each rotation
+        ####
+
+        # create a surface
+        SURF = Surface((self.IMAGE_WIDTH, self.IMAGE_HEIGHT)).convert_alpha()
+
+        # fill the surface with transparent pixels
+        SURF.fill(Color(0, 0, 0, 0))
+
+        # create a polygon using the surface bounds as reference points
+        SURF_RECT = SURF.get_rect()
+        p1 = SURF_RECT.midtop
+        p2 = SURF_RECT.bottomright
+        p3 = SURF_RECT.bottomleft
+        draw_polygon(SURF, Color(color), (p1, p2, p3))
+
+        # rotating to -90 means there's no need to flip later. (pg inverted y-axis)
+        IMG = transform.rotate(SURF, -90.0)
+        return IMG
 '''

@@ -1,5 +1,4 @@
 from random import randint
-from typing import Callable
 
 # installed library imports
 import pygame as pg
@@ -37,11 +36,11 @@ class PG_Map:
         ''' reference to the app timer '''
 
         ### CONSTANTS ####
-        self.cf_game_sprites: dict  = cf_map['game_sprites']
+        self.cf_map_sprites: dict   = cf_map['map_sprites']
         self.cf_ui_sprites: dict    = cf_map['ui_sprites']
+        self.cf_spawning: dict      = cf_map['cf_spawning']
 
-        self.cf_player: dict        = self.cf_game_sprites['player']
-        self.cf_blocks: dict        = self.cf_game_sprites['blocks']
+        # self.cf_player: dict        = self.cf_map_sprites['player']
         self.cf_ui_containers: dict = self.cf_ui_sprites['containers']
         self.cf_ui_bars: dict       = self.cf_ui_sprites['bars']
 
@@ -55,8 +54,8 @@ class PG_Map:
         self.rect            = self.surface.get_rect()
         self.fill_color      = Color(cf_map['fill_color'])
         self.overlap_color   = Color(cf_map['overlap_color'])
-        self.N_OBSTACLES     = int(cf_map['n_obstacles'])
-        self.N_COINS         = int(cf_map['n_coins'])
+        self.N_OBSTACLES     = int(self.cf_spawning['obstacles']['n_obstacles'])
+        self.N_COINS         = int(self.cf_spawning['coins']['n_coins'])
 
         #### SPRITE GROUPS & LISTS ####
         # groups for setup / spawn purposes
@@ -78,7 +77,7 @@ class PG_Map:
         self.ui_container_group = Group()
     
         # create a list to hold all created bars. can be needed for search after .kill()
-        self.UI_STATUS_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
+        self.STATUS_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
         #### VARIABLES ####
         self.collected_coins = []
@@ -89,28 +88,36 @@ class PG_Map:
 
     #### NON-RECURRING SETUP METHODS // HELPER FUNCTIONS ####
 
-    def set_up_all(self, start_loop: bool):
-        ''' bundle of function calls to set up the map '''
+    def set_up_all(self):
+        ''' bundle of function calls to set up the map terrain/npcs '''
         self.set_update_intervals()
-        self.store_player_controls()
         self.set_up_ui_containers()
 
         # sprite creation
         self.spawn_terrain_blocks()
         self.spawn_coins()
-        self.spawn_player()
 
-        # UI creation
-        self.create_all_ui_bars()
+    def spawn_player(self, cf_player: dict):
+        self.player = Player(cf_player, self.cf_map, self.cf_global)
+        offset_x = int(self.cf_spawning['player']['min_terrain_offset_x'])
+        offset_y = int(self.cf_spawning['player']['min_terrain_offset_y'])
 
-        if (start_loop):
-            self.looping = True
-            self.timer.new_segment(self.name, False)
+        bounds_re = self.player.get_idle_bounds()
+        spawn_pos = self.get_rand_pos_no_collide(bounds_re, offset_x, offset_y, self.spawn_collide_group)
+        self.player.spawn(spawn_pos)
+        self.player_group.add(self.player)
+
+        self.set_up_ui_status_bars()
+        self.store_player_controls(cf_player)
+
+    def start(self):
+        self.looping = True
+        self.timer.new_segment(self.name, False)
 
     def set_up_ui_containers(self):
         # set up bar container
         cf_bar_container = self.cf_ui_containers['bar_container']
-        self.BAR_CONTAINER = UI_Sprite_Container(
+        self.STATUS_BAR_CONTAINER = UI_Sprite_Container(
             cf_bar_container['cf_bg'],
             cf_bar_container['position'],
             cf_bar_container['size'],
@@ -122,9 +129,9 @@ class PG_Map:
             cf_bar_container['child_padding_x'],
             cf_bar_container['child_padding_y'],
         )
-        self.ui_container_group.add(self.BAR_CONTAINER)
+        self.ui_container_group.add(self.STATUS_BAR_CONTAINER)
         # prevent coins & player from spawning below the bars:
-        self.spawn_collide_group.add(self.BAR_CONTAINER)
+        self.spawn_collide_group.add(self.STATUS_BAR_CONTAINER)
 
     def set_update_intervals(self):
         self.EVENT_UPDATE_TERRAIN = self.timer.create_event_timer(self.cf_map['upd_intervals']['terrain'], 0)
@@ -132,39 +139,35 @@ class PG_Map:
         self.EVENT_PLAYER_IMG_CYCLE = self.timer.create_event_timer(self.cf_map['upd_intervals']['player_img_cycle'], 0)
         # self.EVENT_COIN_IMG_CYCLE = self.timer.create_event_timer(self.cf_map['upd_intervals']['coin_img_cycle'], 0)
 
-    def store_player_controls(self) -> dict[str, int]:
-        self.STEER_UP    = int(self.cf_player['controls']['steer_up'])
-        self.STEER_LEFT  = int(self.cf_player['controls']['steer_left'])
-        self.STEER_DOWN  = int(self.cf_player['controls']['steer_down'])
-        self.STEER_RIGHT = int(self.cf_player['controls']['steer_right'])
-        self.THRUST      = int(self.cf_player['controls']['thrust'])
+    def store_player_controls(self, cf_player: dict):
+        self.STEER_UP    = int(cf_player['controls']['steer_up'])
+        self.STEER_LEFT  = int(cf_player['controls']['steer_left'])
+        self.STEER_DOWN  = int(cf_player['controls']['steer_down'])
+        self.STEER_RIGHT = int(cf_player['controls']['steer_right'])
+        self.THRUST      = int(cf_player['controls']['thrust'])
 
     def spawn_terrain_blocks(self):
         ''' specialized function for the creating the map terrain '''
 
         # outline the entire game bounds with terrain_blocks:
-        terrain_facing = -1
-        self.spawn_outline_blocks(
-            self.cf_blocks['edge_outline'],
-            self.map_edge_block_group, self.rect, terrain_facing, None
-        )
+        cf_map_edge_block         = self.cf_map_sprites['blocks']['edge_outline']
+        cf_obstacle_block         = self.cf_map_sprites['blocks']['obstacle']
+        cf_obstacle_outline_block = self.cf_map_sprites['blocks']['obstacle_outline']
+
+        self.spawn_outline_blocks(cf_map_edge_block, self.map_edge_block_group, self.rect, -1, None)
         # add map bounds outline blocks to the general map group
         self.block_group.add(self.map_edge_block_group)
 
         # place obstacle_blocks within the game area
-        self.spawn_obstacle_blocks(self.cf_blocks['obstacle'], self.obstacle_block_group)
+        self.spawn_obstacle_blocks(cf_obstacle_block, self.obstacle_block_group)
 
         # outline the obstacles with smaller rects to create more jagged terrain
-        terrain_facing = 1
-        for OBSTACLE_BLOCK in self.obstacle_block_group:
+        for block in self.obstacle_block_group:
             # for each block in obstacle_block_group, outline the block rect
-            alt_pallette = [OBSTACLE_BLOCK.color]
             self.spawn_outline_blocks(
-                self.cf_blocks['obstacle_outline'],
-                self.obstacle_block_group, 
-                OBSTACLE_BLOCK.rect, 
-                terrain_facing,
-                alt_pallette
+                cf_obstacle_outline_block,
+                self.obstacle_block_group,
+                block.rect, 1, [block.color]
             )
 
         # add obstacle blocks and their outline blocks to the general map group
@@ -195,7 +198,7 @@ class PG_Map:
         MAX_X = bounds.right
         MIN_Y = bounds.top
         MAX_Y = bounds.bottom
-        PADDING = int(cf_block['padding'])
+        PADDING = int(cf_block['spacing'])
 
         # below are four loops that together will outline the entire bounds
         # the loop places blocks in a clockwise path, following each axis
@@ -319,9 +322,9 @@ class PG_Map:
         '''
 
         # padding, taking into account the player size to not completely block paths:
-        H_PADDING = int(self.cf_player['surface']['height'] + cf_block['padding'])
-        W_PADDING = int(self.cf_player['surface']['width'] + cf_block['padding'])
-        color_pool = cf_block['color_pool']
+        H_PADDING = int(self.cf_spawning['obstacles']['min_spacing_x'] + cf_block['spacing'])
+        W_PADDING = int(self.cf_spawning['obstacles']['min_spacing_y'] + cf_block['spacing'])
+        color_pool: list[tuple[int, int, int]] = cf_block['color_pool']
 
         # initiate the loop
         placed_blocks = 0
@@ -372,19 +375,11 @@ class PG_Map:
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
 
-    def spawn_player(self):
-        ''' create and spawn the player sprite '''
-        player_width = int(self.cf_player['surface']['width'])
-        player_height = int(self.cf_player['surface']['height'])
-        tmp_rect = Rect((0, 0), (player_width, player_height))
-        spawn_pos = self.get_rand_pos_no_collide(tmp_rect, player_width, player_height, self.spawn_collide_group)
-        del tmp_rect
+    def set_up_ui_status_bars(self):
+        for bar in self.STATUS_BARS:
+            bar.kill()
+            del bar
 
-        # create the player sprite, then update player_group
-        self.player = Player(self.cf_player, self.cf_map, self.cf_global, spawn_pos)
-        self.player_group.add(self.player)
-
-    def create_all_ui_bars(self):
         HEALTH_BAR = UI_Auto_Icon_Bar_Horizontal(
             self.cf_ui_bars['player_status']['health'],
             self.cf_global,
@@ -413,38 +408,37 @@ class PG_Map:
             0.0,
             self.player.get_collision_cooldown_frames_left,
         )
-        self.UI_STATUS_BARS.extend([HEALTH_BAR, FUEL_BAR, GHOST_BAR, SHIELD_BAR])
+        self.STATUS_BARS.extend([HEALTH_BAR, FUEL_BAR, GHOST_BAR, SHIELD_BAR])
 
         # auto add all const bars
-        self.BAR_CONTAINER.add_children_by_ref_id("CONST", self.UI_STATUS_BARS)
+        self.STATUS_BAR_CONTAINER.add_children_by_ref_id("CONST", self.STATUS_BARS)
 
     def spawn_coins(self):
         ''' create and position the coin sprite various places around the screen '''
-        cf_coin = self.cf_game_sprites['coin']
+        cf_coin = self.cf_map_sprites['coin']
 
-        spritesheet_path = cf_coin['spritesheet_path']
-        spritesheet_variants = int(cf_coin['image_variants'])
+        n_spritesheet_images = int(cf_coin['image_variants'])
         scalar = float(cf_coin['image_scalar'])
 
         # all the coins share a single tuple containing their images
-        COIN_SPRITESHEET_IMG = pg.image.load(spritesheet_path)
-        IMAGES = partition_spritesheet(COIN_SPRITESHEET_IMG, spritesheet_variants, scalar)
+        COIN_SPRITESHEET_IMG = pg.image.load(cf_coin['spritesheet_path'])
+        IMAGES = partition_spritesheet(COIN_SPRITESHEET_IMG, n_spritesheet_images, scalar)
 
         # place the coins according to settings
-        min_offset = int(self.cf_map['min_coin_offset'])
-        min_spread = int(self.cf_map['min_coin_spread'])
+        min_terrain_offset = int(self.cf_spawning['coins']['min_terrain_offset'])
+        min_spread = int(self.cf_spawning['coins']['min_spread'])
         
         COIN_RECT = IMAGES[0].get_rect()
 
         # create two rects for placement collision purposes
-        offset_rect = COIN_RECT.copy().inflate(min_offset, min_offset)
+        offset_rect = COIN_RECT.copy().inflate(min_terrain_offset, min_terrain_offset)
         spread_rect = COIN_RECT.copy().inflate(min_spread, min_spread)
 
         # coin positioning procedure
         placed_coins = 0
         failed_attempts = 0
         while (placed_coins != self.N_COINS):
-            rand_pos = self.get_rand_pos(min_offset, min_offset)
+            rand_pos = self.get_rand_pos(min_terrain_offset, min_terrain_offset)
             offset_rect.center = rand_pos
             spread_rect.center = rand_pos
 
@@ -465,7 +459,7 @@ class PG_Map:
                         break
 
                 if not (coin_collision):
-                    TUP_IMAGES = (IMAGES, int(spritesheet_variants - 1))
+                    TUP_IMAGES = (IMAGES, int(n_spritesheet_images - 1))
                     self.coin_group.add(Coin(cf_coin, self.cf_global, TUP_IMAGES, rand_pos))
                     placed_coins += 1
 
@@ -508,7 +502,7 @@ class PG_Map:
         else:
             ref_id.append("BAR")
 
-        MATCHING_BARS = self.BAR_CONTAINER.add_children_by_ref_id(ref_id, self.UI_STATUS_BARS)
+        MATCHING_BARS = self.STATUS_BAR_CONTAINER.add_children_by_ref_id(ref_id, self.STATUS_BARS)
         for BAR in MATCHING_BARS:
             if (min_val):
                 BAR.min_val = float(min_val)

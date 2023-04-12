@@ -325,7 +325,7 @@ class UI_Sprite_Container(UI_Container):
         self.children.add(child)
         # self.children.update()
 
-    def kill_all_children(self) -> int:
+    def kill_all_children(self):
         ''' removes all children from self.children '''
         self.children.empty()
 

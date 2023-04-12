@@ -12,6 +12,7 @@ from config.cf_window import CF_WINDOW
 from config.cf_timer import CF_TIMER
 from config.cf_menu import CF_MENU
 from config.cf_maps import CF_MAPS
+from config.cf_players import CF_PLAYERS
 
 # local modules
 from modules.PG_window import PG_Window
@@ -49,7 +50,8 @@ class PG_App:
             cf_window: dict,
             cf_timer: dict,
             cf_menu: dict,
-            cf_maps: dict
+            cf_maps: dict,
+            cf_players: dict
         ):
 
         self.cf_global = cf_global
@@ -57,6 +59,7 @@ class PG_App:
         self.cf_timer = cf_timer
         self.cf_menu = cf_menu
         self.cf_maps = cf_maps
+        self.cf_players = cf_players
 
         # store relevant global constants
         self.FPS_LIMIT = int(self.cf_global['fps_limit'])
@@ -87,11 +90,15 @@ class PG_App:
         self.PAUSE_MENU_BUTTONS = []
 
         self.menu_title_text = str("<GameName>")
-        self.curr_mouse_pos = pg.mouse.get_pos()
+        self.curr_mouse_pos: tuple[int, int] = pg.mouse.get_pos()
 
-        self.looping = True
-        self.map_loaded = False
-        self.run_map_on_launch = False
+        self.looping: bool = True
+        self.map_loaded: bool = False
+        self.awaiting_player_selection: bool = False
+        
+        self.selected_map_key: str | None = None
+        self.selected_player_key: str | None = str('corvette')
+
         self.print_misc_info = True
 
         self.set_up_menu()
@@ -363,13 +370,16 @@ class PG_App:
             print(f'> Map object "{self.map.name}" created from config! Setting up map assets ...')
 
         # set up the map
-        self.map.set_up_all(True)
+        self.map.set_up_all()
         self.window.set_extended_caption(self.map.name)
 
         if (self.print_misc_info):
             print(f'> succesfully created and set up map. Returning ...')
 
         self.map_loaded = True
+
+        self.map.spawn_player(self.cf_players[self.selected_player_key])
+        self.map.start()
         self.timer.activate_duration_text()
 
     def exit_map(self, map_completed: bool):
@@ -466,10 +476,6 @@ class PG_App:
             pg.display.update()
 
             self.tooltip_group.empty()
-            if (self.run_map_on_launch):
-                self.run_map_on_launch = False
-                self.init_map(self.valid_cf_maps_keys[0])
-                self.map.looping = True
 
             if (self.map_loaded):
                 if not (self.map.paused):
@@ -496,6 +502,7 @@ if __name__ == '__main__':
     # initialize pygame and verify the version before anything else
     pg.init()
     run_app = True
+
     if (pg.version.vernum < CF_GLOBAL['req_pg_version']['vernum']):
         msg = f'\nExpected pygame version {CF_GLOBAL["req_pg_version"]["string"]} or newer. '
         msg += '(if using pip, "pip install pygame --upgrade" will upgrade pygame)'
@@ -505,9 +512,9 @@ if __name__ == '__main__':
             run_app = False
             print('Exiting ...')
 
-    if (run_app):
+    if run_app:
         # load the app
-        APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MENU, CF_MAPS)
+        APP = PG_App(CF_GLOBAL, CF_WINDOW, CF_TIMER, CF_MENU, CF_MAPS, CF_PLAYERS)
         APP.loop()
 
     pg.quit()
