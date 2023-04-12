@@ -19,7 +19,7 @@ from .PG_block import Block
 from .PG_player import Player
 from .PG_coin import Coin
 from .PG_ui_containers import UI_Sprite_Container
-from .PG_ui_bar import UI_Auto_Icon_Bar_Horizontal
+from .PG_ui_bars import UI_Auto_Icon_Bar_Horizontal
 from .PG_common import partition_spritesheet
 
 

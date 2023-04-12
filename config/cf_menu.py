@@ -56,45 +56,34 @@ CF_MENU = {
     # buttons combine two backgrounds and two fonts
     'buttons': {
         'map_selection': {
-            'default': {
-                'bg':   CF_FILLED_RECT['red_on_darkred'],
-                'font': cf_font(24, 'dutchwhite', 'bold', None)
+            'cf_button': {
+                'default': CF_FILLED_RECT['red_on_darkred'],
+                'hovering':CF_FILLED_RECT['red_on_offblack'],
+                'clicked': CF_FILLED_RECT['darkred_on_bone'],
             },
-            'hovering': {
-                'bg':   CF_FILLED_RECT['red_on_offblack'],
-                'font': cf_font(25, 'bone', 'bold', None)
-            },
-            'clicked': {
-                'bg':   CF_FILLED_RECT['darkred_on_bone'],
-                'font': cf_font(25, 'bone', 'semibold', 'italic')
+            'cf_fonts': {
+                'default': cf_font(24, 'dutchwhite', 'bold', None),
+                'hovering': cf_font(25, 'bone', 'bold', None),
+                'clicked': cf_font(25, 'bone', 'semibold', 'italic'),
             }
         },
         'map_paused_action': {
-            'default': {
-                'bg':   CF_FILLED_RECT['red_on_darkred'],
-                'font': cf_font(24, 'bone', 'bold', None)
+            'cf_button': {
+                'default': CF_FILLED_RECT['red_on_darkred'],
+                'hovering':CF_FILLED_RECT['red_on_offblack'],
+                'clicked': CF_FILLED_RECT['darkred_on_bone'],
             },
-            'hovering': {
-                'bg':   CF_FILLED_RECT['red_on_offblack'],
-                'font': cf_font(25, 'bone', 'bold', None)
-            },
-            'clicked': {
-                'bg':   CF_FILLED_RECT['darkred_on_bone'],
-                'font': cf_font(25, 'bone', 'semibold', 'italic')
+            'cf_fonts': {
+                'default': cf_font(24, 'dutchwhite', 'bold', None),
+                'hovering': cf_font(25, 'bone', 'bold', None),
+                'clicked': cf_font(25, 'bone', 'semibold', 'italic'),
             }
         },
         'player_selection': {
-            'default': {
-                'bg':   CF_FILLED_RECT['red_on_darkred'],
-                'font': cf_font(24, 'dutchwhite', 'bold', None)
-            },
-            'hovering': {
-                'bg':   CF_FILLED_RECT['red_on_offblack'],
-                'font': cf_font(25, 'bone', 'bold', None)
-            },
-            'clicked': {
-                'bg':   CF_FILLED_RECT['darkred_on_bone'],
-                'font': cf_font(25, 'bone', 'semibold', 'italic')
+            'cf_button': {
+                'default': CF_FILLED_RECT['red_on_darkred'],
+                'hovering':CF_FILLED_RECT['red_on_offblack'],
+                'clicked': CF_FILLED_RECT['darkred_on_bone'],
             }
         },
     }
