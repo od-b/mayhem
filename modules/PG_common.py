@@ -21,8 +21,11 @@ def partition_spritesheet(spritesheet: Surface, n_images: int, scale: float) -> 
     # return list as a tuple
     return tuple(images)
 
-
-def load_sprites(path, n_images, scalar) -> tuple[Surface, ...]:
+def load_sprites_tuple(path, n_images, scalar) -> tuple[tuple[Surface, ...], int]:
+    ''' returns a tuple:
+        tuple[0] => tuple[images, ...]
+        tuple[1] => max index of tuple[0] (len-1)
+    '''
     SHEET = image.load(path)
 
     if (n_images == 1):
@@ -31,7 +34,9 @@ def load_sprites(path, n_images, scalar) -> tuple[Surface, ...]:
 
         SURF = Surface((img_width, img_height), flags=SRCALPHA)
         SURF.blit(SHEET, SURF.get_rect())
-        
-        return (transform.scale_by(SURF, scalar), )
+
+        IMG = (transform.scale_by(SURF, scalar), )
+        return (IMG, int(n_images - 1))
     else:
-        return partition_spritesheet(SHEET, n_images, scalar)
+        IMAGES = partition_spritesheet(SHEET, n_images, scalar)
+        return (IMAGES, int(n_images - 1))

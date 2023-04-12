@@ -86,7 +86,8 @@ CF_COINS = {
 
 
 CF_PLAYERS = {
-    'polygon': {
+    'test_polygon': {
+        #### TEST SPRITE, NOT USABLE WITHOUT ALTERING CODE ####
         # settings that determine how the sprite will look
         'surface': {
             'spritesheets': None,
@@ -169,14 +170,9 @@ CF_PLAYERS = {
                     'n_images': int(21),
                 }
             },
-            # width / height determines size of the polygon
-            'width':  int(30),
-            'height': int(40),
-            # alpha colors must not have an alpha key below 127 without increasing maskcollide threshhold
-            'colors': {
-                'default':            RGB['P_yellow_vibrant'],
-                'collision_cooldown': RGBA['blue_gray_128'],
-            }
+            # approx width / height, used by environment pre player spawn
+            'width':  int(45),
+            'height': int(45),
         },
         'gameplay': {
             'max_health': float(150),       # maximum and initial health
@@ -196,6 +192,138 @@ CF_PLAYERS = {
         },
         'phase_durations': {
             'thrust_begin':             float(0.6), # M(S); links startin accel, fps and max accel. (longer time to reach max thrust)
+            'thrust_end':               float(2.0), # S;    transition between thrust and normal accel (retain thrust longer)
+            'collision_recoil_m':       float(0.3), # S(S); links crash velocity, fps and n. recoil frames. (longer impearment)
+            'collision_cooldown':       float(1.0), # S;    min time between terrain collision (longer crash immunity)
+        },
+        # keyboard controls
+        'controls': {
+            'steer_up':     pg.K_w,
+            'steer_left':   pg.K_a,
+            'steer_down':   pg.K_s,
+            'steer_right':  pg.K_d,
+            'thrust':       pg.K_SPACE,
+        },
+    },
+    'bomber': {
+        # settings that determine how the sprite will look
+        'surface': {
+            'spritesheets': {
+                'image_scalar': float(0.5),
+                'idle': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Bomber','Idle.png'),
+                    'n_images': int(1),
+                },
+                'shield': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Bomber','Evasion.png'),
+                    'n_images': int(9),
+                },
+                ### three phases of thrust -> a:init, b:full thrust, c:falloff ###
+                'thrust_a': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Bomber','Move.png'),
+                    'n_images': int(6),
+                },
+                'thrust_b': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Bomber','Boost.png'),
+                    'n_images': int(6),
+                },
+                'thrust_c': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Bomber','Move.png'),
+                    'n_images': int(6),
+                },
+                'destroyed': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Bomber','Destroyed.png'),
+                    'n_images': int(10),
+                }
+            },
+            # approx width / height, used by environment pre player spawn
+            'width':  int(40),
+            'height': int(40),
+        },
+        'gameplay': {
+            'max_health': float(150),       # maximum and initial health
+            'max_fuel':   float(150),       # maximum and initial mana
+            'min_collision_health_loss': float(15),
+            'max_collision_health_loss': float(60)
+        },
+        'physics': {
+            'mass':                     float(1.15),  # M;  more mass => more gravity, faster
+            'handling':                 float(0.022), # W;  how responsive steering will be
+            'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
+            'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
+            'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
+            'max_velocity':             float(0.7),   # R;  general max velocity
+            'terminal_velocity':        float(1.0),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
+            'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
+        },
+        'phase_durations': {
+            'thrust_begin':             float(0.6), # M(S); links startin accel, fps and max accel. (longer time to reach max thrust)
+            'thrust_end':               float(2.0), # S;    transition between thrust and normal accel (retain thrust longer)
+            'collision_recoil_m':       float(0.3), # S(S); links crash velocity, fps and n. recoil frames. (longer impearment)
+            'collision_cooldown':       float(1.0), # S;    min time between terrain collision (longer crash immunity)
+        },
+        # keyboard controls
+        'controls': {
+            'steer_up':     pg.K_w,
+            'steer_left':   pg.K_a,
+            'steer_down':   pg.K_s,
+            'steer_right':  pg.K_d,
+            'thrust':       pg.K_SPACE,
+        },
+    },
+    'fighter': {
+        # settings that determine how the sprite will look
+        'surface': {
+            'spritesheets': {
+                'image_scalar': float(0.5),
+                'idle': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Fighter','Idle.png'),
+                    'n_images': int(1),
+                },
+                'shield': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Fighter','Evasion.png'),
+                    'n_images': int(8),
+                },
+                ### three phases of thrust -> a:init, b:full thrust, c:falloff ###
+                'thrust_a': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Fighter','Move.png'),
+                    'n_images': int(6),
+                },
+                'thrust_b': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Fighter','Boost.png'),
+                    'n_images': int(5),
+                },
+                'thrust_c': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Fighter','Move.png'),
+                    'n_images': int(6),
+                },
+                'destroyed': {
+                    'path': os_path_join('assets','spritesheets','spaceships','Fighter','Destroyed.png'),
+                    'n_images': int(15),
+                }
+            },
+            # approx width / height, used by environment pre player spawn
+            'width':  int(30),
+            'height': int(40),
+        },
+        'gameplay': {
+            'max_health': float(100),       # maximum and initial health
+            'max_fuel':   float(100),       # maximum and initial mana
+            'min_collision_health_loss': float(30),
+            'max_collision_health_loss': float(60)
+        },
+        'physics': {
+            'mass':                     float(1),     # M;  more mass => more gravity, faster
+            'handling':                 float(0.035), # W;  how responsive steering will be
+            'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
+            'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
+            'thrust_magnitude':         float(1.5),   # R;  max magnitude of acceleration during thrust
+            'max_velocity':             float(0.7),   # R;  general max velocity
+            'terminal_velocity':        float(0.8),   # R;  max velocity, but for falling. (grav constant from map still accumulates)
+            'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
+        },
+        'phase_durations': {
+            'thrust_begin':             float(0.4), # M(S); links startin accel, fps and max accel. (longer time to reach max thrust)
             'thrust_end':               float(2.0), # S;    transition between thrust and normal accel (retain thrust longer)
             'collision_recoil_m':       float(0.3), # S(S); links crash velocity, fps and n. recoil frames. (longer impearment)
             'collision_cooldown':       float(1.0), # S;    min time between terrain collision (longer crash immunity)

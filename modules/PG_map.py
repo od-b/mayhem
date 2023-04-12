@@ -465,8 +465,8 @@ class PG_Map:
                         break
 
                 if not (coin_collision):
-                    NEW_COIN = Coin(cf_coin, self.cf_global, IMAGES, rand_pos)
-                    self.coin_group.add(NEW_COIN)
+                    TUP_IMAGES = (IMAGES, int(spritesheet_variants - 1))
+                    self.coin_group.add(Coin(cf_coin, self.cf_global, TUP_IMAGES, rand_pos))
                     placed_coins += 1
 
             if coin_collision or terrain_collision:

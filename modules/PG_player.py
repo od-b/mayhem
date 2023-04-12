@@ -5,7 +5,7 @@ from pygame.sprite import Sprite
 from pygame.draw import polygon as draw_polygon
 # from pygame.gfxdraw import aapolygon as gfxdraw_aapolygon, aatrigon as gfxdraw_aatrigon
 
-from .PG_common import load_sprites
+from .PG_common import load_sprites_tuple
 
 
 class Player(Sprite):
@@ -30,9 +30,6 @@ class Player(Sprite):
         ''' map gravity multiplier '''
         self.FUEL_CONSUMPTION   = float(cf_map['player_fuel_consumption'])
 
-        # surface settings
-        self.IMAGE_WIDTH        = int(cf_surface['width'])
-        self.IMAGE_HEIGHT       = int(cf_surface['height'])
         # gameplay
         self.MAX_HEALTH         = float(cf_gameplay['max_health'])
         self.MAX_FUEL           = float(cf_gameplay['max_fuel'])
@@ -94,29 +91,13 @@ class Player(Sprite):
         cf_thrust_b: dict = self.cf_spritesheets['thrust_b']
         cf_thrust_c: dict = self.cf_spritesheets['thrust_c']
 
-        _N_IDLE_IMAGES = int(cf_idle['n_images'])
-        _N_SHIELD_IMAGES = int(cf_shield['n_images'])
-        _N_DESTROYED_IMAGES = int(cf_destroyed['n_images'])
-        _N_THRUST_A_IMAGES = int(cf_thrust_a['n_images'])
-        _N_THRUST_B_IMAGES = int(cf_thrust_b['n_images'])
-        _N_THRUST_C_IMAGES = int(cf_thrust_c['n_images'])
+        self.IDLE_IMAGES      = load_sprites_tuple(cf_idle['path'], cf_idle['n_images'], scalar)
+        self.SHIELD_IMAGES    = load_sprites_tuple(cf_shield['path'], cf_shield['n_images'], scalar)
+        self.DESTROYED_IMAGES = load_sprites_tuple(cf_destroyed['path'], cf_destroyed['n_images'], scalar)
+        self.THRUST_A_IMAGES  = load_sprites_tuple(cf_thrust_a['path'], cf_thrust_a['n_images'], scalar)
+        self.THRUST_B_IMAGES  = load_sprites_tuple(cf_thrust_b['path'], cf_thrust_b['n_images'], scalar)
+        self.THRUST_C_IMAGES  = load_sprites_tuple(cf_thrust_c['path'], cf_thrust_c['n_images'], scalar)
 
-        _IDLE_IMAGES = load_sprites(cf_idle['path'], _N_IDLE_IMAGES, scalar)
-        _SHIELD_IMAGES = load_sprites(cf_shield['path'], _N_SHIELD_IMAGES, scalar)
-        _DESTROYED_IMAGES = load_sprites(cf_destroyed['path'], _N_DESTROYED_IMAGES, scalar)
-        _THRUST_A_IMAGES = load_sprites(cf_thrust_a['path'], _N_THRUST_A_IMAGES, scalar)
-        _THRUST_B_IMAGES = load_sprites(cf_thrust_b['path'], _N_THRUST_B_IMAGES, scalar)
-        _THRUST_C_IMAGES = load_sprites(cf_thrust_c['path'], _N_THRUST_C_IMAGES, scalar)
-
-        # store the tuples nested in tuples, along with the max allowed index
-        self.IDLE_IMAGES        = (_IDLE_IMAGES, int(_N_IDLE_IMAGES - 1))
-        self.SHIELD_IMAGES      = (_SHIELD_IMAGES, int(_N_SHIELD_IMAGES - 1))
-        self.DESTROYED_IMAGES   = (_DESTROYED_IMAGES, int(_N_DESTROYED_IMAGES - 1))
-        self.THRUST_A_IMAGES    = (_THRUST_A_IMAGES, int(_N_THRUST_A_IMAGES - 1))
-        self.THRUST_B_IMAGES    = (_THRUST_B_IMAGES, int(_N_THRUST_B_IMAGES - 1))
-        self.THRUST_C_IMAGES    = (_THRUST_C_IMAGES, int(_N_THRUST_C_IMAGES - 1))
-
-        self.special_image_set = False
         self.curr_image_index = 0
         self.curr_image_type: tuple[tuple[Surface, ...], int] = self.IDLE_IMAGES
         self.curr_image: Surface = self.curr_image_type[0][self.curr_image_index]
@@ -130,11 +111,9 @@ class Player(Sprite):
 
     def set_special_image_type(self, image_type: tuple[tuple[Surface, ...], int]):
         self.curr_image_type = image_type
-        self.special_image_set = True
         self.cycle_active_image()
 
     def set_idle_image_type(self):
-        self.special_image_set = False
         self.curr_image_index = 0
         self.curr_image_type = self.IDLE_IMAGES
         self.curr_image = self.curr_image_type[0][self.curr_image_index]
@@ -175,7 +154,8 @@ class Player(Sprite):
         self.set_idle_image_type()
 
     def set_up_polygon_image(self, color: Color):
-        ''' get the the original image used for later transformation
+        ''' TEST // DEBUG PURPOSES
+            get the the original image used for later transformation
             * ensures the original image is rotated, not the rotated one.
                 if this is not done, two things will happen:
                 1) The image will become larger after each rotation at an exponential rate

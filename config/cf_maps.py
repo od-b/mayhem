@@ -30,8 +30,9 @@ CF_MAPS = {
         'min_coin_spread': int(120),    # min. distance to another coin
         # nested configs; sets the config dicts of "children". can be shared or unique
         'game_sprites': {
-            # 'player': CF_PLAYERS['polygon'],
-            'player': CF_PLAYERS['corvette'],
+            # 'player': CF_PLAYERS['corvette'],
+            'player': CF_PLAYERS['fighter'],
+            # 'player': CF_PLAYERS['bomber'],
             'blocks': {
                 'edge_outline':     CF_BLOCKS['small_gray_block'],
                 'obstacle':         CF_BLOCKS['pastel_block'],
