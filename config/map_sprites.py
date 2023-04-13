@@ -74,15 +74,33 @@ CF_COINS = {
     }
 }
 
+CF_PROJECTILE_SPAWNERS = {
+    'missiles_x2': {
+        'rate_of_fire': int(60),
+        'sleep_duration': int(125),
+        'n_projectiles_before_sleep': int(2),
+        'cf_projectile': {
+            'spritesheet': {
+                'path': os_path_join('assets','spritesheets','projectiles','missile.png'),
+                'n_images': int(4)
+            },
+            'img_cycle_frequency': int(0),
+            'image_scalar': float(1.0),
+            'kill_on_collide': True,
+            'damage': float(10)
+        }
+    },
+}
+
 CF_TURRETS = {
     'missile_launcher': {
+        'cf_projectile_spawner': CF_PROJECTILE_SPAWNERS['missiles_x2'],
+        'rotation_rate': float(0.1),
+        'n_projectile_spawners': int(2),
+        'image_scalar': float(0.2),
         'spritesheet': {
             'path': os_path_join('assets','spritesheets','turrets','simple','idle.png'),
-            'n_images': int(1)
+            'n_images': int(1),
         },
-        'projectile_spritesheet': {
-            'path': os_path_join('assets','spritesheets','projectiles','missile.png'),
-            'n_images': int(4)
-        }
     }
 }

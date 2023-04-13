@@ -18,7 +18,7 @@ from .PG_timer import PG_Timer
 from .PG_block import Block
 from .PG_player import Player
 from .PG_coin import Coin
-from .PG_projectiles import PG_Projectile_Spawner
+from .PG_turret import PG_Turret
 from .PG_ui_containers import UI_Sprite_Container
 from .PG_ui_bars import UI_Auto_Icon_Bar_Horizontal
 from .PG_common import partition_spritesheet
@@ -615,32 +615,25 @@ class PG_Map:
                     pass
 
     def projectile_collide_func(self, dmg):
+        self.player.health -= dmg
+        if (self.player.health <= 0):
+            self.player.init_death_event()
         print(dmg)
 
     def spawn_turrets(self):
         self.turret_group = Group()
-        
-        cf_projectile = self.cf_map_sprites['turrets']['missile_launcher']['projectile_spritesheet']
+
+        cf_turret = self.cf_map_sprites['turrets']['missile_launcher']
         spawn_pos = Vec2(400, 400)
-        velo = Vec2(1.0, 0)
-        rate_of_fire = int(30)
-        img_cycle_freq = int(40)
+        # velo = Vec2(0.7, 0.2)
 
-
-        PG_Projectile_Spawner(
+        PG_Turret(
+            cf_turret,
             self.turret_group,
             spawn_pos,
-            rate_of_fire,
-            int(125),
-            int(2),
-            cf_projectile,
-            img_cycle_freq,
-            1.0,
+            float(0),
             self.block_group,
-            self.projectile_collide_func,
-            True,
-            velo,
-            float(10)
+            self.projectile_collide_func
         )
 
     def draw(self):
@@ -653,6 +646,7 @@ class PG_Map:
         self.block_group.draw(self.surface)
         self.coin_group.draw(self.surface)
         self.turret_group.update(self.surface)
+        self.turret_group.draw(self.surface)
 
     def loop(self):
         # if a map was initiated by the menu, launch the main loop
