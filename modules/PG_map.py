@@ -18,6 +18,7 @@ from .PG_timer import PG_Timer
 from .PG_block import Block
 from .PG_player import Player
 from .PG_coin import Coin
+from .PG_projectiles import PG_Projectile_Spawner
 from .PG_ui_containers import UI_Sprite_Container
 from .PG_ui_bars import UI_Auto_Icon_Bar_Horizontal
 from .PG_common import partition_spritesheet
@@ -100,8 +101,9 @@ class PG_Map:
         # sprite creation
         self.spawn_terrain_blocks()
         self.spawn_coins()
-        
-        self.ALL_SPRITES.extend(self.block_group.sprites() + self.coin_group.sprites())
+        self.spawn_turrets()
+
+        self.ALL_SPRITES.extend(self.block_group.sprites() + self.coin_group.sprites() + self.turret_group.sprites())
 
     def spawn_player(self, cf_player: dict):
         self.player = Player(cf_player, self.cf_map, self.cf_global)
@@ -113,8 +115,12 @@ class PG_Map:
         self.player.spawn(spawn_pos)
         self.player_group.add(self.player)
 
+        for turret in self.turret_group.sprites():
+            turret.init(self.player)
+
         self.set_up_ui_status_bars()
         self.store_player_controls(cf_player)
+
         self.ALL_SPRITES.append(self.player)
 
     def start(self):
@@ -429,7 +435,7 @@ class PG_Map:
 
         # all the coins share a single tuple containing their images
         COIN_SPRITESHEET_IMG = pg.image.load(cf_coin['spritesheet_path'])
-        IMAGES = partition_spritesheet(COIN_SPRITESHEET_IMG, n_spritesheet_images, scalar)
+        IMAGES = partition_spritesheet(COIN_SPRITESHEET_IMG, n_spritesheet_images, scalar, None)
 
         # place the coins according to settings
         min_terrain_offset = int(self.cf_spawning['coins']['min_terrain_offset'])
@@ -556,34 +562,6 @@ class PG_Map:
 
     #### LOOP ####
 
-    def draw(self):
-        self.surface.fill(self.fill_color)
-
-        if (DEBUG_PLAYER_VISUALS):
-            self.debug__draw_player_all_info()
-        else:
-            self.player_group.draw(self.surface)
-        self.block_group.draw(self.surface)
-        self.coin_group.draw(self.surface)
-
-    def loop(self):
-        # if a map was initiated by the menu, launch the main loop
-        while (self.looping):
-            self.draw()
-            self.timer.draw_ui(self.surface)
-
-            # collision checks
-            self.check_player_block_collision()
-            self.check_player_coin_collision()
-            self.check_events()
-            self.ui_container_group.update(self.surface)
-
-            display.update()
-
-            self.coin_group.update()
-            self.player_group.update()
-            self.timer.update()
-
     def check_events(self):
         for event in pg.event.get():
             # check if the event type matches any relevant types
@@ -635,6 +613,64 @@ class PG_Map:
                     self.quit_called = True
                 case _:
                     pass
+
+    def projectile_collide_func(self, dmg):
+        print(dmg)
+
+    def spawn_turrets(self):
+        self.turret_group = Group()
+        
+        cf_projectile = self.cf_map_sprites['turrets']['missile_launcher']['projectile_spritesheet']
+        spawn_pos = Vec2(400, 400)
+        velo = Vec2(1.0, 0)
+        rate_of_fire = int(30)
+        img_cycle_freq = int(40)
+
+
+        PG_Projectile_Spawner(
+            self.turret_group,
+            spawn_pos,
+            rate_of_fire,
+            int(125),
+            int(2),
+            cf_projectile,
+            img_cycle_freq,
+            1.0,
+            self.block_group,
+            self.projectile_collide_func,
+            True,
+            velo,
+            float(10)
+        )
+
+    def draw(self):
+        self.surface.fill(self.fill_color)
+
+        if (DEBUG_PLAYER_VISUALS):
+            self.debug__draw_player_all_info()
+        else:
+            self.player_group.draw(self.surface)
+        self.block_group.draw(self.surface)
+        self.coin_group.draw(self.surface)
+        self.turret_group.update(self.surface)
+
+    def loop(self):
+        # if a map was initiated by the menu, launch the main loop
+        while (self.looping):
+            self.draw()
+            self.timer.draw_ui(self.surface)
+
+            # collision checks
+            self.check_player_block_collision()
+            self.check_player_coin_collision()
+            self.check_events()
+            self.ui_container_group.update(self.surface)
+
+            display.update()
+
+            self.coin_group.update()
+            self.player_group.update()
+            self.timer.update()
 
     #### MASK RELATED METHODS ####
 

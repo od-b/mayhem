@@ -18,7 +18,6 @@ from config.cf_players import CF_PLAYERS
 from modules.PG_window import PG_Window
 from modules.PG_map import PG_Map
 from modules.PG_timer import PG_Timer
-
 from modules.PG_ui_containers import (
     UI_Container_Wrapper,
     UI_Single_Centered_Container,
@@ -119,6 +118,13 @@ class PG_App:
 
         self.set_up_menu()
         self.create_tooltip_container()
+        
+        self.debug_auto_init_map = True
+
+    def debug_start_map(self):
+        self.selected_cf_player = self.cf_players['fighter']
+        self.selected_cf_map = self.cf_maps['map_1']
+        self.init_map()
 
     #### RUN-ONCE MENU SETUP METHODS ####
 
@@ -741,6 +747,9 @@ class PG_App:
             pg.display.update()
 
             self.tooltip_group.empty()
+
+            if (self.debug_auto_init_map):
+                self.debug_start_map()
 
             # check whether a map is loaded
             if (self.map_loaded):

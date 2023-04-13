@@ -1,14 +1,6 @@
 from os.path import join as os_path_join
 from .colors import RGB, RGBA, PALLETTES
 
-CF_TURRETS = {
-    'default': {
-        'spritesheet_path': os_path_join('assets','spritesheets','coin_1.png'),
-        'image_variants': int(9),
-        'image_scalar': float(0.1),
-    }
-}
-
 CF_BLOCKS = {
     #   color_pool: list of one ore more RGB color values
     #   spacing:
@@ -82,3 +74,15 @@ CF_COINS = {
     }
 }
 
+CF_TURRETS = {
+    'missile_launcher': {
+        'spritesheet': {
+            'path': os_path_join('assets','spritesheets','turrets','simple','idle.png'),
+            'n_images': int(1)
+        },
+        'projectile_spritesheet': {
+            'path': os_path_join('assets','spritesheets','projectiles','missile.png'),
+            'n_images': int(4)
+        }
+    }
+}

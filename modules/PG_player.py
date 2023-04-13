@@ -81,12 +81,12 @@ class Player(Sprite):
         cf_thrust_b: dict = cf_spritesheets['thrust_b']
         cf_thrust_c: dict = cf_spritesheets['thrust_c']
 
-        self.IDLE_IMAGES      = load_sprites_tuple(cf_idle['path'], cf_idle['n_images'], scalar)
-        self.SHIELD_IMAGES    = load_sprites_tuple(cf_shield['path'], cf_shield['n_images'], scalar)
-        self.DESTROYED_IMAGES = load_sprites_tuple(cf_destroyed['path'], cf_destroyed['n_images'], scalar)
-        self.THRUST_A_IMAGES  = load_sprites_tuple(cf_thrust_a['path'], cf_thrust_a['n_images'], scalar)
-        self.THRUST_B_IMAGES  = load_sprites_tuple(cf_thrust_b['path'], cf_thrust_b['n_images'], scalar)
-        self.THRUST_C_IMAGES  = load_sprites_tuple(cf_thrust_c['path'], cf_thrust_c['n_images'], scalar)
+        self.IDLE_IMAGES      = load_sprites_tuple(cf_idle['path'], cf_idle['n_images'], scalar, None)
+        self.SHIELD_IMAGES    = load_sprites_tuple(cf_shield['path'], cf_shield['n_images'], scalar, None)
+        self.DESTROYED_IMAGES = load_sprites_tuple(cf_destroyed['path'], cf_destroyed['n_images'], scalar, None)
+        self.THRUST_A_IMAGES  = load_sprites_tuple(cf_thrust_a['path'], cf_thrust_a['n_images'], scalar, None)
+        self.THRUST_B_IMAGES  = load_sprites_tuple(cf_thrust_b['path'], cf_thrust_b['n_images'], scalar, None)
+        self.THRUST_C_IMAGES  = load_sprites_tuple(cf_thrust_c['path'], cf_thrust_c['n_images'], scalar, None)
 
     def get_idle_bounds(self):
         return self.IDLE_IMAGES[0][0].get_rect().copy()

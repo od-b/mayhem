@@ -1,7 +1,7 @@
 from pygame import Surface, SRCALPHA, transform, Rect, image
 
 
-def partition_spritesheet(spritesheet: Surface, n_images: int, scale: float) -> tuple[Surface, ...]:
+def partition_spritesheet(spritesheet: Surface, n_images: int, scalar: float, angle: None | float) -> tuple[Surface, ...]:
     ''' partition a horizontal spritesheet into equal sized segments '''
     images = []
     rect = spritesheet.get_rect()
@@ -15,13 +15,19 @@ def partition_spritesheet(spritesheet: Surface, n_images: int, scale: float) -> 
         area_rect = Rect(x, 0, x+img_width, img_height)
         # blit that area from the sheet onto the surface, then scale
         SURF.blit(spritesheet, SURF.get_rect(), area_rect)
-        IMG = transform.scale_by(SURF, scale)
+        IMG: Surface
+        if (angle == None):
+            IMG = transform.scale_by(SURF, scalar)
+        else:
+            IMG = transform.rotozoom(SURF, angle, scalar)
+
         images.append(IMG)
 
     # return list as a tuple
     return tuple(images)
 
-def load_sprites_tuple(path, n_images, scalar) -> tuple[tuple[Surface, ...], int]:
+
+def load_sprites_tuple(path: str, n_images: int, scalar: float, angle: None | float) -> tuple[tuple[Surface, ...], int]:
     ''' returns a tuple:
         tuple[0] => tuple[images, ...]
         tuple[1] => max index of tuple[0] (len-1)
@@ -35,8 +41,13 @@ def load_sprites_tuple(path, n_images, scalar) -> tuple[tuple[Surface, ...], int
         SURF = Surface((img_width, img_height), flags=SRCALPHA)
         SURF.blit(SHEET, SURF.get_rect())
 
-        IMG = (transform.scale_by(SURF, scalar), )
+        IMG: Surface
+        if (angle == None):
+            IMG = (transform.scale_by(SURF, scalar), )
+        else:
+            IMG = (transform.rotozoom(SURF, angle, scalar), )
+
         return (IMG, int(n_images - 1))
     else:
-        IMAGES = partition_spritesheet(SHEET, n_images, scalar)
+        IMAGES = partition_spritesheet(SHEET, n_images, scalar, angle)
         return (IMAGES, int(n_images - 1))

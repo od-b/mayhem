@@ -1,5 +1,5 @@
 from .colors import RGB
-from .map_sprites import CF_BLOCKS, CF_COINS
+from .map_sprites import CF_BLOCKS, CF_COINS, CF_TURRETS
 from .map_ui import MAP_CONTAINERS, PLAYER_STATUS_BARS
 
 #### MISC ####
@@ -26,6 +26,9 @@ CF_MAPS = {
                 'min_terrain_offset': int(11),      # min. offset to terrain
                 'min_spread': int(120),     # min. distance to another coin
             },
+            'turrets': {
+                'n_turrets': 1,
+            },
             'obstacles': {
                 'n_obstacles':     int(13),
                 # min/max distance inbetween generated obstacles
@@ -45,7 +48,10 @@ CF_MAPS = {
                 'obstacle':         CF_BLOCKS['pastel_block'],
                 'obstacle_outline': CF_BLOCKS['adaptive_block'],
             },
-            'coin': CF_COINS['default']
+            'coin': CF_COINS['default'],
+            'turrets': {
+                'missile_launcher': CF_TURRETS['missile_launcher'],
+            }
         },
         'ui_sprites': {
             'containers': MAP_CONTAINERS,
