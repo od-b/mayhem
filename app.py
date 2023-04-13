@@ -29,6 +29,19 @@ from modules.PG_ui_buttons import UI_Button, UI_Text_Button, UI_Image_Button
 
 INFO_PRINT = True
 
+'''
+FORMATTING_TRIGGERS = {
+    # one of | none:
+    'bold': str("_b_"),
+    'italic': str("_i_"),
+    'light': str("_l_"),
+    # may be combined:
+    'alt_color': str("a/"),
+    'title': str("t/"),
+    'newline': str("n/"),
+    'nosplit': str('::')    # renders words together. applies formatting to all. useful for titles.
+}
+'''
 
 class PG_App:
     ''' Singleton app class.
@@ -107,9 +120,13 @@ class PG_App:
         self.set_up_menu()
         self.create_tooltip_container()
 
+    #### RUN-ONCE MENU SETUP METHODS ####
+
     def set_up_menu(self):
-        ''' This function has a lot of constants / magic numbers / settings
+        ''' Set up self.MENU_WRAPPER and all children // objects that depend on it
         
+            This function has a few constants / magic numbers / settings
+
             Originally tried doing this exclusively through config, but no way tbh.
             Callable references, etc, are for one not viable if that is done. Also, nearly 
             everything relies on calculating previous sizes.
@@ -279,7 +296,7 @@ class PG_App:
             dummy_pos,
             self.btn_onclick_start_map,
             None,
-            self.button_mouse_over,
+            self.btn_check_mouse_over,
             None,
             self.cf_menu['buttons']['start_game']['cf_fonts'],
             '',
@@ -332,10 +349,10 @@ class PG_App:
         PLAYER_SELECT_BUTTONS: list[UI_Button] = []
 
         for player_key in self.valid_cf_player_keys:
-            tooltip_text = self.create_player_tooltip_text(player_key)
+            tooltip_text = self.format_player_tooltip_text(player_key)
             trigger_func = self.btn_onclick_select_player
             trigger_parameter = player_key
-            hover_bool_func = self.button_mouse_over
+            hover_bool_func = self.btn_check_mouse_over
             ref_id = player_key
             image_path = self.cf_players[player_key]['spritesheets']['idle']['path']
 
@@ -367,11 +384,11 @@ class PG_App:
         MAP_SELECT_BUTTONS: list[UI_Text_Button] = []
 
         for map_key in self.valid_cf_maps_keys:
-            tooltip_text = self.create_map_tooltip_text(map_key)
+            tooltip_text = self.format_map_tooltip_text(map_key)
             trigger_func = self.btn_onclick_select_map
             trigger_parameter = map_key
             btn_text = str(self.cf_maps[map_key]['name'])
-            hover_bool_func = self.button_mouse_over
+            hover_bool_func = self.btn_check_mouse_over
             text_getter_func = None
             text_getter_param = map_key
             ref_id = map_key
@@ -414,7 +431,7 @@ class PG_App:
             self.MENU_WRAPPER.rect.center,
             self.exit_map,
             False,
-            self.button_mouse_over,
+            self.btn_check_mouse_over,
             btn_return_tooltip,
             cf_fonts,
             str('Main Menu'),
@@ -432,7 +449,7 @@ class PG_App:
             self.MENU_WRAPPER.rect.center,
             self.reset_map,
             None,
-            self.button_mouse_over,
+            self.btn_check_mouse_over,
             btn_reset_tooltip,
             cf_fonts,
             str('Reset'),
@@ -450,7 +467,7 @@ class PG_App:
             self.MENU_WRAPPER.rect.center,
             self.unpause_map,
             None,
-            self.button_mouse_over,
+            self.btn_check_mouse_over,
             btn_unpause_tooltip,
             cf_fonts,
             str('Unpause'),
@@ -465,22 +482,28 @@ class PG_App:
 
         return PAUSE_ACTION_BTNS
 
-    def create_map_tooltip_text(self, map_key: str):
+    def create_tooltip_container(self):
+        ''' create a text container that will dynamically change its size to fit the given text '''
+        cf_tooltip = self.cf_menu['tooltip_container']
+
+        self.TOOLTIP = UI_Text_Container(
+            cf_tooltip['cf_bg'],
+            cf_tooltip['cf_fonts'],
+            cf_tooltip['cf_formatting_triggers'],
+            self.window,
+            (0, 0),
+            cf_tooltip['max_width'],
+            cf_tooltip['max_height'],
+            cf_tooltip['child_padding_x'],
+            cf_tooltip['child_padding_y'],
+            cf_tooltip['title_padding_y'],
+            str("_H_This _N_is a _*_tooltip test. _N_Hello _N_World! 1234 abc")
+        )
+
+    def format_map_tooltip_text(self, map_key: str):
         return str(f'{map_key}')
 
-    # FORMATTING_TRIGGERS = {
-    #     # one of | none:
-    #     'bold': str("_b_"),
-    #     'italic': str("_i_"),
-    #     'light': str("_l_"),
-    #     # may be combined:
-    #     'alt_color': str("a/"),
-    #     'title': str("t/"),
-    #     'newline': str("n/"),
-    #     'nosplit': str('::')    # renders words together. applies formatting to all. useful for titles.
-    # }
-
-    def create_player_tooltip_text(self, player_key: str):
+    def format_player_tooltip_text(self, player_key: str):
         # TODO: format these constants as comparable percentages
         CF = self.cf_players[player_key]
         CF_g = CF['gameplay']
@@ -510,48 +533,7 @@ class PG_App:
 
         return text
 
-    def create_tooltip_container(self):
-        ''' create a text container that will dynamically change its size to fit the given text '''
-        cf_tooltip = self.cf_menu['tooltip_container']
-
-        self.TOOLTIP = UI_Text_Container(
-            cf_tooltip['cf_bg'],
-            cf_tooltip['cf_fonts'],
-            cf_tooltip['cf_formatting_triggers'],
-            self.window,
-            self.MENU_WRAPPER.rect.topleft,
-            cf_tooltip['max_width'],
-            cf_tooltip['max_height'],
-            cf_tooltip['child_padding_x'],
-            cf_tooltip['child_padding_y'],
-            cf_tooltip['title_padding_y'],
-            str("_H_This _N_is a _*_tooltip test. _N_Hello _N_World! 1234 abc")
-        )
-
-    def swap_to_pause_menu(self):
-        self.BTN_WRAPPER_TOP.replace_children(self.PAUSE_ACTION_BUTTONS)
-        self.BTN_WRAPPER_MID.kill_all_children()
-        self.swap_start_game_btn_state(True)
-
-    def swap_to_main_menu(self):
-        self.BTN_WRAPPER_TOP.replace_children(self.MAP_SELECT_BUTTONS)
-        self.BTN_WRAPPER_MID.replace_children(self.PLAYER_SELECT_BUTTONS)
-        self.timer.kill_duration_text()
-
-        self.selected_cf_map = None
-        self.selected_cf_player = None
-
-        for btn in self.BUTTON_LIST:
-            btn.toggle_state_active = False
-        self.swap_start_game_btn_state(False)
-
-    def swap_start_game_btn_state(self, make_clickable: bool):
-        if make_clickable:
-            self.BTN_START_GAME.toggle_state_active = False
-            self.BTN_START_GAME.allow_trigger = True
-        else:
-            self.BTN_START_GAME.toggle_state_active = True
-            self.BTN_START_GAME.allow_trigger = False
+    #### CALLABLE BUTTON METHODS -- not directly called by the app ####
 
     def btn_get_menu_title_text(self):
         if self.map_loaded:
@@ -610,12 +592,7 @@ class PG_App:
             if self.selected_cf_map:
                 self.swap_start_game_btn_state(True)
 
-    def mouse_is_over(self, has_rect):
-        if has_rect.rect.collidepoint(self.curr_mouse_pos):
-            return True
-        return False
-
-    def button_mouse_over(self, button: UI_Button):
+    def btn_check_mouse_over(self, button: UI_Button):
         hovering = self.mouse_is_over(button)
         if (hovering):
             if (hasattr(button, "tooltip_text")):
@@ -624,24 +601,7 @@ class PG_App:
                 self.tooltip_group.add(self.TOOLTIP)
         return hovering
 
-    def check_button_onclick(self, buttons: list[UI_Button]):
-        ''' check if mouse is above a button when mouse1 clicked '''
-        for btn in buttons:
-            if self.mouse_is_over(btn):
-                # check if button can be triggered
-                if not btn.allow_trigger:
-                    break
-                # un-toggle if already clicked
-                if btn.toggle_state_active:
-                    btn.toggle_state_active = False
-                    if btn.trigger_parameter:
-                        btn.trigger_func(None)
-                    break
-                # turn off click state for other buttons in the list
-                for _btn in buttons:
-                    _btn.toggle_state_active = False
-                btn.trigger()
-                break
+    #### MAP STATE METHODS ####
 
     def init_map(self):
         # create the map object as an attribute of self
@@ -691,6 +651,58 @@ class PG_App:
     def unpause_map(self):
         self.map.unpause()
 
+    #### MISC && MAIN LOOPS ####
+
+    def mouse_is_over(self, has_rect):
+        ''' check if curr_mouse_pos collides with an objects rect '''
+        if has_rect.rect.collidepoint(self.curr_mouse_pos):
+            return True
+        return False
+
+    def check_button_onclick(self, buttons: list[UI_Button]):
+        ''' check if mouse is above a button when mouse1 clicked '''
+        for btn in buttons:
+            if self.mouse_is_over(btn):
+                # check if button can be triggered
+                if not btn.allow_trigger:
+                    break
+                # un-toggle if already clicked
+                if btn.toggle_state_active:
+                    btn.toggle_state_active = False
+                    if btn.trigger_parameter:
+                        btn.trigger_func(None)
+                    break
+                # turn off click state for other buttons in the list
+                for _btn in buttons:
+                    _btn.toggle_state_active = False
+                btn.trigger()
+                break
+
+    def swap_to_pause_menu(self):
+        self.BTN_WRAPPER_TOP.replace_children(self.PAUSE_ACTION_BUTTONS)
+        self.BTN_WRAPPER_MID.kill_all_children()
+        self.swap_start_game_btn_state(True)
+
+    def swap_to_main_menu(self):
+        self.BTN_WRAPPER_TOP.replace_children(self.MAP_SELECT_BUTTONS)
+        self.BTN_WRAPPER_MID.replace_children(self.PLAYER_SELECT_BUTTONS)
+        self.timer.kill_duration_text()
+
+        self.selected_cf_map = None
+        self.selected_cf_player = None
+
+        for btn in self.BUTTON_LIST:
+            btn.toggle_state_active = False
+        self.swap_start_game_btn_state(False)
+
+    def swap_start_game_btn_state(self, make_clickable: bool):
+        if make_clickable:
+            self.BTN_START_GAME.toggle_state_active = False
+            self.BTN_START_GAME.allow_trigger = True
+        else:
+            self.BTN_START_GAME.toggle_state_active = True
+            self.BTN_START_GAME.allow_trigger = False
+
     def check_events(self):
         for event in pg.event.get():
             match (event.type):
@@ -717,33 +729,45 @@ class PG_App:
         ''' main loop for drawing, checking events and updating the game '''
         self.window.fill_surface()
 
-        while (self.looping):
+        # outer loop for the app
+        while self.looping:
             self.timer.update_paused()
+            self.timer.draw_ui(self.window.map_surface)
             self.curr_mouse_pos = pg.mouse.get_pos()
             self.menu_wrapper_group.update(self.window.surface)
             self.tooltip_group.update(self.window.surface)
 
-            self.timer.draw_ui(self.window.map_surface)
             self.check_events()
             pg.display.update()
 
             self.tooltip_group.empty()
 
+            # check whether a map is loaded
             if (self.map_loaded):
+                # check whether there was an initialization, or if map is paused
                 if not (self.map.paused):
-                    # ignore mouse events when map is active
+                    # ignore mouse events when map is active, then loop the map
                     self.timer.block_events(self.PG_MOUSE_EVENTS)
                     self.map.loop()
+
+                    # map loop breakout: pause or program exit?
                     if (self.map.quit_called):
                         self.looping = False
                     else:
                         self.timer.allow_events(self.PG_MOUSE_EVENTS)
+                        # check if map is completed or paused
                         if (self.map.paused):
                             self.swap_to_pause_menu()
+                        else:
+                            # TODO: self.swap_to_victory_menu()
+                            pass
                 else:
+                    # map is paused. keep drawing it in the background,
+                    # but do not update any game sprites
                     self.map.draw()
                     self.map.ui_container_group.update(self.map.surface)
             else:
+                # main menu is loaded without any map. Clear the entire surface.
                 self.window.fill_surface()
 
         if INFO_PRINT:
