@@ -471,8 +471,47 @@ class PG_App:
     def create_map_tooltip_text(self, map_key: str):
         return str(f'{map_key}')
 
+    # FORMATTING_TRIGGERS = {
+    #     # one of | none:
+    #     'bold': str("_b_"),
+    #     'italic': str("_i_"),
+    #     'light': str("_l_"),
+    #     # may be combined:
+    #     'alt_color': str("a/"),
+    #     'title': str("t/"),
+    #     'newline': str("n/"),
+    #     'nosplit': str('::')    # renders words together. applies formatting to all. useful for titles.
+    # }
+
     def create_player_tooltip_text(self, player_key: str):
-        return str(f'{player_key}')
+        # TODO: format these constants as comparable percentages
+        CF = self.cf_players[player_key]
+        CF_g = CF['gameplay']
+        CF_w = CF['physics']
+
+        name = CF['name']
+        descr = CF['description']
+        description = descr.split()
+
+        mass = CF_w['mass']
+        handling = CF_w['handling']
+        thrust = CF_w['thrust_magnitude']
+        max_hp = int(CF_g['max_health'])
+        max_fuel = int(CF_g['max_fuel'])
+
+        text = f't/_b_{name}'
+        text += f' n/'
+
+        for word in description:
+            text += f'_i_{word} '
+
+        text += f' n/a/_b_Health: {max_hp} '
+        text += f' n/a/_b_Fuel: {max_fuel} '
+        text += f' n/a/_b_Mass: {mass} '
+        text += f' n/a/_b_Handling: {handling} '
+        text += f' n/a/_b_Thrust: {thrust} '
+
+        return text
 
     def create_tooltip_container(self):
         ''' create a text container that will dynamically change its size to fit the given text '''
@@ -527,7 +566,7 @@ class PG_App:
             return str("Map Paused. Select an Action")
 
         if (self.selected_cf_map and self.selected_cf_player):
-            return str("Ready to start?")
+            return str("Ready to Start?")
         elif (self.selected_cf_map):
             map_name = self.selected_cf_map['name']
             return f'{map_name} Selected. Select a Player!'
@@ -565,6 +604,7 @@ class PG_App:
 
     def btn_onclick_select_player(self, player_key: str | None):
         if (player_key == None):
+            self.selected_cf_player = None
             self.swap_start_game_btn_state(False)
         else:
             self.selected_cf_player = self.cf_players[player_key]
@@ -591,13 +631,13 @@ class PG_App:
         ''' check if mouse is above a button when mouse1 clicked '''
         for btn in buttons:
             if self.mouse_is_over(btn):
-                # check if button can be toggled
-                # un-toggle if already clicked 
+                # check if button can be triggered
                 if not btn.allow_trigger:
                     break
-                if (btn.toggle_state_active):
+                # un-toggle if already clicked
+                if btn.toggle_state_active:
                     btn.toggle_state_active = False
-                    if (btn.trigger_parameter):
+                    if btn.trigger_parameter:
                         btn.trigger_func(None)
                     break
                 # turn off click state for other buttons in the list

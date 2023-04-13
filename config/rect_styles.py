@@ -82,7 +82,7 @@ CF_FILLED_RECT = {
     'offblack_on_offblack': { # alpha
         'color':            RGB['earth_black'],
         'alpha':            int(220),
-        'border_color':     RGB['earth_black'],
+        'border_color':     RGB['earth_black_dark'],
         'border_width':     int(2),
         'border_alpha':     int(255),
     },

@@ -33,16 +33,16 @@ CF_MENU = {
     'tooltip_container': {
         'cf_bg': CF_FILLED_RECT['offblack_on_offblack'],
         'cf_formatting_triggers': FORMATTING_TRIGGERS,
-        'max_width': int(300),
-        'max_height': int(300),
-        'child_padding_x': int(10),
-        'child_padding_y': int(10),
+        'max_width': int(320),
+        'max_height': int(300),         # not enforced
+        'child_padding_x': int(10),     # word spacing
+        'child_padding_y': int(6),      # line spacing
         'title_padding_y': int(4),
         'cf_fonts': {
             'bg_color': FONT_RECT_BG_COLOR,
             'antialias': FONT_ANTIALIAS,
             'color': RGB['bone'],
-            'alt_color': RGB['blue_light'],
+            'alt_color': RGB['blue'],
             'size': int(21),
             'title_size': int(26),
             'paths': {
@@ -64,7 +64,7 @@ CF_MENU = {
             'cf_fonts': {
                 'default': cf_font(24, 'dutchwhite', 'bold', None),
                 'hovering': cf_font(25, 'bone', 'bold', None),
-                'toggled': cf_font(25, 'bone', 'semibold', 'italic'),
+                'toggled': cf_font(24, 'bone', 'bold', 'italic'),
             }
         },
         'map_paused_action': {
@@ -93,9 +93,9 @@ CF_MENU = {
                 'toggled': CF_FILLED_RECT['offblack_on_gray'],
             },
             'cf_fonts': {
-                'default': cf_font(24, 'dutchwhite', 'bold', None),
-                'hovering': cf_font(25, 'bone', 'bold', None),
-                'toggled': cf_font(25, 'bone', 'semibold', 'italic'),
+                'default': cf_font(25, 'bone', 'semibold', None),
+                'hovering': cf_font(26, 'bone', 'bold', None),
+                'toggled': cf_font(25, 'gray_148', 'semibold', None),
             }
         },
     }

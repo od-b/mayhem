@@ -24,6 +24,7 @@ from .colors import RGB, RGBA
 CF_PLAYERS = {
     'corvette': {
         'name': str("Corvette"),
+        'description': str("Tanky, with great Fuel Capacity. Large and Heavy."),
         'spritesheets': {
             'image_scalar': float(0.4),
             'idle': {
@@ -54,17 +55,17 @@ CF_PLAYERS = {
         },
         'gameplay': {
             'fuel_consumption': float(0.02),
-            'max_health': float(150),       # maximum and initial health
-            'max_fuel':   float(150),       # maximum and initial mana
-            'min_collision_health_loss': float(15),
-            'max_collision_health_loss': float(60)
+            'max_health': float(200),       # maximum and initial health
+            'max_fuel':   float(200),       # maximum and initial mana
+            'min_collision_health_loss': float(30),
+            'max_collision_health_loss': float(40)
         },
         'physics': {
-            'mass':                     float(1.15),  # M;  more mass => more gravity, faster
-            'handling':                 float(0.022), # W;  how responsive steering will be
+            'mass':                     float(1.25),  # M;  more mass => more gravity, faster
+            'handling':                 float(0.018), # W;  how responsive steering will be
             'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
-            'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
+            'thrust_magnitude':         float(1.2),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
             'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
@@ -85,6 +86,7 @@ CF_PLAYERS = {
     },
     'bomber': {
         'name': str("Bomber"),
+        'description': str("All-Rounder, Balanced and Versatile."),
         'spritesheets': {
             'image_scalar': float(0.5),
             'idle': {
@@ -117,15 +119,15 @@ CF_PLAYERS = {
             'fuel_consumption': float(0.02),
             'max_health': float(150),       # maximum and initial health
             'max_fuel':   float(150),       # maximum and initial mana
-            'min_collision_health_loss': float(15),
-            'max_collision_health_loss': float(60)
+            'min_collision_health_loss': float(35),
+            'max_collision_health_loss': float(50)
         },
         'physics': {
             'mass':                     float(1.0),  # M;  more mass => more gravity, faster
-            'handling':                 float(0.022), # W;  how responsive steering will be
+            'handling':                 float(0.023), # W;  how responsive steering will be
             'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
-            'thrust_magnitude':         float(1.4),   # R;  max magnitude of acceleration during thrust
+            'thrust_magnitude':         float(1.3),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
             'collision_recoil_w':       float(0.3),   # W;  how drastic the bounce-back of a crash will be
         },
@@ -146,6 +148,7 @@ CF_PLAYERS = {
     },
     'fighter': {
         'name': str("Fighter"),
+        'description': str("Light, Agile and Fast. Low Health and Fuel Capacity."),
         'spritesheets': {
             'image_scalar': float(0.5),
             'idle': {
@@ -178,13 +181,13 @@ CF_PLAYERS = {
             'fuel_consumption': float(0.02),
             'max_health': float(100),       # maximum and initial health
             'max_fuel':   float(100),       # maximum and initial mana
-            'min_collision_health_loss': float(30),
+            'min_collision_health_loss': float(45),
             'max_collision_health_loss': float(60)
         },
         'physics': {
             'mass':                     float(0.8),     # M;  more mass => more gravity, faster
             'handling':                 float(0.03), # W;  how responsive steering will be
-            'thrust_handling_m':        float(1.6),   # M;  handling multiplier during thrust. may reduce or increase handling.
+            'thrust_handling_m':        float(1.45),   # M;  handling multiplier during thrust. may reduce or increase handling.
             'max_acceleration':         float(0.3),   # M;  non-thrust only => limit non-thrust movement (links controls to accel)
             'thrust_magnitude':         float(1.5),   # R;  max magnitude of acceleration during thrust
             'max_velocity':             float(0.7),   # R;  general max velocity
