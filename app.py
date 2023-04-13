@@ -247,6 +247,7 @@ class PG_App:
             mid_btn_padding_x, mid_btn_padding_y
         )
 
+
         # store in respective lists
         self.BUTTON_LIST.extend(self.PLAYER_SELECT_BUTTONS)
         # initialize with main menu buttons 
@@ -280,7 +281,6 @@ class PG_App:
             None,
             self.button_mouse_over,
             None,
-            False,
             self.cf_menu['buttons']['start_game']['cf_fonts'],
             '',
             self.btn_get_start_map_text,
@@ -337,7 +337,6 @@ class PG_App:
             trigger_parameter = player_key
             hover_bool_func = self.button_mouse_over
             ref_id = player_key
-            allow_trigger = True
             image_path = self.cf_players[player_key]['spritesheets']['idle']['path']
 
             BTN = UI_Image_Button(
@@ -350,7 +349,6 @@ class PG_App:
                 trigger_parameter,
                 hover_bool_func,
                 tooltip_text,
-                allow_trigger,
                 image_path,
                 btn_image_padding_x,
                 btn_image_padding_y
@@ -366,7 +364,7 @@ class PG_App:
         btn_width = int((container_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
         btn_height = int(container_h - (btn_padding_y * 2))
 
-        MAP_SELECT_BUTTONS: list[UI_Button] = []
+        MAP_SELECT_BUTTONS: list[UI_Text_Button] = []
 
         for map_key in self.valid_cf_maps_keys:
             tooltip_text = self.create_map_tooltip_text(map_key)
@@ -377,7 +375,6 @@ class PG_App:
             text_getter_func = None
             text_getter_param = map_key
             ref_id = map_key
-            allow_trigger = True
 
             BTN = UI_Text_Button(
                 self.cf_menu['buttons']['map_selection']['cf_button'],
@@ -389,7 +386,6 @@ class PG_App:
                 trigger_parameter,
                 hover_bool_func,
                 tooltip_text,
-                allow_trigger,
                 self.cf_menu['buttons']['map_selection']['cf_fonts'],
                 btn_text,
                 text_getter_func,
@@ -404,7 +400,6 @@ class PG_App:
         n_buttons = int(3)
         btn_width = int((container_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
         btn_height = int(container_h - (btn_padding_y * 2))
-        btn_allow_trigger = True
 
         cf_button = self.cf_menu['buttons']['map_paused_action']['cf_button']
         cf_fonts = self.cf_menu['buttons']['map_paused_action']['cf_fonts']
@@ -421,7 +416,6 @@ class PG_App:
             False,
             self.button_mouse_over,
             btn_return_tooltip,
-            btn_allow_trigger,
             cf_fonts,
             str('Main Menu'),
             None,
@@ -440,7 +434,6 @@ class PG_App:
             None,
             self.button_mouse_over,
             btn_reset_tooltip,
-            btn_allow_trigger,
             cf_fonts,
             str('Reset'),
             None,
@@ -459,14 +452,18 @@ class PG_App:
             None,
             self.button_mouse_over,
             btn_unpause_tooltip,
-            btn_allow_trigger,
             cf_fonts,
             str('Unpause'),
             None,
             None
         )
 
-        return [BTN_RETURN, BTN_RESET, BTN_UNPAUSE]
+        PAUSE_ACTION_BTNS: list[UI_Text_Button] = [BTN_RETURN, BTN_RESET, BTN_UNPAUSE]
+
+        for btn in PAUSE_ACTION_BTNS:
+            btn.toggle_state_duration = None
+
+        return PAUSE_ACTION_BTNS
 
     def create_map_tooltip_text(self, map_key: str):
         return str(f'{map_key}')

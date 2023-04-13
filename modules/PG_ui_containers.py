@@ -442,7 +442,14 @@ class UI_Container_Wrapper(UI_Sprite_Container):
 
 class UI_Text_Container(Sprite):
     ''' Not related to other containers.
-        
+
+        NOTE: 
+            Designed for visual effects within a GUI, and uses a lot of resources to 
+            make text pretty. For an optimized text object, use UI_Text_Box.
+
+            (Text in pygame is generally not optimized, so if fast text rendering is needed,
+            use a pre-rendered alphabet spritesheet instead.)
+
         If given a cf_bg, will automatically adjust the visible rect area to fit the
         realized text renders
         * Change position through .move() or by positioning self.rect
