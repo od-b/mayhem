@@ -53,6 +53,27 @@ CF_MENU = {
             }
         }
     },
+    'post_game_text_container': {
+        'cf_bg': None,
+        'cf_formatting_triggers': FORMATTING_TRIGGERS,
+        'child_padding_x': int(10),     # word spacing
+        'child_padding_y': int(6),      # line spacing
+        'title_padding_y': int(10),
+        'cf_fonts': {
+            'bg_color': FONT_RECT_BG_COLOR,
+            'antialias': FONT_ANTIALIAS,
+            'color': RGB['earth_black'],
+            'alt_color': RGB['blue'],
+            'size': int(21),
+            'title_size': int(26),
+            'paths': {
+                'light': get_path('light', None),
+                'default': get_path('regular', None),
+                'italic': get_path('regular', 'italic'),
+                'bold': get_path('bold', None),
+            }
+        }
+    },
     # buttons combine two backgrounds and two fonts
     'buttons': {
         'map_selection': {

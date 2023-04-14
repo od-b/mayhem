@@ -74,32 +74,76 @@ CF_COINS = {
     }
 }
 
+CF_PROJECTILES = {
+    'missile': {
+        'spritesheet': {
+            'path': os_path_join('assets','spritesheets','projectiles','missile.png'),
+            'n_images': int(4)
+        },
+        'img_cycle_frequency': int(0),
+        'image_scalar': float(1.0),
+        'damage': float(10)
+    }
+}
+
 CF_PROJECTILE_SPAWNERS = {
-    'missiles_x2': {
+    'missile_x1': {
+        'rate_of_fire': int(60), # irrelevant if only one projectile at a time
+        'sleep_duration': int(80),
+        'n_projectiles_before_sleep': int(1),
+        'cf_projectile': CF_PROJECTILES['missile']
+    },
+    'missile_x2': {
         'rate_of_fire': int(60),
         'sleep_duration': int(125),
         'n_projectiles_before_sleep': int(2),
-        'cf_projectile': {
-            'spritesheet': {
-                'path': os_path_join('assets','spritesheets','projectiles','missile.png'),
-                'n_images': int(4)
-            },
-            'img_cycle_frequency': int(0),
-            'image_scalar': float(1.0),
-            'kill_on_collide': True,
-            'damage': float(10)
-        }
+        'cf_projectile': CF_PROJECTILES['missile']
+    },
+    'missile_x4': {
+        'rate_of_fire': int(45),
+        'sleep_duration': int(180),
+        'n_projectiles_before_sleep': int(4),
+        'cf_projectile': CF_PROJECTILES['missile']
     },
 }
 
 CF_TURRETS = {
-    'missile_launcher': {
-        'cf_projectile_spawner': CF_PROJECTILE_SPAWNERS['missiles_x2'],
-        'rotation_rate': float(0.1),
-        'n_projectile_spawners': int(2),
-        'image_scalar': float(0.2),
+    'missile_launcher_x1': {
+        # shoots a single missile at a set interval while rotating; never stops rotating
+        'cf_projectile_spawner': CF_PROJECTILE_SPAWNERS['missile_x1'],
+        'rotation_rate': float(-0.15),
+        'image_scalar': float(0.25),
+        'delay_before_shooting': int(0),
+        'delay_after_shooting': int(0),
+        'projectile_magnitude': float(1.0),
         'spritesheet': {
-            'path': os_path_join('assets','spritesheets','turrets','simple','idle.png'),
+            'path': os_path_join('assets','spritesheets','turrets','single','idle.png'),
+            'n_images': int(1),
+        },
+    },
+    'missile_launcher_x2': {
+        # shoots 2 consecutive missiles while rotating
+        'cf_projectile_spawner': CF_PROJECTILE_SPAWNERS['missile_x2'],
+        'rotation_rate': float(-0.1),
+        'image_scalar': float(0.25),
+        'delay_before_shooting': int(5),
+        'delay_after_shooting': int(3),
+        'projectile_magnitude': float(1.0),
+        'spritesheet': {
+            'path': os_path_join('assets','spritesheets','turrets','single','idle.png'),
+            'n_images': int(1),
+        },
+    },
+    'missile_launcher_x4': {
+        # shoots 4 consecutive missiles while rotating
+        'cf_projectile_spawner': CF_PROJECTILE_SPAWNERS['missile_x4'],
+        'rotation_rate': float(0.18),
+        'image_scalar': float(0.25),
+        'delay_before_shooting': int(0),
+        'delay_after_shooting': int(0),
+        'projectile_magnitude': float(0.5),
+        'spritesheet': {
+            'path': os_path_join('assets','spritesheets','turrets','single','idle.png'),
             'n_images': int(1),
         },
     }

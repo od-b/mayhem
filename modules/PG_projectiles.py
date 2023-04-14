@@ -4,18 +4,20 @@ from pygame.math import Vector2 as Vec2, lerp, clamp
 from pygame import Surface, SRCALPHA, transform, Rect, image
 from pygame.sprite import Sprite, Group, collide_mask, groupcollide
 from .PG_common import load_sprites_tuple
+from math import cos, sin, pi, radians
 
 
 class PG_Projectile(Sprite):
     ''' projectile with a single image '''
     def __init__(self,
             group: Group,
+            global_projectile_group: Group,
             damage: float,
             image: Surface,
             position: Vec2,
             velocity: Vec2,
         ):
-        Sprite.__init__(self, group)
+        Sprite.__init__(self, group, global_projectile_group)
         self.group = group
         self.damage = damage
 
@@ -35,13 +37,14 @@ class PG_Projectile_Cycle(PG_Projectile):
     ''' projectile that cycles between spritesheet images '''
     def __init__(self,
             group: Group,
+            global_projectile_group: Group,
             damage: float,
             IMAGES: tuple[tuple[Surface, ...], int],
             position: Vec2,
             velocity: Vec2,
             cycle_frequency: int
         ):
-        super().__init__(group, damage, IMAGES[0][0], position, velocity)
+        super().__init__(group, global_projectile_group, damage, IMAGES[0][0], position, velocity)
         self.curr_image_index = 0
         self.IMAGES = IMAGES[0]
         self.N_IMAGES = IMAGES[1]
@@ -69,10 +72,9 @@ class PG_Projectile_Spawner(Sprite):
     def __init__(self,
             cf_projectile_spawner: dict,
             group: Group,
+            global_projectile_group: Group,
             position: Vec2 | tuple[int, int],
             P_velocity: Vec2 | tuple[int, int],
-            P_collide_group: Group,
-            P_player_collide_func: Callable[[float], None],
         ):
         Sprite.__init__(self, group)
 
@@ -85,15 +87,13 @@ class PG_Projectile_Spawner(Sprite):
         cf_projectile = cf_projectile_spawner['cf_projectile']
         self.P_IMG_CYCLE_FREQUENCY = int(cf_projectile['img_cycle_frequency'])
         self.P_IMAGE_SCALAR = float(cf_projectile['image_scalar'])
-        self.P_KILL_ON_COLLIDE = cf_projectile['kill_on_collide']
         self.P_DAMAGE = float(cf_projectile['damage'])
         self.P_VELOCITY = Vec2(P_velocity)
-        self.P_collide_group = P_collide_group
-        self.P_player_collide_func = P_player_collide_func
+        self.global_projectile_group = global_projectile_group
         
         self.P_spritesheet_path = str(cf_projectile['spritesheet']['path'])
         self.P_spritesheet_n_images = int(cf_projectile['spritesheet']['n_images'])
-        
+
         # load + scale and rotate images
         self.P_angle = Vec2(0.0, 0.0).angle_to(Vec2(self.P_VELOCITY.x, -self.P_VELOCITY.y))
         IMG_SOURCE = load_sprites_tuple(
@@ -142,19 +142,27 @@ class PG_Projectile_Spawner(Sprite):
         new_velo = self.P_VELOCITY.rotate(delta_angle)
         self.rotate_projectile_angle(new_velo)
 
-    def init(self, player: Sprite):
-        self.player = player
-        self.P_COLLIDEANY_GROUP = Group()
-        self.P_COLLIDEANY_GROUP.add(player)
-        self.P_COLLIDEANY_GROUP.add(self.P_collide_group)
-
     def spawn_cycle_projectile(self):
-        PG_Projectile_Cycle(self.projectiles, self.P_DAMAGE, self.P_IMG_SOURCE,
-                            self.position, self.P_VELOCITY, self.P_IMG_CYCLE_FREQUENCY)
+        PG_Projectile_Cycle(
+            self.projectiles,
+            self.global_projectile_group,
+            self.P_DAMAGE,
+            self.P_IMG_SOURCE,
+            self.position, 
+            self.P_VELOCITY, 
+            self.P_IMG_CYCLE_FREQUENCY
+        )
         self.updates_until_fire = self.RATE_OF_FIRE
 
     def spawn_projectile(self):
-        PG_Projectile(self.projectiles, self.P_DAMAGE, self.P_IMG_SOURCE, self.position, self.P_VELOCITY)
+        PG_Projectile(
+            self.projectiles,
+            self.global_projectile_group,
+            self.P_DAMAGE,
+            self.P_IMG_SOURCE,
+            self.position,
+            self.P_VELOCITY
+        )
         self.updates_until_fire = self.RATE_OF_FIRE
 
     def update(self, surface: Surface, delta_angle: float):
@@ -179,14 +187,3 @@ class PG_Projectile_Spawner(Sprite):
         self.projectiles.draw(surface)
         self.projectiles.update()
 
-        collidedict = groupcollide(
-            self.P_COLLIDEANY_GROUP,
-            self.projectiles,
-            False,
-            self.P_KILL_ON_COLLIDE,
-            collided=collide_mask
-        )
-        if (collidedict):
-            for k, _ in collidedict.items():
-                if k == self.player:
-                    self.P_player_collide_func(self.P_DAMAGE)

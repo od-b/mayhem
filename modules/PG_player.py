@@ -377,7 +377,6 @@ class Player(Sprite):
         self.velocity.y = (self.MAX_VELO * 1.5)
         self.thrust_begin_frames_left = 0
         self.thrust_end_frames_left = 0
-        self.key_thrusting = False
         self.collision_recoil_frames_left = 100000
         self.collision_cooldown_frames_left = 100000
         self.set_special_image_type(self.DESTROYED_IMAGES) 

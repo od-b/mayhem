@@ -5,7 +5,7 @@ import pygame as pg
 from pygame import Color, Surface, Rect, display
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
-from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask
+from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask, groupcollide
 from pygame.mask import Mask
 
 # from pygame.image import save as image_save
@@ -18,7 +18,7 @@ from .PG_timer import PG_Timer
 from .PG_block import Block
 from .PG_player import Player
 from .PG_coin import Coin
-from .PG_turret import PG_Turret
+from .PG_turret import PG_Missile_Turret
 from .PG_ui_containers import UI_Sprite_Container
 from .PG_ui_bars import UI_Auto_Icon_Bar_Horizontal
 from .PG_common import partition_spritesheet
@@ -62,8 +62,8 @@ class PG_Map:
         self.ALL_SPRITES: list[Sprite] = []
 
         # groups for setup / spawn purposes
-        self.obstacle_block_group = Group()
-        ''' group specifically containing the randomly placed obstacle core blocks '''
+        self.obstacle_group = Group()
+        ''' group specifically randomly placed obstacle core blocks '''
         self.map_edge_block_group = Group()
         ''' group specifically containing the map surface outline blocks '''
         self.terrain_group = Group()
@@ -79,17 +79,26 @@ class PG_Map:
         self.block_group = Group()
         ''' combined group of constant, map-anchored rectangular sprites '''
         self.coin_group = Group()
+
+        self.TURRETS = []
+        self.turret_group = Group()
         self.ui_container_group = Group()
+
+        self.projectile_collide_group = Group()
+        self.global_projectile_group = Group()
 
         # create a list to hold all created bars. can be needed for search after .kill()
         self.STATUS_BARS: list[UI_Auto_Icon_Bar_Horizontal] = []
         
         #### VARIABLES ####
         self.collected_coins = []
-        self.looping   = False
-        self.paused    = False
-        self.completed = False
+        self.looping     = False
+        self.paused      = False
+        self.map_success   = None
         self.quit_called = False
+        self.death_frames_left = int(0)
+
+        self.player_death_source: str = ''
 
     #### NON-RECURRING SETUP METHODS // HELPER FUNCTIONS ####
 
@@ -99,10 +108,15 @@ class PG_Map:
         self.set_up_ui_containers()
 
         # sprite creation
+        self.spawn_missile_turrets()
         self.spawn_terrain_blocks()
-        self.spawn_coins()
-        self.spawn_turrets()
 
+        self.terrain_group.add(self.block_group, self.turret_group)
+        # self.terrain_group.add(self.turret_group)
+        self.spawn_collide_group.add(self.block_group, self.turret_group)
+        # self.spawn_collide_group.add(self.turret_group)
+
+        self.spawn_coins()
         self.ALL_SPRITES.extend(self.block_group.sprites() + self.coin_group.sprites() + self.turret_group.sprites())
 
     def spawn_player(self, cf_player: dict):
@@ -115,12 +129,11 @@ class PG_Map:
         self.player.spawn(spawn_pos)
         self.player_group.add(self.player)
 
-        for turret in self.turret_group.sprites():
-            turret.init(self.player)
-
         self.set_up_ui_status_bars()
         self.store_player_controls(cf_player)
 
+        self.projectile_collide_group.add(self.block_group)
+        self.projectile_collide_group.add(self.player)
         self.ALL_SPRITES.append(self.player)
 
     def start(self):
@@ -172,21 +185,26 @@ class PG_Map:
         self.block_group.add(self.map_edge_block_group)
 
         # place obstacle_blocks within the game area
-        self.spawn_obstacle_blocks(cf_obstacle_block, self.obstacle_block_group)
+        self.spawn_obstacle_blocks(cf_obstacle_block, self.obstacle_group)
+
+        # remove from temp placement groups after blocks are placed
+        for turret in self.TURRETS:
+            turret.kill()
+
+        # re-add turrets to their appropriate group
+        self.turret_group.add(self.TURRETS)
 
         # outline the obstacles with smaller rects to create more jagged terrain
-        for block in self.obstacle_block_group:
-            # for each block in obstacle_block_group, outline the block rect
+        for block in self.obstacle_group:
+            # for each block in obstacle_group, outline the block rect
             self.spawn_outline_blocks(
                 cf_obstacle_outline_block,
-                self.obstacle_block_group,
+                self.obstacle_group,
                 block.rect, 1, [block.color]
             )
 
         # add obstacle blocks and their outline blocks to the general map group
-        self.block_group.add(self.obstacle_block_group)
-        self.terrain_group.add(self.block_group)
-        self.spawn_collide_group.add(self.block_group)
+        self.block_group.add(self.obstacle_group)
 
     def spawn_outline_blocks(self, cf_block: dict, group: Group, bounds: Rect,
                               facing: int, alt_pallette: None | list[Color]):
@@ -487,6 +505,13 @@ class PG_Map:
 
     #### RECURRING METHODS ####
 
+    def return_to_app(self, map_success: bool):
+        self.map_success = map_success
+        self.looping = False
+        if (map_success == False):
+            self.death_frames_left = int(3*self.cf_global['fps_limit'])
+            self.player.init_death_event()
+
     def pause(self):
         self.timer.pause()
         self.paused = True
@@ -498,13 +523,34 @@ class PG_Map:
         self.looping = True
 
     def reset(self):
-        self.player.reset_all_attributes()
+        self.player_death_source = ''
+        self.map_success = None
+        self.death_frames_left = int(0)
+
         for block in self.block_group:
             block.alt_surf_timeleft = 0
+        
+        for projectile in self.global_projectile_group.sprites():
+            projectile.kill()
+            del projectile
+
+        self.block_update_group.empty()
         self.coin_group.add(self.collected_coins)
         self.collected_coins = []
         self.timer.new_segment(self.name, False)
         self.looping = True
+        self.player.reset_all_attributes()
+
+        # make sure all masks are cleared
+        self.surface.fill(self.fill_color)
+        self.turret_group.update(self.surface)
+        self.turret_group.draw(self.surface)
+        self.coin_group.update()
+        self.player_group.update()
+        self.player_group.draw(self.surface)
+        self.block_group.draw(self.surface)
+        self.coin_group.draw(self.surface)
+        display.update()
 
     def activate_temp_bar(self, ref_id, min_val, max_val):
         if type(ref_id) != list:
@@ -519,7 +565,7 @@ class PG_Map:
             if (max_val):
                 BAR.max_val = float(max_val)
 
-    def check_player_block_collision(self):
+    def check_player_terrain_collision(self):
         ''' since collision is based on image masks, call this after draw, but before update
             * if player collides with a block, init the recoil sequence for the player 
         '''
@@ -533,21 +579,22 @@ class PG_Map:
             if (self.player.collision_cooldown_frames_left == 0):
                 if not self.player.key_thrusting:
                     self.player.set_idle_image_type()
-        elif spritecollideany(self.player, self.block_group):
+        elif spritecollideany(self.player, self.terrain_group):
             # if player rect collides with any block rects, check detailed mask collision
-            collidelist = spritecollide(self.player, self.block_group, False, collided=collide_mask)
+            collidelist = spritecollide(self.player, self.terrain_group, False, collided=collide_mask)
             if collidelist:
                 # if masks collide, init player recoil phase and get the cd frame count for ghost bar
                 cd_frames = self.player.init_phase_collision_recoil()
                 if (cd_frames):
                     self.activate_temp_bar('GHOST', 0, cd_frames)
                 else:
-                    self.player.init_death_event()
+                    self.player_death_source = 'Terrain'
+                    self.return_to_app(False)
                 # highlight blocks that player collided with
-                self.block_update_group.empty()
-                for BLOCK in collidelist:
-                    BLOCK.init_timed_highlight()
-                    self.block_update_group.add(BLOCK)
+                for sprite in collidelist:
+                    if (type(sprite) == Block):
+                        sprite.init_timed_highlight()
+                        self.block_update_group.add(sprite)
 
     def check_player_coin_collision(self):
         # check rect collide
@@ -557,8 +604,7 @@ class PG_Map:
             if (collidelist):
                 self.collected_coins.extend(collidelist)
                 if (len(self.collected_coins) == self.N_COINS):
-                    print("ALL COINS COLLECTED")
-                    # TODO: SOMETHING
+                    self.return_to_app(True)
 
     #### LOOP ####
 
@@ -614,49 +660,104 @@ class PG_Map:
                 case _:
                     pass
 
-    def projectile_collide_func(self, dmg):
-        self.player.health -= dmg
-        if (self.player.health <= 0):
-            self.player.init_death_event()
-        print(dmg)
+    def spawn_missile_turrets(self):
+        cf_turrets: dict = self.cf_map_sprites['missile_turrets']
+        valid_turret_keys = list(cf_turrets.keys())
+        max_cf_index = (len(valid_turret_keys) - 1)
 
-    def spawn_turrets(self):
-        self.turret_group = Group()
+        n_turrets = self.cf_spawning['missile_turrets']['n_turrets']
+        min_edge_offset_x = self.cf_spawning['missile_turrets']['min_edge_offset_x']
+        min_edge_offset_y = self.cf_spawning['missile_turrets']['min_edge_offset_y']
+        min_spacing_x = self.cf_spawning['missile_turrets']['min_spacing_x']
+        min_spacing_y = self.cf_spawning['missile_turrets']['min_spacing_y']
 
-        cf_turret = self.cf_map_sprites['turrets']['missile_launcher']
-        spawn_pos = Vec2(400, 400)
-        # velo = Vec2(0.7, 0.2)
+        placement_re = Rect((0, 0), (2*min_spacing_x, 2*min_spacing_y))
 
-        PG_Turret(
-            cf_turret,
-            self.turret_group,
-            spawn_pos,
-            float(0),
-            self.block_group,
-            self.projectile_collide_func
+        for i in range(n_turrets):
+            selected_cf_index = i
+            if (selected_cf_index > max_cf_index):
+                selected_cf_index = randint(0, max_cf_index)
+            cf_turret = cf_turrets[valid_turret_keys[selected_cf_index]]
+
+            place_attempts = 0
+            placement_pos: tuple[int, int]
+
+            while (place_attempts < self.LOOP_LIMIT):
+                rand_pos = self.get_rand_pos(min_edge_offset_x, min_edge_offset_y)
+                placement_re.center = rand_pos
+
+                placement_ok = True
+                for other_turret in self.turret_group.sprites():
+                    if (other_turret.rect.colliderect(placement_re)):
+                        placement_ok = False
+                
+                if (placement_ok):
+                    placement_pos = rand_pos
+                    break
+                else:
+                    place_attempts += 1
+                    if (place_attempts == self.LOOP_LIMIT):
+                        msg = 'failure placing missile turrets'
+                        raise LoopError(msg, len(self.turret_group.sprites()), n_turrets, self.LOOP_LIMIT)
+
+            TURRET = PG_Missile_Turret(
+                cf_turret,
+                self.turret_group,
+                self.global_projectile_group,
+                placement_pos,
+                float(0)
+            )
+            self.TURRETS.append(TURRET)
+
+            # temporary add to obstacle group, to avoid blocks being placed on the turrets
+            self.obstacle_group.add(TURRET)
+
+    def check_projectile_collision(self):
+        collide_dict = groupcollide(
+            self.projectile_collide_group,
+            self.global_projectile_group,
+            False,
+            True,
+            collided=collide_mask
         )
+        # check if projectile hit player, if it hit anything
+        if self.player in collide_dict.keys():
+            for projectile in collide_dict[self.player]:
+                self.player.health -= projectile.damage
+                if (self.player.health <= 0):
+                    self.return_to_app(False)
+                    self.player_death_source = 'Projectile'
 
-    def draw(self):
+        for projectile in collide_dict:
+            del projectile
+
+    def draw_external(self):
         self.surface.fill(self.fill_color)
-
-        if (DEBUG_PLAYER_VISUALS):
-            self.debug__draw_player_all_info()
-        else:
-            self.player_group.draw(self.surface)
+        self.player_group.draw(self.surface)
         self.block_group.draw(self.surface)
         self.coin_group.draw(self.surface)
-        self.turret_group.update(self.surface)
         self.turret_group.draw(self.surface)
 
     def loop(self):
+        self.paused = False
+
         # if a map was initiated by the menu, launch the main loop
         while (self.looping):
-            self.draw()
+            self.surface.fill(self.fill_color)
+            if (DEBUG_PLAYER_VISUALS):
+                self.debug__draw_player_all_info()
+            else:
+                self.player_group.draw(self.surface)
+            self.block_group.draw(self.surface)
+            self.coin_group.draw(self.surface)
+            self.turret_group.update(self.surface)
+            self.turret_group.draw(self.surface)
             self.timer.draw_ui(self.surface)
 
             # collision checks
-            self.check_player_block_collision()
+            self.check_player_terrain_collision()
             self.check_player_coin_collision()
+            self.check_projectile_collision()
             self.check_events()
             self.ui_container_group.update(self.surface)
 
@@ -854,13 +955,13 @@ class PG_Map:
     a) checking rects with spritecollideany before mask check
     ncalls  tottime  percall  cumtime  percall filename:lineno(function)
         1    0.000    0.000   31.657   31.657 <string>:1(<module>)
-     3938    0.003    0.000    0.209    0.000 PG_map.py:509(check_player_block_collision)
+     3938    0.003    0.000    0.209    0.000 PG_map.py:509(check_player_terrain_collision)
      3938    0.001    0.000    0.013    0.000 PG_map.py:536(check_player_coin_collision)
      
     b) no spritecollideany, only mask checks
     ncalls  tottime  percall  cumtime  percall filename:lineno(function)
         1    0.000    0.000   27.569   27.569 <string>:1(<module>)
-     3430    0.003    0.000    0.743    0.000 PG_map.py:509(check_player_block_collision)
+     3430    0.003    0.000    0.743    0.000 PG_map.py:509(check_player_terrain_collision)
      3430    0.002    0.000    0.027    0.000 PG_map.py:537(check_player_coin_collision)
     
     CONCLUSION --> spritecollideany with rect before mask check is **clearly** more efficient

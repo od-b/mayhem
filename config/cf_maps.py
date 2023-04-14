@@ -10,7 +10,6 @@ MAP_UPDATE_INTERVALS = {
     'coin_img_cycle': int(10),
 }
 
-
 CF_MAPS = {
     # a map is a setup config for the active part of the game surface
     'map_1': {
@@ -22,35 +21,41 @@ CF_MAPS = {
         # nested configs; sets the config dicts of "children". can be shared or unique
         'cf_spawning': {
             'coins': {
-                'n_coins':         int(20),
-                'min_terrain_offset': int(11),      # min. offset to terrain
-                'min_spread': int(120),     # min. distance to another coin
+                'n_coins':            int(1),
+                'min_terrain_offset': int(11),  # min. offset to terrain
+                'min_spread':         int(160), # min. distance to another coin
             },
-            'turrets': {
-                'n_turrets': 1,
+            'missile_turrets': {
+                'n_turrets': 3,
+                'min_edge_offset_x':  int(140),
+                'min_edge_offset_y':  int(140),
+                'min_spacing_x':      int(350),  # spacing between other turrets
+                'min_spacing_y':      int(250)   # spacing between other turrets
             },
             'obstacles': {
-                'n_obstacles':     int(13),
+                'n_obstacles':        int(8),
                 # min/max distance inbetween generated obstacles
-                'min_spacing_x': int(45),
-                'min_spacing_y': int(45)
+                'min_spacing_x':      int(65),
+                'min_spacing_y':      int(45)
             },
             'player': {
                 # how close to an existing sprite the player can spawn
                 # values are padded ON TOP OF players idle image bounding rect
-                'min_terrain_offset_x': int(20),
-                'min_terrain_offset_y': int(20)
+                'min_terrain_offset_x': int(30),
+                'min_terrain_offset_y': int(30)
             }
         },
         'map_sprites': {
+            'coin': CF_COINS['default'],
             'blocks': {
                 'edge_outline':     CF_BLOCKS['small_gray_block'],
                 'obstacle':         CF_BLOCKS['pastel_block'],
                 'obstacle_outline': CF_BLOCKS['adaptive_block'],
             },
-            'coin': CF_COINS['default'],
-            'turrets': {
-                'missile_launcher': CF_TURRETS['missile_launcher'],
+            'missile_turrets': {
+                'missile_launcher_x1': CF_TURRETS['missile_launcher_x1'],
+                'missile_launcher_x2': CF_TURRETS['missile_launcher_x2'],
+                'missile_launcher_x4': CF_TURRETS['missile_launcher_x4'],
             }
         },
         'ui_sprites': {

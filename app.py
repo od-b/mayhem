@@ -80,13 +80,8 @@ class PG_App:
         self.DEBUG_COLOR_2 = Color(self.cf_global['debug_color_2'])
 
         # create a list of available map keys
-        self.valid_cf_maps_keys = []
-        for key, _ in self.cf_maps.items():
-            self.valid_cf_maps_keys.append(str(key))
-
-        self.valid_cf_player_keys = []
-        for key, _ in self.cf_players.items():
-            self.valid_cf_player_keys.append(str(key))
+        self.valid_cf_maps_keys = self.cf_maps.keys()
+        self.valid_cf_player_keys = self.cf_players.keys()
 
         if INFO_PRINT:
             print(f'loaded maps (config map keys): {self.valid_cf_maps_keys}')
@@ -107,6 +102,8 @@ class PG_App:
         self.menu_wrapper_group = GroupSingle()
         self.tooltip_group = GroupSingle()
         self.BUTTON_LIST = []
+        self.DEFAULT_MENU_SUBCONTAINERS = []
+        self.POSTGAME_MENU_SUBCONTAINERS = []
 
         self.menu_title_text = str("Coins In Space")
         self.curr_mouse_pos: tuple[int, int] = pg.mouse.get_pos()
@@ -115,11 +112,11 @@ class PG_App:
         self.map_loaded: bool = False
         self.selected_cf_player: str | None = None
         self.selected_cf_map: str| None = None
+        self.post_map_looping = False
+        self.post_map_menu_active = False
 
         self.set_up_menu()
         self.create_tooltip_container()
-        
-        self.debug_auto_init_map = True
 
     def debug_start_map(self):
         self.selected_cf_player = self.cf_players['fighter']
@@ -276,6 +273,21 @@ class PG_App:
         # initialize with main menu buttons 
         self.BTN_WRAPPER_MID.add_child(self.PLAYER_SELECT_BUTTONS)
 
+        ### alternate subcontainer 4 --> post map summary text
+        cf_post_game_c = self.cf_menu['post_game_text_container']
+        self.POST_GAME_WRAPPER = UI_Text_Container(
+            cf_post_game_c['cf_bg'],
+            cf_post_game_c['cf_fonts'],
+            cf_post_game_c['cf_formatting_triggers'],
+            self.window,
+            self.MENU_WRAPPER.rect.midtop,
+            subcontainer_w,
+            subcontainer_h,
+            cf_post_game_c['child_padding_x'],
+            cf_post_game_c['child_padding_y'],
+            cf_post_game_c['title_padding_y'],
+            str("post game wrapper test text")
+        )
 
         ### subcontainer 5 --> button container --> start game || return to game
 
@@ -314,21 +326,15 @@ class PG_App:
         # add the button to the relevant lists/groups
         self.BTN_WRAPPER_BOT.add_child(self.BTN_START_GAME)
 
-        # subcontainers_left -= len(self.MENU_WRAPPER.children.sprites())
-        # subcontainer_h += int(unclaimed_height / subcontainers_left)
-
-        # for _ in range(subcontainers_left):
-        #     subcontainer = UI_Sprite_Container(
-        #         CF_BG_NONE, dummy_pos,
-        #         (subcontainer_w, subcontainer_h),
-        #         "left", 0, 0,
-        #         "right", "centery", int(4), int(0)
-        #     )
-        #     self.MENU_WRAPPER.add_child(subcontainer)
-
         ### PIXEL PERFECT SIZE CORRECTIONS ###
         # update to get the actual positions
         self.menu_wrapper_group.update(self.window.surface)
+
+        # sort the menu subctonainer states into lists
+        self.DEFAULT_MENU_SUBCONTAINERS.extend(self.MENU_WRAPPER.children.sprites())
+        self.POSTGAME_MENU_SUBCONTAINERS.extend(
+            [TITLE_CONTAINER, SUBTITLE_CONTAINER, self.POST_GAME_WRAPPER, self.BTN_WRAPPER_BOT]
+        )
 
         # correct last subcontainer height
         target_y_pos = int(
@@ -420,7 +426,7 @@ class PG_App:
 
     def create_map_paused_buttons(self, container_w, container_h, btn_padding_x, btn_padding_y):
         # recalculate width for the map pause buttons
-        n_buttons = int(3)
+        n_buttons = int(2)
         btn_width = int((container_w - (btn_padding_x * (n_buttons - 1))) / n_buttons)
         btn_height = int(container_h - (btn_padding_y * 2))
 
@@ -464,24 +470,25 @@ class PG_App:
         )
 
         # 3) unpause
-        btn_unpause_tooltip = str("Return to the game.")
-        BTN_UNPAUSE = UI_Text_Button(
-            cf_button,
-            self.cf_global,
-            ["BUTTON", "PAUSE_MENU", "UNPAUSE"],
-            (btn_width, btn_height),
-            self.MENU_WRAPPER.rect.center,
-            self.unpause_map,
-            None,
-            self.btn_check_mouse_over,
-            btn_unpause_tooltip,
-            cf_fonts,
-            str('Unpause'),
-            None,
-            None
-        )
+        # btn_unpause_tooltip = str("Return to the game.")
+        # BTN_UNPAUSE = UI_Text_Button(
+        #     cf_button,
+        #     self.cf_global,
+        #     ["BUTTON", "PAUSE_MENU", "UNPAUSE"],
+        #     (btn_width, btn_height),
+        #     self.MENU_WRAPPER.rect.center,
+        #     self.unpause_map,
+        #     None,
+        #     self.btn_check_mouse_over,
+        #     btn_unpause_tooltip,
+        #     cf_fonts,
+        #     str('Unpause'),
+        #     None,
+        #     None
+        # )
 
-        PAUSE_ACTION_BTNS: list[UI_Text_Button] = [BTN_RETURN, BTN_RESET, BTN_UNPAUSE]
+        # PAUSE_ACTION_BTNS: list[UI_Text_Button] = [BTN_RETURN, BTN_RESET, BTN_UNPAUSE]
+        PAUSE_ACTION_BTNS: list[UI_Text_Button] = [BTN_RETURN, BTN_RESET]
 
         for btn in PAUSE_ACTION_BTNS:
             btn.toggle_state_duration = None
@@ -548,7 +555,13 @@ class PG_App:
 
     def btn_get_menu_subtitle_text(self):
         if (self.map_loaded):
-            return str("Map Paused. Select an Action")
+            if (self.map.map_success != None):
+                if (self.map.map_success == True):
+                    return str('Map Completed')
+                else:
+                    return str('Map Failed')
+            if (self.map.paused):
+                return str("Map Paused. Select an Action")
 
         if (self.selected_cf_map and self.selected_cf_player):
             return str("Ready to Start?")
@@ -563,12 +576,19 @@ class PG_App:
 
     def btn_get_start_map_text(self):
         if self.map_loaded:
+            if (self.map.map_success != None):
+                return str("CONTINUE")
             return str("RETURN")
         return str("START MAP")
 
     def btn_onclick_start_map(self):
         if self.map_loaded:
-            self.unpause_map()
+            if (self.map.map_success != None):
+                self.swap_to_pause_menu()
+                self.swap_start_game_btn_state(False)
+                # self.exit_map(self.map.map_success)
+            else:
+                self.unpause_map()
         elif self.selected_cf_player and self.selected_cf_map:
             if INFO_PRINT:
                 map_name = self.selected_cf_map['name']
@@ -634,6 +654,8 @@ class PG_App:
         # save segment if map was completed
         self.timer.new_segment("menu", map_completed)
         self.map_loaded = False
+        self.selected_cf_map = None
+        self.selected_cf_player = None
 
         if INFO_PRINT:
             print(f'[exit_map]: Cleaning up all map sprites ... ')
@@ -641,6 +663,10 @@ class PG_App:
         for elem in self.map.ALL_SPRITES:
             elem.kill()
             del elem
+
+        for projectile in self.map.global_projectile_group.sprites():
+            projectile.kill()
+            del projectile
 
         if INFO_PRINT:
             print(f'All sprites deleted. Deleting "{self.map.name}"')
@@ -685,11 +711,13 @@ class PG_App:
                 break
 
     def swap_to_pause_menu(self):
+        self.MENU_WRAPPER.replace_children(self.DEFAULT_MENU_SUBCONTAINERS)
         self.BTN_WRAPPER_TOP.replace_children(self.PAUSE_ACTION_BUTTONS)
         self.BTN_WRAPPER_MID.kill_all_children()
         self.swap_start_game_btn_state(True)
 
     def swap_to_main_menu(self):
+        self.MENU_WRAPPER.replace_children(self.DEFAULT_MENU_SUBCONTAINERS)
         self.BTN_WRAPPER_TOP.replace_children(self.MAP_SELECT_BUTTONS)
         self.BTN_WRAPPER_MID.replace_children(self.PLAYER_SELECT_BUTTONS)
         self.timer.kill_duration_text()
@@ -722,7 +750,7 @@ class PG_App:
                     match (event.key):
                         case pg.K_ESCAPE:
                             if (self.map_loaded):
-                                if (self.map.paused):
+                                if (self.map.paused) and (self.map.map_success == None):
                                     self.map.unpause()
                         case _:
                             pass
@@ -731,49 +759,67 @@ class PG_App:
                 case _:
                     pass
 
+    def post_map_loop(self):
+        self.post_map_looping = True
+        self.swap_to_post_game_menu()
+        self.map.paused = True
+
+        death_frames_left = int(self.map.death_frames_left)
+
+        while (self.looping and self.post_map_looping):
+            self.timer.update_paused()
+
+            if (death_frames_left > 0):
+                death_frames_left -= 1
+                self.map.draw_external()
+                self.map.check_events()
+                self.map.ui_container_group.update(self.map.surface)
+                pg.display.update()
+                self.map.coin_group.update()
+                self.map.player_group.update()
+                if (self.map.quit_called):
+                    self.looping = False
+            else:
+                self.post_map_looping = False
+
     def loop(self):
         ''' main loop for drawing, checking events and updating the game '''
         self.window.fill_surface()
 
         # outer loop for the app
         while self.looping:
+            self.curr_mouse_pos = pg.mouse.get_pos()
             self.timer.update_paused()
             self.timer.draw_ui(self.window.map_surface)
-            self.curr_mouse_pos = pg.mouse.get_pos()
             self.menu_wrapper_group.update(self.window.surface)
             self.tooltip_group.update(self.window.surface)
-
             self.check_events()
             pg.display.update()
-
             self.tooltip_group.empty()
-
-            if (self.debug_auto_init_map):
-                self.debug_start_map()
 
             # check whether a map is loaded
             if (self.map_loaded):
                 # check whether there was an initialization, or if map is paused
                 if not (self.map.paused):
-                    # ignore mouse events when map is active, then loop the map
-                    self.timer.block_events(self.PG_MOUSE_EVENTS)
-                    self.map.loop()
+                    if (self.map.map_success == None):
+                        # ignore mouse events when map is active, then loop the map
+                        self.timer.block_events(self.PG_MOUSE_EVENTS)
+                        self.map.loop()
 
-                    # map loop breakout: pause or program exit?
-                    if (self.map.quit_called):
-                        self.looping = False
-                    else:
-                        self.timer.allow_events(self.PG_MOUSE_EVENTS)
-                        # check if map is completed or paused
-                        if (self.map.paused):
-                            self.swap_to_pause_menu()
+                        # map loop breakout: pause or program exit?
+                        if (self.map.quit_called):
+                            self.looping = False
                         else:
-                            # TODO: self.swap_to_victory_menu()
-                            pass
+                            self.timer.allow_events(self.PG_MOUSE_EVENTS)
+                            # check if map is completed or paused
+                            if (self.map.paused):
+                                self.swap_to_pause_menu()
+                            else:
+                                self.post_map_loop()
                 else:
                     # map is paused. keep drawing it in the background,
                     # but do not update any game sprites
-                    self.map.draw()
+                    self.map.draw_external()
                     self.map.ui_container_group.update(self.map.surface)
             else:
                 # main menu is loaded without any map. Clear the entire surface.
@@ -782,6 +828,26 @@ class PG_App:
         if INFO_PRINT:
             print('[APP][loop] App exiting through main loop')
 
+    def swap_to_post_game_menu(self):
+        self.post_map_menu_active = True
+        self.swap_start_game_btn_state(True)
+
+        if (self.map.map_success == True):
+            msg = f'n/a/_b_Time: {self.timer.get_segment_duration_formatted()} '
+            msg += f'n/a/_b_Health: {self.map.player.health:.2f} '
+            msg += f'n/a/_b_Fuel: {self.map.player.fuel:.2f} '
+            self.POST_GAME_WRAPPER.set_text(msg)
+        else:
+            msg = f''
+            if (self.map.player_death_source == 'Terrain'):
+                msg += f't/_i_You::left::a::dent::in::the::terrain '
+            elif (self.map.player_death_source == 'Projectile'):
+                msg += f't/_i_You::ate::a::bullet::and::exploded '
+            msg += 'n/Reset map to try again!'
+            self.POST_GAME_WRAPPER.set_text(msg)
+
+        self.MENU_WRAPPER.replace_children(self.POSTGAME_MENU_SUBCONTAINERS)
+        self.timer.kill_duration_text()
 
 if __name__ == '__main__':
     # initialize pygame and verify the version before anything else

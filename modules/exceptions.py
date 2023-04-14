@@ -8,7 +8,7 @@ class LoopError(Exception):
         self.msg += f'  {placed} out of {target} objects placed/checked.\n'
         if msg:
             self.msg += f'  info: {msg}'
-        super().__init__(f'< {self.msg} >')
+        super().__init__(f'\n< {self.msg} >')
 
 
 class ConfigError(Exception):
