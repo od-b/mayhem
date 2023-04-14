@@ -20,7 +20,6 @@ CF_GLOBAL = {
     'debug_color': RGB['white'],
     'debug_color_2': RGB['purple'],
     # fully transparent color
-    'transparent_color': RGBA['alpha_0'],
     # fps_limit:
     #   due to how tick works with sync limitations, especially at higher values,
     #   fps should be set to one of the following values: [30, 62, 125, 200, 250]

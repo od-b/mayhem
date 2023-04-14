@@ -16,16 +16,15 @@ class Block(Sprite):
         cf_global: dict with expected keys  -> config/cf_global/CF_GLOBAL
         size: tuple[int, int]
         position: tuple[int, int]
-        pallette: list[Color]
     '''
 
     def __init__(self,
             cf_block: dict,
             cf_global: dict,
-            pallette: list[tuple],
             size: tuple[int, int],
             position: tuple[int, int],
-            update_interval: int
+            update_interval: int = 1,
+            override_color: None | tuple | Color = None
         ):
 
         Sprite.__init__(self)
@@ -34,22 +33,22 @@ class Block(Sprite):
         self.cf_global  = cf_global
         self.cf_block   = cf_block
         self.UPDATE_INTERVAL = update_interval
-
-        self.pallette   = pallette
-        ''' list of one or more tuples. May be RGB, RGBA, or even a mix '''
         self.position   = position
         ''' top left position '''
         self.size       = size
-        ''' use .rect for easier external access to the size '''
-        self.alpha_key  = int(cf_block['alpha_key'])
 
         # store attributes from config
-        self.mass          = float(cf_block['mass'])
-        self.border_width  = int(cf_block['border_width'])
+        self.alpha_key = int(cf_block['alpha_key'])
+        self.border_width = int(cf_block['border_width'])
         self.border_color: Color | None = cf_block['border_color']
 
         # pick a random color from the given color pallette
-        self.color = Color(self.pallette[randint(0, len(self.pallette)-1)])
+        if (override_color != None):
+            self.color = Color(override_color)
+        else:
+            pallette: list[Color] = cf_block['color_pool']
+            rand_index = randint(0, len(pallette)-1)
+            self.color = Color(pallette[rand_index])
 
         # determine if alpha conversion is needed
         if (self.alpha_key < 255):
@@ -73,10 +72,21 @@ class Block(Sprite):
             _create_alt_image Sets these attributes:
             * self.alt_border_color
             * self.alt_color
-            * self.ALT_SURF_DURATION
         '''
 
-        if (self.ALT_IMAGE):
+        alt_surf_duration = self.cf_block['alt_surface']['duration']
+
+        if (alt_surf_duration == 0) or (alt_surf_duration == None):
+            self.ALT_SURF_DURATION = int(0)
+        if (alt_surf_duration < self.UPDATE_INTERVAL):
+            # update at first available frame
+            # set to self.UPDATE_INTERVAL instead of 1 to avoid negative durations
+            self.ALT_SURF_DURATION = self.UPDATE_INTERVAL
+        else:
+            # subtracting update interval yields the correct timing
+            self.ALT_SURF_DURATION = int(alt_surf_duration - self.UPDATE_INTERVAL)
+
+        if self.ALT_IMAGE:
             self.alt_surf_timeleft = int(0)
             ''' variable, remaining duration of the highlight.
                 * is set to None if an ALT_IMG does not exist
@@ -139,22 +149,11 @@ class Block(Sprite):
             else:
                 self.alt_border_color = None
 
-            # subtracting update interval yields the correct timing
-            # verify that this does not leave a negative timer, however
-            if (cf_alt_surf['duration'] == 0):
-                self.ALT_SURF_DURATION = int(0)
-                ''' ms to highlight the block for '''
-            elif (cf_alt_surf['duration'] < self.UPDATE_INTERVAL):
-                self.ALT_SURF_DURATION = self.UPDATE_INTERVAL
-            else:
-                self.ALT_SURF_DURATION = int(cf_alt_surf['duration'] - self.UPDATE_INTERVAL)
-
             return ALT_IMG
 
         # else, no alt image is to be set. Be a good boy and set self values nonetheless
         self.alt_color = None
         self.alt_border_color = None
-        self.ALT_SURF_DURATION = 0
         return None
 
     def swap_to_alt_image(self):

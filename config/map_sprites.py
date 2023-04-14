@@ -1,21 +1,12 @@
 from os.path import join as os_path_join
 from .colors import RGB, RGBA, PALLETTES
 
+# TODO: Refactor cf_blocks from unique configs to using .rect_styles && the map spawn config
 CF_BLOCKS = {
     #   color_pool: list of one ore more RGB color values
-    #   spacing:
-    #       integer ∈ (0 <= spacing < min(max_width, max_height))
     #       pixels inbetween similar type blocks when placed
-    #   mass: 
     #       how 'tough' the blocks are. Used for collision responses
-    #       a block with mass of 0 will ignore all collision with controllables
-    'cold_blue_block': {
-        'mass':             float(0),
-        'spacing':          int(130),
-        'min_height':       int(10),
-        'max_height':       int(40),
-        'min_width':        int(8),
-        'max_width':        int(80),
+    'cold_blue': {
         'color_pool':       PALLETTES['COLD_BLUE'],
         'alpha_key':        int(255),
         'border_color':     None,
@@ -27,13 +18,7 @@ CF_BLOCKS = {
             'duration':     int(3000),  # duration in ms once triggered
         },
     },
-    'pastel_block': {
-        'mass':             float(0),
-        'spacing':          int(130),
-        'min_height':       int(10),
-        'max_height':       int(80),
-        'min_width':        int(8),
-        'max_width':        int(90),
+    'pastel_mix': {
         'color_pool':       PALLETTES['PASTEL_MIX'],
         'alpha_key':        int(255),
         'border_color':     None,
@@ -45,13 +30,7 @@ CF_BLOCKS = {
             'duration':     int(3000),  # duration in ms once triggered
         },
     },
-    'adaptive_block': {
-        'mass':             float(0),
-        'spacing':          int(0),
-        'min_height':       int(10),
-        'max_height':       int(16),
-        'min_width':        int(8),
-        'max_width':        int(20),
+    'no_pallette': {
         'color_pool':       None,
         'alpha_key':        int(255),
         'border_color':     None,
@@ -62,13 +41,7 @@ CF_BLOCKS = {
             'duration':     int(3000),  # duration in ms once triggered
         },
     },
-    'small_gray_block': {
-        'mass':             float(0),
-        'spacing':          int(0),
-        'min_height':       int(10),
-        'max_height':       int(16),
-        'min_width':        int(8),
-        'max_width':        int(22),
+    'shades_of_gray': {
         'color_pool':       PALLETTES['SHADES_OF_GRAY'],
         'alpha_key':        int(255),
         'border_color':     None,
@@ -79,13 +52,7 @@ CF_BLOCKS = {
             'duration':     int(3000),  # duration in ms once triggered
         },
     },
-    'small_orange_block': {
-        'mass':             float(0),
-        'spacing':          int(2),
-        'min_height':       int(8),
-        'max_height':       int(20),
-        'min_width':        int(7),
-        'max_width':        int(25),
+    'orange_mix': {
         'color_pool':       PALLETTES['ORANGES'],
         'alpha_key':        int(255),
         'border_color':     None,

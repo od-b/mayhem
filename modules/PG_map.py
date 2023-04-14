@@ -23,7 +23,7 @@ from .PG_ui_containers import UI_Sprite_Container
 from .PG_ui_bars import UI_Auto_Icon_Bar_Horizontal
 from .PG_common import partition_spritesheet
 
-
+SPAWN_INFO_PRINT = True
 DEBUG_PLAYER_VISUALS = False
 DEBUG_CHEAT_MODE = True
 
@@ -37,11 +37,9 @@ class PG_Map:
         ''' reference to the app timer '''
 
         ### CONSTANTS ####
-        self.cf_map_sprites: dict   = cf_map['map_sprites']
         self.cf_ui_sprites: dict    = cf_map['ui_sprites']
         self.cf_spawning: dict      = cf_map['cf_spawning']
 
-        # self.cf_player: dict        = self.cf_map_sprites['player']
         self.cf_ui_containers: dict = self.cf_ui_sprites['containers']
         self.cf_ui_bars: dict       = self.cf_ui_sprites['bars']
 
@@ -55,7 +53,6 @@ class PG_Map:
         self.rect            = self.surface.get_rect()
         self.fill_color      = Color(cf_map['fill_color'])
         self.overlap_color   = Color(cf_map['overlap_color'])
-        self.N_OBSTACLES     = int(self.cf_spawning['obstacles']['n_obstacles'])
         self.N_COINS         = int(self.cf_spawning['coins']['n_coins'])
 
         #### SPRITE GROUPS & LISTS ####
@@ -108,7 +105,7 @@ class PG_Map:
         self.set_up_ui_containers()
 
         # sprite creation
-        self.spawn_missile_turrets()
+        self.spawn_turrets()
         self.spawn_terrain_blocks()
 
         self.terrain_group.add(self.block_group, self.turret_group)
@@ -176,16 +173,19 @@ class PG_Map:
         ''' specialized function for the creating the map terrain '''
 
         # outline the entire game bounds with terrain_blocks:
-        cf_map_edge_block         = self.cf_map_sprites['blocks']['edge_outline']
-        cf_obstacle_block         = self.cf_map_sprites['blocks']['obstacle']
-        cf_obstacle_outline_block = self.cf_map_sprites['blocks']['obstacle_outline']
 
-        self.spawn_outline_blocks(cf_map_edge_block, self.map_edge_block_group, self.rect, -1, None)
+        # spawn the map edge blocks
+        self.spawn_outline_blocks(
+            self.cf_spawning['map_outline_blocks'],
+            self.map_edge_block_group,
+            self.rect
+        )
+
         # add map bounds outline blocks to the general map group
         self.block_group.add(self.map_edge_block_group)
 
         # place obstacle_blocks within the game area
-        self.spawn_obstacle_blocks(cf_obstacle_block, self.obstacle_group)
+        self.spawn_obstacle_blocks(self.obstacle_group)
 
         # remove from temp placement groups after blocks are placed
         for turret in self.TURRETS:
@@ -195,20 +195,20 @@ class PG_Map:
         self.turret_group.add(self.TURRETS)
 
         # outline the obstacles with smaller rects to create more jagged terrain
-        facing = self.cf_spawning['obstacles']['outline_block_facing']
         for block in self.obstacle_group:
             # for each block in obstacle_group, outline the block rect
             self.spawn_outline_blocks(
-                cf_obstacle_outline_block,
+                self.cf_spawning['obstacle_blocks']['outline_blocks'],
                 self.obstacle_group,
-                block.rect, facing, [block.color]
+                block.rect, 
+                specific_color=block.color
             )
 
         # add obstacle blocks and their outline blocks to the general map group
         self.block_group.add(self.obstacle_group)
 
-    def spawn_outline_blocks(self, cf_block: dict, group: Group, bounds: Rect,
-                              facing: int, alt_pallette: None | list[Color]):
+    def spawn_outline_blocks(self, cf_spawn_outline_block: dict, group: Group, bounds: Rect,
+                            specific_color: None | tuple | Color = None):
 
         ''' encapsulate the given rects' bounds with blocks
             * if alt_pallette is None, the block will use the cf_block color list at random
@@ -219,18 +219,26 @@ class PG_Map:
             * 0  => center
             * 1  => outwards
         '''
-        
-        if (alt_pallette):
-            color_pool = alt_pallette
-        else:
-            color_pool = cf_block['color_pool']
 
-        # constant declarations for readability
+
+        # constant declarations for readability:
+        # bounds min/max
         MIN_X = bounds.left
         MAX_X = bounds.right
         MIN_Y = bounds.top
         MAX_Y = bounds.bottom
-        PADDING = int(cf_block['spacing'])
+
+        # block min/max 
+        MIN_WIDTH = int(cf_spawn_outline_block['min_width'])
+        MAX_WIDTH = int(cf_spawn_outline_block['max_width'])
+        MIN_HEIGHT = int(cf_spawn_outline_block['min_height'])
+        MAX_HEIGHT = int(cf_spawn_outline_block['max_height'])
+
+        PADDING = int(cf_spawn_outline_block['padding'])
+        FACING = int(cf_spawn_outline_block['facing'])
+
+        BLOCK_UPDATE_INTERVAL = int(self.cf_map['upd_intervals']['terrain'])
+        CF_BLOCK = cf_spawn_outline_block['cf_block']
 
         # below are four loops that together will outline the entire bounds
         # the loop places blocks in a clockwise path, following each axis
@@ -246,8 +254,8 @@ class PG_Map:
         curr_pos_x = MIN_X
         while curr_pos_x < MAX_X:
             # set random height/width from within the ranges
-            width = randint(cf_block['min_width'], cf_block['max_width'])
-            height = randint(cf_block['min_height'], cf_block['max_height'])
+            width = randint(MIN_WIDTH, MAX_WIDTH)
+            height = randint(MIN_HEIGHT, MAX_HEIGHT)
 
             # create a tuple to contain the position of the block
             position = (curr_pos_x, int(0))
@@ -258,11 +266,12 @@ class PG_Map:
                 width = (MAX_X - curr_pos_x)
 
             # assemble the block
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_intervals']['terrain']))
+            BLOCK = Block(CF_BLOCK, self.cf_global, (width, height), position, 
+                          update_interval=BLOCK_UPDATE_INTERVAL,
+                          override_color=specific_color)
 
             # adjust position according to facing
-            match (facing):
+            match (FACING):
                 case (-1):
                     BLOCK.rect.top = MIN_Y
                 case (0):
@@ -280,16 +289,17 @@ class PG_Map:
         # 2) topright --> bottomright
         curr_pos_y = last_block.rect.bottom
         while curr_pos_y < MAX_Y:
-            width = randint(cf_block['min_width'], cf_block['max_width'])
-            height = randint(cf_block['min_height'], cf_block['max_height'])
+            width = randint(MIN_WIDTH, MAX_WIDTH)
+            height = randint(MIN_HEIGHT, MAX_HEIGHT)
             position = (int(0), curr_pos_y)
             if (curr_pos_y + height) > MAX_Y:
                 height = MAX_Y - curr_pos_y
 
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_intervals']['terrain']))
+            BLOCK = Block(CF_BLOCK, self.cf_global, (width, height), position, 
+                          update_interval=BLOCK_UPDATE_INTERVAL,
+                          override_color=specific_color)
 
-            match (facing):
+            match (FACING):
                 case (-1):
                     BLOCK.rect.right = MAX_X
                 case (0):
@@ -303,17 +313,19 @@ class PG_Map:
         # 3) bottomright --> bottomleft
         curr_pos_x = last_block.rect.left
         while curr_pos_x > MIN_X:
-            width = randint(cf_block['min_width'], cf_block['max_width'])
-            height = randint(cf_block['min_height'], cf_block['max_height'])
+            width = randint(MIN_WIDTH, MAX_WIDTH)
+            height = randint(MIN_HEIGHT, MAX_HEIGHT)
             position = (int(0), int(0))
             if (curr_pos_x - width) < MIN_X:
                 width = abs(MIN_X - curr_pos_x)
 
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_intervals']['terrain']))
+            BLOCK = Block(CF_BLOCK, self.cf_global, (width, height), position, 
+                          update_interval=BLOCK_UPDATE_INTERVAL,
+                          override_color=specific_color)
+
             BLOCK.rect.right = curr_pos_x
 
-            match (facing):
+            match (FACING):
                 case (-1):
                     BLOCK.rect.bottom = MAX_Y
                 case (0):
@@ -327,17 +339,19 @@ class PG_Map:
         # 4) bottomleft --> topright
         curr_pos_y = last_block.rect.top
         while curr_pos_y > MIN_Y:
-            width = randint(cf_block['min_width'], cf_block['max_width'])
-            height = randint(cf_block['min_height'], cf_block['max_height'])
+            width = randint(MIN_WIDTH, MAX_WIDTH)
+            height = randint(MIN_HEIGHT, MAX_HEIGHT)
             position = (int(0), int(0))
             if (curr_pos_y - height) < MIN_Y:
                 height = abs(MIN_Y - curr_pos_y)
 
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_intervals']['terrain']))
+            BLOCK = Block(CF_BLOCK, self.cf_global, (width, height), position, 
+                          update_interval=BLOCK_UPDATE_INTERVAL,
+                          override_color=specific_color)
+
             BLOCK.rect.bottom = curr_pos_y
 
-            match (facing):
+            match (FACING):
                 case (-1):
                     BLOCK.rect.left = MIN_X
                 case (0):
@@ -348,30 +362,39 @@ class PG_Map:
             group.add(BLOCK)
             curr_pos_y = (BLOCK.rect.top - PADDING)
 
-    def spawn_obstacle_blocks(self, cf_block: dict, group: Group):
+    def spawn_obstacle_blocks(self, group: Group):
         ''' specialized obstacle spawning algorithm
             * checks for collision with the passed group and self.block_group before placing
         '''
 
+        CF_BLOCK = self.cf_spawning['obstacle_blocks']['cf_block']
+        N_OBSTACLES = int(self.cf_spawning['obstacle_blocks']['n_obstacles'])
+
         # padding, taking into account the player size to not completely block paths:
-        H_PADDING = int(self.cf_spawning['obstacles']['min_spacing_x'] + cf_block['spacing'])
-        W_PADDING = int(self.cf_spawning['obstacles']['min_spacing_y'] + cf_block['spacing'])
-        color_pool: list[tuple[int, int, int]] = cf_block['color_pool']
+        W_PADDING = int(self.cf_spawning['obstacle_blocks']['min_spacing_y'])
+        H_PADDING = int(self.cf_spawning['obstacle_blocks']['min_spacing_x'])
+
+        MIN_WIDTH = int(self.cf_spawning['obstacle_blocks']['min_width'])
+        MAX_WIDTH = int(self.cf_spawning['obstacle_blocks']['max_width'])
+        MIN_HEIGHT = int(self.cf_spawning['obstacle_blocks']['min_height'])
+        MAX_HEIGHT = int(self.cf_spawning['obstacle_blocks']['max_height'])
+
+        BLOCK_UPDATE_INTERVAL = int(self.cf_map['upd_intervals']['terrain'])
 
         # initiate the loop
         placed_blocks = 0
         failed_attempts = 0
-        while placed_blocks < self.N_OBSTACLES:
+        while placed_blocks < N_OBSTACLES:
             # set random height/width from within the ranges
-            width = randint(cf_block['min_width'], cf_block['max_width'])
-            height = randint(cf_block['min_height'], cf_block['max_height'])
+            width = randint(MIN_HEIGHT, MAX_HEIGHT)
+            height = randint(MIN_WIDTH, MAX_WIDTH)
 
             # get a random position within the map
             position = self.get_rand_pos(width, height)
 
             # assemble the block
-            BLOCK = Block(cf_block, self.cf_global, color_pool, (width, height),
-                          position, int(self.cf_map['upd_intervals']['terrain']))
+            BLOCK = Block(CF_BLOCK, self.cf_global, (width, height), position,
+                          update_interval=BLOCK_UPDATE_INTERVAL)
 
             # the block is now created, but there's 2 potential problems:
             # 1) the block might overlap other blocks
@@ -401,11 +424,17 @@ class PG_Map:
                         Fail limit of {self.LOOP_LIMIT} attempts reached.\
                         Too many or too large obstacles.\n\
                         block padding set too high can also be the cause.\
-                        Current obstacle count: {placed_blocks} / {self.N_OBSTACLES}'
-                    raise ConfigError(msg, cf_block)
+                        Current obstacle count: {placed_blocks} / {N_OBSTACLES}'
+                    raise ConfigError(msg, CF_BLOCK)
 
             # make sure the copied temp rect is not saved in memory
             del inflated_rect
+        
+        if (failed_attempts >= (0.5 * self.LOOP_LIMIT)) or (SPAWN_INFO_PRINT):
+            if (failed_attempts > placed_blocks):
+                msg = '[failed_attempts / allowed] while placing '
+                msg += f'obstacle_blocks: [{failed_attempts} / {self.LOOP_LIMIT}]'
+                print(msg)
 
     def set_up_ui_status_bars(self):
         for bar in self.STATUS_BARS:
@@ -447,7 +476,7 @@ class PG_Map:
 
     def spawn_coins(self):
         ''' create and position the coin sprite various places around the screen '''
-        cf_coin = self.cf_map_sprites['coin']
+        cf_coin = self.cf_spawning['coins']['cf_coin']
 
         n_spritesheet_images = int(cf_coin['image_variants'])
         scalar = float(cf_coin['image_scalar'])
@@ -501,6 +530,12 @@ class PG_Map:
                 if (failed_attempts >= self.LOOP_LIMIT):
                     msg = 'cannot place coins using the corring config'
                     raise LoopError(msg, placed_coins, self.N_COINS, self.LOOP_LIMIT)
+        
+        if (failed_attempts >= (0.5 * self.LOOP_LIMIT)) or (SPAWN_INFO_PRINT):
+            if (failed_attempts > placed_coins):
+                msg = '[failed_attempts / allowed] while placing '
+                msg += f'coins: [{failed_attempts} / {self.LOOP_LIMIT}]'
+                print(msg)
         
         self.spawn_collide_group.add(self.coin_group)
 
@@ -661,16 +696,15 @@ class PG_Map:
                 case _:
                     pass
 
-    def spawn_missile_turrets(self):
-        cf_turrets: dict = self.cf_map_sprites['missile_turrets']
-        valid_turret_keys = list(cf_turrets.keys())
-        max_cf_index = (len(valid_turret_keys) - 1)
+    def spawn_turrets(self):
+        cf_turrets: list = self.cf_spawning['turrets']['cf_turrets']
+        max_cf_index = (len(cf_turrets) - 1)
 
-        n_turrets = self.cf_spawning['missile_turrets']['n_turrets']
-        min_edge_offset_x = self.cf_spawning['missile_turrets']['min_edge_offset_x']
-        min_edge_offset_y = self.cf_spawning['missile_turrets']['min_edge_offset_y']
-        min_spacing_x = self.cf_spawning['missile_turrets']['min_spacing_x']
-        min_spacing_y = self.cf_spawning['missile_turrets']['min_spacing_y']
+        n_turrets = self.cf_spawning['turrets']['n_turrets']
+        min_edge_offset_x = self.cf_spawning['turrets']['min_edge_offset_x']
+        min_edge_offset_y = self.cf_spawning['turrets']['min_edge_offset_y']
+        min_spacing_x = self.cf_spawning['turrets']['min_spacing_x']
+        min_spacing_y = self.cf_spawning['turrets']['min_spacing_y']
 
         placement_re = Rect((0, 0), (2*min_spacing_x, 2*min_spacing_y))
 
@@ -678,12 +712,12 @@ class PG_Map:
             selected_cf_index = i
             if (selected_cf_index > max_cf_index):
                 selected_cf_index = randint(0, max_cf_index)
-            cf_turret = cf_turrets[valid_turret_keys[selected_cf_index]]
+            cf_turret = cf_turrets[selected_cf_index]
 
-            place_attempts = 0
+            failed_attempts = 0
             placement_pos: tuple[int, int]
 
-            while (place_attempts < self.LOOP_LIMIT):
+            while (failed_attempts < self.LOOP_LIMIT):
                 rand_pos = self.get_rand_pos(min_edge_offset_x, min_edge_offset_y)
                 placement_re.center = rand_pos
 
@@ -696,10 +730,16 @@ class PG_Map:
                     placement_pos = rand_pos
                     break
                 else:
-                    place_attempts += 1
-                    if (place_attempts == self.LOOP_LIMIT):
+                    failed_attempts += 1
+                    if (failed_attempts == self.LOOP_LIMIT):
                         msg = 'failure placing missile turrets'
                         raise LoopError(msg, len(self.turret_group.sprites()), n_turrets, self.LOOP_LIMIT)
+            
+            if (failed_attempts >= (0.5 * self.LOOP_LIMIT)) or (SPAWN_INFO_PRINT):
+                if (failed_attempts > n_turrets):
+                    msg = '[failed_attempts / allowed] while placing '
+                    msg += f'turret #{i}: [{failed_attempts} / {self.LOOP_LIMIT}]'
+                    print(msg)
 
             TURRET = PG_Missile_Turret(
                 cf_turret,
