@@ -1,10 +1,12 @@
 ### Author: Odin Bjerke | <od.bjerke@gmail.com> | <obj021@uit.no>  
 
-# Python Version
+# Dependancies
+
+## Python 3.10+
 The code uses type hints extensively, and therefore requires a recent python version [3.5 or newer](https://docs.python.org/3/library/typing.html).  [(further info)](https://peps.python.org/topic/typing/)  
 
-Be aware **the latest python version may break pygame, stick to 3.5 through 3.10**  
-Recommended version: [Python 3.10.0](https://www.python.org/downloads/release/python-3100/)  
+To run this app, [Python 3.10.0](https://www.python.org/downloads/release/python-3100/) or newer is required.  
+Note **pygame 2.3.0 should work with python 3.11+, but i have not tested it**
 ### Check python version by running one of the scripts below.
 **Mac**:  
 >python3 -c "exec(\"import sys\nprint('Python Version=='+sys.version)\")"  
@@ -12,12 +14,8 @@ Recommended version: [Python 3.10.0](https://www.python.org/downloads/release/py
 **Windows/Linux**:  
 >python -c "exec(\"import sys\nprint('Python Version=='+sys.version)\")"  
 
-# Pygame Version
+## Pygame 2.1.3+
 Developed and tested using **pygame 2.3.0**  
-I know for a fact any version prior to **2.1.3** will not work.  
-
-# Installation
-Assuming pip as package manager, automatically install the required libraries by running  
->pip install -r requirements.txt  
-
-__or__ check the __requirements.txt__ file and manually install the modules.  
+If you are running an earlier version of pygame, i strongly recommend updating.
+There are many performance updates, and introduces no backward compatibility issues that do not already exist in the prior 2.0+ versions.  
+I know for a fact any pygame version prior to **2.1.3** will not work with this app.  
