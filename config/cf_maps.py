@@ -6,7 +6,6 @@ from os.path import join as os_path_join
 MAP_UPDATE_INTERVALS = {
     'terrain': int(100),
     'player_img_cycle': int(30)
-    # 'coin_img_cycle': int(10),
 }
 
 CF_MAPS = {

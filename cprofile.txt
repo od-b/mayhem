@@ -1,0 +1,261 @@
+### map_1, looped until completion, 125 max fps with busy loop ###
+
+51955263 function calls (51928326 primitive calls) in 26.952 seconds
+
+   Ordered by: standard name
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   26.952   26.952 <string>:1(<module>)
+        3    0.000    0.000    0.000    0.000 PG_block.py:164(init_timed_highlight)
+       11    0.000    0.000    0.000    0.000 PG_block.py:173(update)
+    30822    0.009    0.000    0.017    0.000 PG_coin.py:31(update)
+        1    0.000    0.000    0.000    0.000 PG_map.py:578(return_to_app)
+        1    0.000    0.000    0.000    0.000 PG_map.py:625(activate_temp_bar)
+     3367    0.004    0.000    0.368    0.000 PG_map.py:638(check_player_terrain_collision)
+     3367    0.002    0.000    0.011    0.000 PG_map.py:669(check_player_coin_collision)
+     3367    0.007    0.000    0.135    0.000 PG_map.py:681(check_events)
+     3367    0.004    0.000   10.415    0.003 PG_map.py:790(check_projectile_collision)
+     3367    0.003    0.000    4.997    0.001 PG_map.py:809(clear_surf_with_image)
+        1    0.038    0.038   26.952   26.952 PG_map.py:822(loop)
+        2    0.000    0.000    0.000    0.000 PG_map.py:876(sprite_mask_overlap)
+        2    0.000    0.000    0.000    0.000 PG_map.py:899(blit_overlap_mask)
+      148    0.000    0.000    0.033    0.000 PG_map.py:905(blit_block_player_overlap)
+      768    0.001    0.000    0.001    0.000 PG_player.py:143(cycle_active_image)
+       17    0.000    0.000    0.000    0.000 PG_player.py:150(set_special_image_type)
+        2    0.000    0.000    0.000    0.000 PG_player.py:155(set_idle_image_type)
+        2    0.000    0.000    0.000    0.000 PG_player.py:161(init_phase_collision_recoil)
+        5    0.000    0.000    0.000    0.000 PG_player.py:224(init_phase_thrust_begin)
+        5    0.000    0.000    0.000    0.000 PG_player.py:249(init_phase_thrust_end)
+     3343    0.002    0.000    0.005    0.000 PG_player.py:261(set_velocity_with_gravity)
+       78    0.000    0.000    0.000    0.000 PG_player.py:267(apply_thrust_begin_frame)
+     2699    0.008    0.000    0.012    0.000 PG_player.py:298(thrust_frame)
+      337    0.001    0.000    0.002    0.000 PG_player.py:305(apply_thrust_end_frame)
+      229    0.001    0.000    0.001    0.000 PG_player.py:327(default_frame)
+     3367    0.010    0.000    0.256    0.000 PG_player.py:338(update_image)
+     3367    0.007    0.000    0.281    0.000 PG_player.py:353(update)
+        1    0.000    0.000    0.000    0.000 PG_player.py:375(init_death_event)
+      149    0.000    0.000    0.000    0.000 PG_player.py:397(get_collision_cooldown_frames_left)
+     3367    0.000    0.000    0.000    0.000 PG_player.py:400(get_curr_health)
+     3367    0.000    0.000    0.000    0.000 PG_player.py:403(get_curr_fuel)
+       87    0.000    0.000    0.001    0.000 PG_projectiles.py:12(__init__)
+     8386    0.014    0.000    0.034    0.000 PG_projectiles.py:125(rotate_projectile_angle)
+     8386    0.006    0.000    0.042    0.000 PG_projectiles.py:141(rotate_by_degrees)
+       87    0.000    0.000    0.001    0.000 PG_projectiles.py:157(spawn_projectile)
+    10101    0.010    0.000    0.336    0.000 PG_projectiles.py:168(update)
+    50360    0.022    0.000    0.168    0.000 PG_projectiles.py:30(update)
+     3367    0.008    0.000    0.008    0.000 PG_timer.py:164(get_fps_string)
+     3367    0.002    0.000    6.235    0.002 PG_timer.py:172(clock_tick_busy)
+     3367    0.001    0.000    0.116    0.000 PG_timer.py:178(draw_ui)
+     3367    0.011    0.000    6.254    0.002 PG_timer.py:182(update)
+    10101    0.012    0.000    0.217    0.000 PG_turret.py:61(update_image)
+    10101    0.010    0.000    0.571    0.000 PG_turret.py:67(update)
+     6882    0.005    0.000    0.090    0.000 PG_ui_bars.py:208(draw_horizontal_bar)
+     6883    0.007    0.000    0.098    0.000 PG_ui_bars.py:230(update)
+     6882    0.009    0.000    0.066    0.000 PG_ui_bars.py:92(draw_horizontal_bar)
+    13617    0.003    0.000    0.003    0.000 PG_ui_containers.py:101(_align_y_to_bottom_of)
+        1    0.000    0.000    0.000    0.000 PG_ui_containers.py:234(get_children_by_ref_id_intersection)
+        9    0.000    0.000    0.000    0.000 PG_ui_containers.py:245(<genexpr>)
+     6734    0.002    0.000    0.002    0.000 PG_ui_containers.py:268(draw_bg)
+     6734    0.012    0.000    0.024    0.000 PG_ui_containers.py:274(update)
+        1    0.000    0.000    0.000    0.000 PG_ui_containers.py:343(add_child)
+        1    0.000    0.000    0.000    0.000 PG_ui_containers.py:346(add_children_by_ref_id)
+     6734    0.009    0.000    0.381    0.000 PG_ui_containers.py:363(update)
+     6883    0.002    0.000    0.002    0.000 PG_ui_containers.py:86(_align_x_to_container_left)
+     6734    0.003    0.000    0.003    0.000 PG_ui_containers.py:89(_align_x_to_container_right)
+     6734    0.004    0.000    0.021    0.000 PG_ui_text_box.py:107(_get_text_w_pretext)
+       34    0.000    0.000    0.002    0.000 PG_ui_text_box.py:141(update_text_render)
+     6734    0.003    0.000    0.026    0.000 PG_ui_text_box.py:151(update)
+       87    0.000    0.000    0.000    0.000 sprite.py:112(__init__)
+       87    0.000    0.000    0.000    0.000 sprite.py:117(add)
+    20202    0.004    0.000    0.004    0.000 sprite.py:1402(sprites)
+      177    0.000    0.000    0.000    0.000 sprite.py:153(add_internal)
+ 22615010    6.538    0.000    7.985    0.000 sprite.py:1646(collide_mask)
+  1476594    2.236    0.000   10.454    0.000 sprite.py:1673(spritecollide)
+     1293    0.042    0.000    0.247    0.000 sprite.py:1714(<listcomp>)
+     3367    0.204    0.000   10.411    0.003 sprite.py:1725(groupcollide)
+     6734    0.076    0.000    0.119    0.000 sprite.py:1761(spritecollideany)
+       81    0.000    0.000    0.000    0.000 sprite.py:183(kill)
+  1547559    0.232    0.000    0.232    0.000 sprite.py:363(sprites)
+      177    0.000    0.000    0.000    0.000 sprite.py:376(add_internal)
+      161    0.000    0.000    0.000    0.000 sprite.py:389(remove_internal)
+        4    0.000    0.000    0.000    0.000 sprite.py:400(has_internal)
+    18128    0.005    0.000    0.022    0.000 sprite.py:421(__iter__)
+      5/4    0.000    0.000    0.000    0.000 sprite.py:427(add)
+44029/17093    0.048    0.000    1.282    0.000 sprite.py:527(update)
+    30303    0.038    0.000    1.262    0.000 sprite.py:539(draw)
+  1609958    0.191    0.000    0.191    0.000 sprite.py:554(<genexpr>)
+     3367    0.004    0.000    0.007    0.000 timer.py:110(update)
+     3367    0.002    0.000    0.002    0.000 timer.py:27(update_duration)
+     3367    0.008    0.000    0.008    0.000 timer.py:78(get_segment_duration_formatted)
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.all}
+        1    0.000    0.000   26.952   26.952 {built-in method builtins.exec}
+    30477    0.003    0.000    0.003    0.000 {built-in method builtins.hasattr}
+        5    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+    18128    0.001    0.000    0.001    0.000 {built-in method builtins.iter}
+        9    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.round}
+     3367    2.506    0.001    2.506    0.001 {built-in method pygame.display.update}
+     6882    0.006    0.000    0.006    0.000 {built-in method pygame.draw.rect}
+     3367    0.127    0.000    0.127    0.000 {built-in method pygame.event.get}
+    66112    0.460    0.000    0.460    0.000 {built-in method pygame.mask.from_surface}
+      458    0.000    0.000    0.000    0.000 {built-in method pygame.math.clamp}
+     7299    0.001    0.000    0.001    0.000 {built-in method pygame.math.lerp}
+     3367    0.001    0.000    0.001    0.000 {built-in method pygame.time.get_ticks}
+    21854    0.160    0.000    0.160    0.000 {built-in method pygame.transform.rotate}
+      174    0.000    0.000    0.000    0.000 {method '__contains__' of 'dict' objects}
+    11753    0.002    0.000    0.002    0.000 {method 'angle_to' of 'pygame.math.Vector2' objects}
+      162    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+    24015    5.050    0.000    5.050    0.000 {method 'blit' of 'pygame.surface.Surface' objects}
+    30303    0.965    0.000    1.157    0.000 {method 'blits' of 'pygame.surface.Surface' objects}
+      337    0.000    0.000    0.000    0.000 {method 'clamp_magnitude_ip' of 'pygame.math.Vector2' objects}
+       81    0.000    0.000    0.000    0.000 {method 'clear' of 'dict' objects}
+  1383705    0.034    0.000    0.034    0.000 {method 'colliderect' of 'pygame.rect.Rect' objects}
+      174    0.000    0.000    0.000    0.000 {method 'copy' of 'pygame.math.Vector2' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+        9    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+    13764    0.013    0.000    0.013    0.000 {method 'fill' of 'pygame.surface.Surface' objects}
+     3367    0.000    0.000    0.000    0.000 {method 'get_fps' of 'pygame.time.Clock' objects}
+    13589    0.004    0.000    0.004    0.000 {method 'get_rect' of 'pygame.surface.Surface' objects}
+     3367    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+       12    0.000    0.000    0.000    0.000 {method 'length' of 'pygame.math.Vector2' objects}
+ 22615010    1.448    0.000    1.448    0.000 {method 'overlap' of 'pygame.mask.Mask' objects}
+        2    0.000    0.000    0.000    0.000 {method 'overlap_mask' of 'pygame.mask.Mask' objects}
+       34    0.002    0.000    0.002    0.000 {method 'render' of 'pygame.font.Font' objects}
+     8386    0.002    0.000    0.002    0.000 {method 'rotate' of 'pygame.math.Vector2' objects}
+     2777    0.000    0.000    0.000    0.000 {method 'scale_to_length' of 'pygame.math.Vector2' objects}
+     3367    6.233    0.002    6.233    0.002 {method 'tick_busy_loop' of 'pygame.time.Clock' objects}
+        2    0.000    0.000    0.000    0.000 {method 'to_surface' of 'pygame.mask.Mask' objects}
+    30303    0.044    0.000    0.044    0.000 {method 'update' of 'dict' objects}
+     3572    0.003    0.000    0.003    0.000 {method 'update' of 'pygame.math.Vector2' objects}
+
+
+
+### map_1, looped until completion, 250 max fps with busy loop ###
+
+51955263 function calls (51928326 primitive calls) in 26.952 seconds
+   Ordered by: standard name
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   28.054   28.054 <string>:1(<module>)
+        2    0.000    0.000    0.000    0.000 PG_block.py:164(init_timed_highlight)
+       26    0.000    0.000    0.000    0.000 PG_block.py:173(update)
+    32041    0.011    0.000    0.019    0.000 PG_coin.py:31(update)
+        1    0.000    0.000    0.000    0.000 PG_map.py:578(return_to_app)
+        1    0.000    0.000    0.000    0.000 PG_map.py:625(activate_temp_bar)
+     4591    0.006    0.000    0.538    0.000 PG_map.py:638(check_player_terrain_collision)
+     4591    0.003    0.000    0.012    0.000 PG_map.py:669(check_player_coin_collision)
+     4591    0.009    0.000    0.184    0.000 PG_map.py:681(check_events)
+     4591    0.005    0.000   12.974    0.003 PG_map.py:790(check_projectile_collision)
+     4591    0.007    0.000    6.892    0.002 PG_map.py:809(clear_surf_with_image)
+        1    0.065    0.065   28.054   28.054 PG_map.py:822(loop)
+      123    0.000    0.000    0.000    0.000 PG_map.py:876(sprite_mask_overlap)
+      123    0.000    0.000    0.001    0.000 PG_map.py:899(blit_overlap_mask)
+      323    0.001    0.000    0.055    0.000 PG_map.py:905(blit_block_player_overlap)
+      802    0.001    0.000    0.001    0.000 PG_player.py:143(cycle_active_image)
+        8    0.000    0.000    0.000    0.000 PG_player.py:150(set_special_image_type)
+        2    0.000    0.000    0.000    0.000 PG_player.py:161(init_phase_collision_recoil)
+        3    0.000    0.000    0.000    0.000 PG_player.py:224(init_phase_thrust_begin)
+        1    0.000    0.000    0.000    0.000 PG_player.py:249(init_phase_thrust_end)
+     4517    0.003    0.000    0.006    0.000 PG_player.py:261(set_velocity_with_gravity)
+      230    0.001    0.000    0.001    0.000 PG_player.py:267(apply_thrust_begin_frame)
+     4113    0.012    0.000    0.019    0.000 PG_player.py:298(thrust_frame)
+       89    0.000    0.000    0.001    0.000 PG_player.py:305(apply_thrust_end_frame)
+       85    0.000    0.000    0.001    0.000 PG_player.py:327(default_frame)
+     4591    0.012    0.000    0.344    0.000 PG_player.py:338(update_image)
+     4591    0.010    0.000    0.377    0.000 PG_player.py:353(update)
+        1    0.000    0.000    0.000    0.000 PG_player.py:375(init_death_event)
+      324    0.000    0.000    0.000    0.000 PG_player.py:397(get_collision_cooldown_frames_left)
+     4591    0.001    0.000    0.001    0.000 PG_player.py:400(get_curr_health)
+     4591    0.000    0.000    0.000    0.000 PG_player.py:403(get_curr_fuel)
+      118    0.000    0.000    0.002    0.000 PG_projectiles.py:12(__init__)
+    11424    0.023    0.000    0.051    0.000 PG_projectiles.py:125(rotate_projectile_angle)
+    11424    0.009    0.000    0.063    0.000 PG_projectiles.py:141(rotate_by_degrees)
+      118    0.000    0.000    0.002    0.000 PG_projectiles.py:157(spawn_projectile)
+    13773    0.015    0.000    0.465    0.000 PG_projectiles.py:168(update)
+    61631    0.028    0.000    0.211    0.000 PG_projectiles.py:30(update)
+     4591    0.007    0.000    0.008    0.000 PG_timer.py:164(get_fps_string)
+     4591    0.003    0.000    0.131    0.000 PG_timer.py:172(clock_tick_busy)
+     4591    0.002    0.000    0.198    0.000 PG_timer.py:178(draw_ui)
+     4591    0.010    0.000    0.147    0.000 PG_timer.py:182(update)
+    13773    0.017    0.000    0.299    0.000 PG_turret.py:61(update_image)
+    13773    0.015    0.000    0.790    0.000 PG_turret.py:67(update)
+     9505    0.008    0.000    0.125    0.000 PG_ui_bars.py:208(draw_horizontal_bar)
+     9506    0.010    0.000    0.137    0.000 PG_ui_bars.py:230(update)
+     9505    0.013    0.000    0.090    0.000 PG_ui_bars.py:92(draw_horizontal_bar)
+    18688    0.004    0.000    0.004    0.000 PG_ui_containers.py:101(_align_y_to_bottom_of)
+        1    0.000    0.000    0.000    0.000 PG_ui_containers.py:234(get_children_by_ref_id_intersection)
+        9    0.000    0.000    0.000    0.000 PG_ui_containers.py:245(<genexpr>)
+     9182    0.002    0.000    0.002    0.000 PG_ui_containers.py:268(draw_bg)
+     9182    0.018    0.000    0.035    0.000 PG_ui_containers.py:274(update)–
+        1    0.000    0.000    0.000    0.000 PG_ui_containers.py:343(add_child)
+        1    0.000    0.000    0.000    0.000 PG_ui_containers.py:346(add_children_by_ref_id)
+     9182    0.016    0.000    0.575    0.000 PG_ui_containers.py:363(update)
+     9506    0.003    0.000    0.003    0.000 PG_ui_containers.py:86(_align_x_to_container_left)
+     9182    0.004    0.000    0.004    0.000 PG_ui_containers.py:89(_align_x_to_container_right)
+     9182    0.007    0.000    0.027    0.000 PG_ui_text_box.py:107(_get_text_w_pretext)
+      335    0.001    0.000    0.008    0.000 PG_ui_text_box.py:141(update_text_render)
+     9182    0.004    0.000    0.039    0.000 PG_ui_text_box.py:151(update)
+      118    0.000    0.000    0.001    0.000 sprite.py:112(__init__)
+      118    0.000    0.000    0.001    0.000 sprite.py:117(add)
+    27546    0.008    0.000    0.008    0.000 sprite.py:1402(sprites)
+      239    0.000    0.000    0.000    0.000 sprite.py:153(add_internal)
+ 27963750    8.130    0.000    9.930    0.000 sprite.py:1646(collide_mask)
+  2022428    2.822    0.000   13.068    0.000 sprite.py:1673(spritecollide)
+     1965    0.064    0.000    0.382    0.000 sprite.py:1714(<listcomp>)
+     4591    0.280    0.000   12.968    0.003 sprite.py:1725(groupcollide)
+     9182    0.097    0.000    0.151    0.000 sprite.py:1761(spritecollideany)
+      109    0.000    0.000    0.000    0.000 sprite.py:183(kill)
+  2119108    0.362    0.000    0.362    0.000 sprite.py:363(sprites)
+      239    0.000    0.000    0.000    0.000 sprite.py:376(add_internal)
+      217    0.000    0.000    0.000    0.000 sprite.py:389(remove_internal)
+        3    0.000    0.000    0.000    0.000 sprite.py:400(has_internal)
+    24920    0.006    0.000    0.031    0.000 sprite.py:421(__iter__)
+      4/3    0.000    0.000    0.000    0.000 sprite.py:427(add)
+59952/23224    0.068    0.000    1.809    0.000 sprite.py:527(update)
+    41319    0.078    0.000    2.474    0.000 sprite.py:539(draw)
+  2187504    0.462    0.000    0.462    0.000 sprite.py:554(<genexpr>)
+     4591    0.005    0.000    0.006    0.000 timer.py:110(update)
+     4591    0.002    0.000    0.002    0.000 timer.py:27(update_duration)
+     4591    0.012    0.000    0.012    0.000 timer.py:78(get_segment_duration_formatted)
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.abs}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.all}
+        1    0.000    0.000   28.054   28.054 {built-in method builtins.exec}
+    41555    0.007    0.000    0.007    0.000 {built-in method builtins.hasattr}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.isinstance}
+    24920    0.002    0.000    0.002    0.000 {built-in method builtins.iter}
+       12    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.round}
+     4591    3.452    0.001    3.452    0.001 {built-in method pygame.display.update}
+     9505    0.008    0.000    0.008    0.000 {built-in method pygame.draw.rect}
+     4591    0.173    0.000    0.173    0.000 {built-in method pygame.event.get}
+    82395    0.602    0.000    0.602    0.000 {built-in method pygame.mask.from_surface}
+      170    0.000    0.000    0.000    0.000 {built-in method pygame.math.clamp}
+     9826    0.001    0.000    0.001    0.000 {built-in method pygame.math.lerp}
+     4591    0.001    0.000    0.001    0.000 {built-in method pygame.time.get_ticks}
+    29788    0.223    0.000    0.223    0.000 {built-in method pygame.transform.rotate}
+      236    0.000    0.000    0.000    0.000 {method '__contains__' of 'dict' objects}
+    16015    0.003    0.000    0.003    0.000 {method 'angle_to' of 'pygame.math.Vector2' objects}
+      218    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+    33229    6.964    0.000    6.964    0.000 {method 'blit' of 'pygame.surface.Surface' objects}
+    41319    1.773    0.000    2.235    0.000 {method 'blits' of 'pygame.surface.Surface' objects}
+       89    0.000    0.000    0.000    0.000 {method 'clamp_magnitude_ip' of 'pygame.math.Vector2' objects}
+      109    0.000    0.000    0.000    0.000 {method 'clear' of 'dict' objects}
+  1694705    0.042    0.000    0.042    0.000 {method 'colliderect' of 'pygame.rect.Rect' objects}
+      236    0.000    0.000    0.000    0.000 {method 'copy' of 'pygame.math.Vector2' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+       12    0.000    0.000    0.000    0.000 {method 'extend' of 'list' objects}
+    19010    0.017    0.000    0.017    0.000 {method 'fill' of 'pygame.surface.Surface' objects}
+     4591    0.001    0.000    0.001    0.000 {method 'get_fps' of 'pygame.time.Clock' objects}
+    18817    0.006    0.000    0.006    0.000 {method 'get_rect' of 'pygame.surface.Surface' objects}
+     4591    0.000    0.000    0.000    0.000 {method 'keys' of 'dict' objects}
+        6    0.000    0.000    0.000    0.000 {method 'length' of 'pygame.math.Vector2' objects}
+ 27963750    1.800    0.000    1.800    0.000 {method 'overlap' of 'pygame.mask.Mask' objects}
+      123    0.000    0.000    0.000    0.000 {method 'overlap_mask' of 'pygame.mask.Mask' objects}
+      335    0.008    0.000    0.008    0.000 {method 'render' of 'pygame.font.Font' objects}
+    11424    0.003    0.000    0.003    0.000 {method 'rotate' of 'pygame.math.Vector2' objects}
+     4343    0.000    0.000    0.000    0.000 {method 'scale_to_length' of 'pygame.math.Vector2' objects}
+     4591    0.128    0.000    0.128    0.000 {method 'tick_busy_loop' of 'pygame.time.Clock' objects}
+      123    0.000    0.000    0.000    0.000 {method 'to_surface' of 'pygame.mask.Mask' objects}
+    41319    0.071    0.000    0.071    0.000 {method 'update' of 'dict' objects}
+     4602    0.003    0.000    0.003    0.000 {method 'update' of 'pygame.math.Vector2' objects}

@@ -49,13 +49,6 @@ class PG_App:
         * Initializes and sets up pygame objects from the given config
         * Handles game loop and specialized setup-functions
         * attributes that start with cf_ are imported config dicts
-
-        * Conventions defined for the scope of this class:
-        * Methods that start with _ are helper methods, or only called once
-            E.g.; if the method spawns blocks, config should be a dict from ['map']['BLOCKS'].
-        * Methods that start with 'create_' will return the object. 'spawn_' functions are void
-        * Methods that take in 'config' as a parameter will refer to the relevant subdict of self.cf.
-            The expected config is listed in the method docstring.
     '''
 
     def __init__(self, 
@@ -514,6 +507,7 @@ class PG_App:
         )
 
     def format_map_tooltip_text(self, map_key: str):
+        # TODO
         return str(f'{map_key}')
 
     def format_player_tooltip_text(self, player_key: str):
@@ -805,6 +799,11 @@ class PG_App:
                     if (self.map.map_success == None):
                         # ignore mouse events when map is active, then loop the map
                         self.timer.block_events(self.PG_MOUSE_EVENTS)
+                        
+                        # uncomment this and import cProfile to run a map test
+                        # cProfile.run("APP.map.loop()")
+                        # self.looping = False
+                        # start map loop
                         self.map.loop()
 
                         # map loop breakout: pause or program exit?

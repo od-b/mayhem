@@ -20,3 +20,11 @@ If you are running an earlier version of pygame, i strongly recommend updating.
 There are many performance updates, and introduces no backward compatibility issues that do not already exist in the prior 2.0+ versions.  
 I know for a fact any pygame version prior to **2.1.3** will not work with this app.  
 The app will run a version check on initialization, but will crash prior to this if pygame is not installed at all.
+
+
+# How To Play
+Use WASD for directional rotation  (keybinds can be changed in config.cf_players.py)
+Thrust towards facing angle with space. This consumes fuel.  
+If you run out of fuel, chances are good you will crash and die  
+Collect all the coins without dying to finish the map.  
+
