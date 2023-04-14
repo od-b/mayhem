@@ -584,6 +584,7 @@ class PG_App:
     def btn_onclick_start_map(self):
         if self.map_loaded:
             if (self.map.map_success != None):
+                print(f'map_success="{self.map.map_success}"')
                 self.swap_to_pause_menu()
                 self.swap_start_game_btn_state(False)
                 # self.exit_map(self.map.map_success)
@@ -869,3 +870,10 @@ if __name__ == '__main__':
         APP.loop()
 
     pg.quit()
+
+
+''' KNOWN BUGS:
+    * occasionally, when collecting all coins, the "continue" button wont work.
+        the weird thing, it then works for other players, but not that player -- until app restart
+        when app is restarted, it typically works again. i have no clue.
+'''

@@ -1,8 +1,8 @@
 from random import randint
-
+from typing import Callable
 # installed library imports
 import pygame as pg
-from pygame import Color, Surface, Rect, display
+from pygame import Color, Surface, Rect, display, SRCALPHA
 from pygame.math import Vector2 as Vec2
 from pygame.draw import line as draw_line, lines as draw_lines, rect as draw_rect
 from pygame.sprite import Sprite, Group, GroupSingle, spritecollide, spritecollideany, collide_mask, groupcollide
@@ -54,6 +54,40 @@ class PG_Map:
         self.fill_color      = Color(cf_map['fill_color'])
         self.overlap_color   = Color(cf_map['overlap_color'])
         self.N_COINS         = int(self.cf_spawning['coins']['n_coins'])
+
+        if (cf_map['bg_image'] != None):
+            RAW_IMG = pg.image.load(str(cf_map['bg_image'])).convert_alpha()
+
+            raw_img_width = RAW_IMG.get_width()
+            raw_img_height = RAW_IMG.get_height()
+            w_diff = int(self.rect.w - raw_img_width)
+            h_diff = int(self.rect.h - raw_img_height)
+
+            # scale image to the surface size without distorting it
+            if (w_diff > 0) or (h_diff > 0):
+                # image is too small
+                w_scalar = float(self.rect.w / raw_img_width)
+                h_scalar = float(self.rect.h / raw_img_height)
+
+                if (w_scalar > h_scalar):
+                    self.BG_IMAGE = pg.transform.scale_by(RAW_IMG, w_scalar)
+                else:
+                    self.BG_IMAGE = pg.transform.scale_by(RAW_IMG, h_scalar)
+            elif (w_diff != 0) and (h_diff != 0):
+                # do the same if image is too large
+                w_scalar = float(self.rect.w / raw_img_width)
+                h_scalar = float(self.rect.h / raw_img_height)
+                if (w_scalar > h_scalar):
+                    self.BG_IMAGE = pg.transform.scale_by(RAW_IMG, w_scalar)
+                else:
+                    self.BG_IMAGE = pg.transform.scale_by(RAW_IMG, h_scalar)
+            else:
+                # image is exactly the right format
+                self.BG_IMAGE = RAW_IMG
+
+            self.BG_CLEAR_FUNC = self.clear_surf_with_image
+        else:
+            self.BG_CLEAR_FUNC = self.clear_surf_with_fill
 
         #### SPRITE GROUPS & LISTS ####
         self.ALL_SPRITES: list[Sprite] = []
@@ -565,7 +599,7 @@ class PG_Map:
 
         for block in self.block_group:
             block.alt_surf_timeleft = 0
-        
+
         for projectile in self.global_projectile_group.sprites():
             projectile.kill()
             del projectile
@@ -772,8 +806,14 @@ class PG_Map:
         for projectile in collide_dict:
             del projectile
 
-    def draw_external(self):
+    def clear_surf_with_image(self):
+        self.surface.blit(self.BG_IMAGE, (0, 0))
+
+    def clear_surf_with_fill(self):
         self.surface.fill(self.fill_color)
+
+    def draw_external(self):
+        self.BG_CLEAR_FUNC()
         self.player_group.draw(self.surface)
         self.block_group.draw(self.surface)
         self.coin_group.draw(self.surface)
@@ -784,7 +824,8 @@ class PG_Map:
 
         # if a map was initiated by the menu, launch the main loop
         while (self.looping):
-            self.surface.fill(self.fill_color)
+            self.BG_CLEAR_FUNC()
+
             if (DEBUG_PLAYER_VISUALS):
                 self.debug__draw_player_all_info()
             else:

@@ -1,21 +1,20 @@
-from .colors import RGB, PALLETTES
+from .colors import RGB
 from .map_sprites import CF_BLOCKS, CF_COINS, CF_TURRETS
 from .map_ui import MAP_CONTAINERS, PLAYER_STATUS_BARS
-from .rect_styles import CF_FILLED_RECT
-
-#### MISC ####
+from os.path import join as os_path_join
 
 MAP_UPDATE_INTERVALS = {
     'terrain': int(100),
-    'player_img_cycle': int(30),
-    'coin_img_cycle': int(10),
+    'player_img_cycle': int(30)
+    # 'coin_img_cycle': int(10),
 }
 
 CF_MAPS = {
     # a map is a setup config for the active part of the game surface
     'map_1': {
         'name':            str('Map 1'),
-        'fill_color':      RGB['offblack'],
+        'fill_color':      RGB['offblack'],    # fill color, if bg_image is set to None
+        'bg_image':        os_path_join('assets','backgrounds','bg_nebula_blue_green.png'),
         'overlap_color':   RGB['white'],  # used for visualizing overlapping masks / misc
         # 'gravity_c':       float(0),     # every frame gravitational incrementor
         'gravity_c':       float(0.003),     # every frame gravitational incrementor
@@ -89,7 +88,8 @@ CF_MAPS = {
     },
     'map_2': {
         'name':            str('Map 2'),
-        'fill_color':      RGB['offblacker'],
+        'fill_color':      RGB['offblacker'],    # fill color, if bg_image is set to None
+        'bg_image':        os_path_join('assets','backgrounds','bg_planets_dark.png'),
         'overlap_color':   RGB['white'],  # used for visualizing overlapping masks / misc
         # 'gravity_c':       float(0),     # every frame gravitational incrementor
         'gravity_c':       float(0.0015),     # every frame gravitational incrementor
