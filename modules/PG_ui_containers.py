@@ -432,11 +432,11 @@ class UI_Container_Wrapper(UI_Sprite_Container):
 
         for container in self.children:
             # if container is a wrapper, reposition anchor rect
-            # draw_rect(surface, (255, 255, 255), container.rect)
             if (type(container) == type(self)):
                 container.set_anchor_rect(None)
-            else:
-                draw_rect(surface, (0, 0, 0), container.rect, width=2)
+            # debug draw to visualize 
+            # draw_rect(surface, (255, 255, 255), container.rect)
+            # draw_rect(surface, (0, 0, 0), container.rect, width=2)
             container.update(surface)
 
 

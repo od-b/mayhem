@@ -43,6 +43,7 @@ RGB: dict[str, tuple[int, int, int]] = {
     'P_brown':          (223, 166, 123),
     # grays / blacks
     'black':            (0, 0, 0),
+    'offblacker':       (21, 22, 24),
     'offblack':         (24, 26, 31),
     'gray_42':          (42, 42, 42),
     'gray_70':          (70, 70, 70),
@@ -98,6 +99,13 @@ PALLETTES: dict[str, list[tuple[int, int, int]]]  = {
         RGB['orange_2'],
         RGB['orange_3'],
         RGB['navy_black']
+    ],
+    'COLD_BLUE': [
+        RGB['blue'],
+        RGB['blue_dark'],
+        RGB['blue_light'],
+        RGB['blue_gray'],
+        RGB['earth_black']
     ],
     'SHADES_OF_GRAY': [
         RGB['gray_42'],

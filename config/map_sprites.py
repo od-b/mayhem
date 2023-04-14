@@ -9,6 +9,24 @@ CF_BLOCKS = {
     #   mass: 
     #       how 'tough' the blocks are. Used for collision responses
     #       a block with mass of 0 will ignore all collision with controllables
+    'cold_blue_block': {
+        'mass':             float(0),
+        'spacing':          int(130),
+        'min_height':       int(10),
+        'max_height':       int(40),
+        'min_width':        int(8),
+        'max_width':        int(80),
+        'color_pool':       PALLETTES['COLD_BLUE'],
+        'alpha_key':        int(255),
+        'border_color':     None,
+        'border_width':     int(0),
+        # alt_surface may be None or a subdict as below
+        'alt_surface': {
+            'color':        RGB['white'],
+            'border_color': RGB['black'],
+            'duration':     int(3000),  # duration in ms once triggered
+        },
+    },
     'pastel_block': {
         'mass':             float(0),
         'spacing':          int(130),
@@ -58,6 +76,23 @@ CF_BLOCKS = {
         'alt_surface': {
             'color':        RGB['signal_red'],
             'border_color': None,
+            'duration':     int(3000),  # duration in ms once triggered
+        },
+    },
+    'small_orange_block': {
+        'mass':             float(0),
+        'spacing':          int(2),
+        'min_height':       int(8),
+        'max_height':       int(20),
+        'min_width':        int(7),
+        'max_width':        int(25),
+        'color_pool':       PALLETTES['ORANGES'],
+        'alpha_key':        int(255),
+        'border_color':     None,
+        'border_width':     int(0),
+        'alt_surface': {
+            'color':        RGB['white'],
+            'border_color': RGB['black'],
             'duration':     int(3000),  # duration in ms once triggered
         },
     },

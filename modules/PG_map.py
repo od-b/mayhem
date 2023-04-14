@@ -195,12 +195,13 @@ class PG_Map:
         self.turret_group.add(self.TURRETS)
 
         # outline the obstacles with smaller rects to create more jagged terrain
+        facing = self.cf_spawning['obstacles']['outline_block_facing']
         for block in self.obstacle_group:
             # for each block in obstacle_group, outline the block rect
             self.spawn_outline_blocks(
                 cf_obstacle_outline_block,
                 self.obstacle_group,
-                block.rect, 1, [block.color]
+                block.rect, facing, [block.color]
             )
 
         # add obstacle blocks and their outline blocks to the general map group
